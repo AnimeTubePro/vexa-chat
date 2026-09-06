@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>VEXA Owner Panel 👑</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg1:#050505;--bg2:#111;--bg3:#1c1c1c;--bg4:#242424;--tx:#f5f0e0;--tx2:#b0a890;--tx3:#807860;--ac:#ffd700;--acs:rgba(255,215,0,.1);--ok:#2ecc71;--oks:rgba(46,204,113,.1);--dn:#e74c3c;--dns:rgba(231,76,60,.1);--wn:#f39c12;--bd:rgba(255,215,0,.15);--bds:rgba(255,215,0,.3);--gr:linear-gradient(135deg,#ffd700,#ffec8b)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg1);color:var(--tx);font-size:14.5px;line-height:1.5;min-height:100vh}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;color:inherit;transition:.15s}
+.btn:active{transform:scale(.97)}
+.bp{background:var(--gr);color:#111}.bg{background:var(--bg3)}
+.bok{background:var(--ok);color:#fff}.bwn{background:var(--wn);color:#fff}.bdn{background:var(--dn);color:#fff}
+.bsm{padding:6px 12px;font-size:12px}.bbk{width:100%}
+.inp,.txta{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;font-size:14px;color:inherit;outline:none;font-family:inherit}
+.inp:focus,.txta:focus{border-color:var(--ac)}
+.flbl{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px}
+.fld{margin-bottom:14px}
+.mut{color:var(--tx2)}.sm{font-size:12px}.mono{font-family:monospace}.tc{text-align:center}
+.mt8{margin-top:8px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}
+#loginView{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% -10%,var(--acs),transparent 55%),var(--bg1)}
+.lcard{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--bds);border-radius:20px;padding:28px 24px;box-shadow:0 0 40px rgba(255,215,0,.08)}
+.llogo{font-size:26px;font-weight:900;letter-spacing:4px;text-align:center;background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
+.lsub{text-align:center;font-size:12px;color:var(--tx2);margin-bottom:22px}
+.lerr{background:var(--dns);border:1px solid var(--dn);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#ff8a80;display:none;margin-bottom:12px;line-height:1.6}
+.lerr.show{display:block}
+#panel{display:none;padding:16px;max-width:950px;margin:0 auto}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--bd);margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.ph .pt{font-size:20px;font-weight:800}
+.ph .pt span{background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{display:inline-flex;font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;margin-left:6px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:14px}
+.tab{padding:9px 16px;border-radius:99px;font-size:13px;font-weight:600;background:var(--bg2);border:1px solid var(--bd);cursor:pointer;white-space:nowrap}
+.tab.act{background:var(--acs);border-color:var(--ac);color:var(--ac)}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.card:hover{border-color:var(--bds)}
+.crow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.cav{width:44px;height:44px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--ac);background-size:cover;flex-shrink:0}
+.cinfo{flex:1;min-width:220px}
+.cname{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cmeta{font-size:11.5px;color:var(--tx2);word-break:break-all;line-height:1.7}
+.pwline{font-family:monospace;font-size:14px;color:var(--ac);font-weight:700;cursor:pointer;padding:3px 8px;background:var(--acs);border-radius:6px;display:inline-block}
+.pwline:hover{background:var(--acs);outline:1px solid var(--ac)}
+.empt{padding:40px 20px;text-align:center;color:var(--tx2)}
+.empt .ei{font-size:40px;opacity:.6;margin-bottom:8px}
+.toastbox{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;width:min(92vw,360px)}
+.toast{padding:11px 15px;background:var(--bg4);border:1px solid var(--bds);border-radius:10px;font-size:13px;animation:tin .25s}
+.toast.ok{border-left:3px solid var(--ok)}.toast.er{border-left:3px solid var(--dn)}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+.snote{display:flex;gap:8px;align-items:flex-start;background:var(--bg3);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--tx2);margin-top:6px;margin-bottom:12px;line-height:1.5}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:12px;text-align:center}
+.stat .sv{font-size:22px;font-weight:900;color:var(--ac)}.stat .sl{font-size:10px;color:var(--tx2);font-weight:700}
+.pgrid3{display:flex;flex-direction:column;gap:8px}
+.prow2{display:flex;align-items:center;gap:11px;background:var(--bg3);border-radius:10px;padding:10px 13px;cursor:pointer}
+.prow2:active{background:var(--bg4)}
+.prow2 .pl{flex:1;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.pdt{width:9px;height:9px;border-radius:50%}.pdt.a{background:var(--ok)}.pdt.b{background:var(--dn)}
+#genModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:900;display:none;align-items:center;justify-content:center;padding:16px}
+#genModal .gmbox{background:var(--bg2);border:1px solid var(--bds);border-radius:16px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:20px}
+#genModal .gmhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+#genModal .gmhd b{font-size:16px}
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="lcard">
+    <div class="llogo">👑 VEXA OWNER</div>
+    <div class="lsub">Rank #1 — sirf Console Gmail ke liye</div>
+    <div class="lerr" id="lErr"></div>
+    <div class="fld"><label class="flbl">Email</label><input type="email" class="inp" id="lEm" placeholder="owner@gmail.com"></div>
+    <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="lPw" placeholder="••••••••"></div>
+    <button class="btn bp bbk" id="lBtn" onclick="Owner.login()">Login</button>
+    <div class="sm mut tc mt16">⚠️ Sirf role=owner. Baaki: Access Denied.<br>User: <a href="../index.html" style="color:var(--ac)">../index.html</a> · Admin: <a href="../admin/admin.html" style="color:var(--ac)">../admin/admin.html</a></div>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="ph">
+    <div class="pt">👑 <span>OWNER</span><span class="badge" style="background:var(--acs);color:var(--ac)">RANK #1</span></div>
+    <button class="btn bg bsm" onclick="Owner.logout()">Logout</button>
+  </div>
+
+  <div class="stats" id="statsRow"></div>
+
+  <div class="tabs">
+    <div class="tab act" data-t="passwords" onclick="Owner.tab('passwords')">🔑 Real Passwords</div>
+    <div class="tab" data-t="roles" onclick="Owner.tab('roles')">🔄 Roles & Powers</div>
+    <div class="tab" data-t="sendpw" onclick="Owner.tab('sendpw')">📨 Send Password</div>
+    <div class="tab" data-t="users" onclick="Owner.tab('users')">👥 Users</div>
+  </div>
+
+  <div id="tabContent"></div>
+</div>
+
+<div id="genModal"><div class="gmbox"><div class="gmhd"><b id="gmTitle"></b><button class="btn bg bsm" onclick="Owner.mClose()">✕</button></div><div id="gmBody"></div></div></div>
+<div class="toastbox" id="toasts"></div>
+
+<script>
+const CFG={firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"}};
+/* ⭐ CLOUD FUNCTION URL — apna deployed URL daalo */
+const CF_URL='https://us-central1-vexa-b3a1d.cloudfunctions.net/recoveryLogin';
+let auth,db,myUid=null,usersCache={};
+
+function t(msg,ok){var e=document.createElement('div');e.className='toast '+(ok?'ok':'er');e.textContent=msg;document.getElementById('toasts').appendChild(e);setTimeout(function(){e.remove()},3000)}
+function esc(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML}
+function ago(ts){if(!ts)return'';var s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return new Date(ts).toLocaleDateString()}
+function roleBadge(r){
+  if(r==='owner')return '<span class="badge" style="background:var(--acs);color:var(--ac);border:1px solid var(--ac)">👑 OWNER</span>';
+  if(r==='admin')return '<span class="badge" style="background:rgba(155,89,182,.2);color:#c39bd3">⚙️ ADMIN</span>';
+  if(r==='moderator')return '<span class="badge" style="background:var(--oks);color:#7dffa0">🛡️ MOD</span>';
+  return '';
+}
+
+if(location.protocol==='file:'){
+  window.addEventListener('DOMContentLoaded',function(){
+    var eb=document.getElementById('lErr');
+    if(eb){eb.innerHTML='⚠️ <b>file:// se khola hai!</b><br>Cloud Functions (password decrypt) yahan KAAM NAHI karenge — isliye "fetch fail" aa raha tha.<br><br>✅ FIX: VS Code → Live Server → <b>http://localhost:5500/owner/owner.html</b> kholo';eb.classList.add('show')}
+  });
+}
+
+const Owner={
+ tab:function(tn){
+   document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('act',x.dataset.t===tn)});
+   if(tn==='passwords')this.loadPasswords();
+   if(tn==='roles')this.loadRoles();
+   if(tn==='sendpw')this.tabSend();
+   if(tn==='users')this.loadUsers();
+ },
+ modal:function(title,body){
+   document.getElementById('gmTitle').textContent=title;
+   document.getElementById('gmBody').innerHTML=body;
+   document.getElementById('genModal').style.display='flex';
+ },
+ mClose:function(){document.getElementById('genModal').style.display='none'},
+ login:async function(){
+   var em=document.getElementById('lEm').value.trim(),pw=document.getElementById('lPw').value;
+   var eb=document.getElementById('lErr');eb.classList.remove('show');
+   if(!em||!pw){eb.textContent='Email aur password daalo';eb.classList.add('show');return}
+   var b=document.getElementById('lBtn');b.disabled=true;b.textContent='Checking...';
+   try{
+     var cred=await auth.signInWithEmailAndPassword(em,pw);
+     myUid=cred.user.uid;
+     var s=await db.ref('users/'+myUid+'/role').get();
+     var r=s.exists()?s.val():'user';
+     if(r!=='owner'&&r!=='admin'){
+       await auth.signOut();
+       eb.textContent='❌ Access Denied — role "'+r+'" hai. Sirf OWNER (rank #1) yahan aata hai. Owner banane ke liye Firebase Console → users/'+myUid+'/role me "owner" set karo.';
+       eb.classList.add('show');
+       b.disabled=false;b.textContent='Login';
+       return;
+     }
+     document.getElementById('loginView').style.display='none';
+     document.getElementById('panel').style.display='block';
+     this.loadAll();
+   }catch(e){
+     var code=(e&&e.code)||'';
+     var msgMap={
+       'auth/invalid-credential':'Galat email ya password.',
+       'auth/user-not-found':'Account exist nahi karta.',
+       'auth/configuration-not-found':'⚠️ FIX: Firebase Console → Authentication → Email/Password → Enable',
+       'auth/unauthorized-domain':'⚠️ FIX: Firebase Console → Authentication → Settings → Authorized domains → add: <b>'+location.hostname+'</b>'
+     };
+     eb.innerHTML=msgMap[code]||('Error: '+esc(e.message||''));
+     eb.classList.add('show');
+   }
+   b.disabled=false;b.textContent='Login';
+ },
+ logout:async function(){
+   await auth.signOut().catch(function(){});
+   document.getElementById('panel').style.display='none';
+   document.getElementById('loginView').style.display='flex';
+ },
+ loadAll:async function(){
+   /* Cache all users once */
+   try{
+     var s=await db.ref('users').get();
+     usersCache={};
+     if(s.exists())s.forEach(function(uc){usersCache[uc.key]=uc.val()||{}});
+   }catch(e){}
+   this.loadStats();
+   this.tab('passwords');
+ },
+ loadStats:function(){
+   var total=Object.keys(usersCache).length;
+   var mods=0,admins=0,vips=0,verified=0;
+   for(var k in usersCache){
+     var r=usersCache[k].role;
+     if(r==='owner'||r==='admin')admins++;
+     if(r==='moderator')mods++;
+     if(usersCache[k].vip)vips++;
+     if(usersCache[k].verified)verified++;
+   }
+   document.getElementById('statsRow').innerHTML=
+    '<div class="stat"><div class="sv">'+total+'</div><div class="sl">USERS</div></div>'
+    +'<div class="stat"><div class="sv">'+admins+'</div><div class="sl">ADMINS</div></div>'
+    +'<div class="stat"><div class="sv">'+mods+'</div><div class="sl">MODS</div></div>'
+    +'<div class="stat"><div class="sv">'+vips+'</div><div class="sl">VIP</div></div>'
+    +'<div class="stat"><div class="sv">'+verified+'</div><div class="sl">VERIFIED</div></div>';
+ },
+ /* ===== TAB 1: REAL PASSWORDS (ownerRead CF se decrypt) ===== */
+ loadPasswords:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="snote">👑 <span><b>REAL passwords</b> — RTDB me multi-layer encrypted hai, yahan decrypt karke dikhte hain. <b>Sirf tu dekh sakta hai</b> (Cloud Function role check karta hai). Click password = copy.</span></div>'
+    +'<input class="inp mb8" id="searchInp" placeholder="🔍 Search name/username/email/UID..." oninput="Owner.filter()">'
+    +'<div id="listW"><div class="empt"><div class="ei">⏳</div>Loading + decrypting...</div></div>';
+   var listW=document.getElementById('listW');
+   var self=this;
+   var uids=Object.keys(usersCache);
+   if(!uids.length){listW.innerHTML='<div class="empt"><div class="ei">📭</div>No users</div>';return}
+   var h='';
+   uids.forEach(function(uid){
+     var u=usersCache[uid];
+     var cav='<div class="cav">'+esc((u.displayName||'?').charAt(0).toUpperCase())+'</div>';
+     if(u.profilePhoto&&u.profilePhoto.indexOf('data:')!==0)cav='<div class="cav" style="background-image:url(\''+esc(u.profilePhoto)+'\')"></div>';
+     else if(u.profilePhoto&&u.profilePhoto.indexOf('data:')===0)cav='<div class="cav" style="background-image:url('+u.profilePhoto+')"></div>';
+     h+='<div class="card" data-search="'+esc((u.displayName||'')+' '+(u.username||'')+' '+(u.email||'')+' '+uid).toLowerCase()+'">'
+      +'<div class="crow">'+cav
+      +'<div class="cinfo"><div class="cname">'+esc(u.displayName||'Unknown')+(u.verified?' ✔':'')+(u.vip?' <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);color:#3a2a00">VIP</span>':'')+roleBadge(u.role)+(u.banned?' <span class="badge" style="background:var(--dns);color:#ff8a80">BANNED</span>':'')+'</div>'
+      +'<div class="cmeta">📧 Firebase email: '+esc(u.email||'—')+' · '+ago(u.createdAt)+'</div>'
+      +'<div class="cmeta">🔑 Vault Password: <span class="pwline" id="pw-'+uid+'" onclick="Owner.copyPw(\''+uid+'\')">⏳ decrypting…</span></div>'
+      +'<div class="cmeta">📧 Vault Email: <span id="vem-'+uid+'" class="mut">⏳</span></div>'
+      +'<div class="cmeta">📅 DOB: <span id="dob-'+uid+'" class="mut">⏳</span></div>'
+      +'<div class="cmeta mono" style="font-size:10px">UID: '+esc(uid)+'</div></div></div></div>';
+   });
+   listW.innerHTML=h;
+   /* Decrypt har user ke liye (sequential thoda slow but reliable) */
+   var tok=await auth.currentUser.getIdToken(true);
+   var done=0;
+   for(var i=0;i<uids.length;i++){
+     var uid2=uids[i];
+     (async function(u2){
+       try{
+         var r=await fetch(CF_URL.replace('recoveryLogin','ownerRead'),{
+           method:'POST',
+           headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+           body:JSON.stringify({targetUid:u2})
+         });
+         var j=await r.json();
+         var pwEl=document.getElementById('pw-'+u2),emEl=document.getElementById('vem-'+u2),dobEl=document.getElementById('dob-'+u2);
+         if(j.error){
+           if(pwEl)pwEl.innerHTML='<span style="color:var(--tx3);font-weight:400;font-size:12px">— '+esc(j.error)+'</span>';
+           if(emEl)emEl.textContent='—';
+           if(dobEl)dobEl.textContent='—';
+         }else{
+           if(pwEl)pwEl.textContent=j.password||'—';
+           if(emEl)emEl.textContent=j.email||'—';
+           if(dobEl)dobEl.textContent=j.dob||'—';
+         }
+       }catch(e){
+         var pwEl2=document.getElementById('pw-'+u2);
+         if(pwEl2)pwEl2.innerHTML='<span style="color:var(--tx3);font-weight:400;font-size:12px">— fetch fail (Live Server se kholo)</span>';
+       }
+       done++;
+       if(done===uids.length)t('✅ Sab decrypt ho gaya!',true);
+     })(uid2);
+   }
+ },
+ copyPw:function(uid){
+   var el=document.getElementById('pw-'+uid);
+   if(!el)return;
+   var txt=el.textContent;
+   if(txt.indexOf('⏳')>-1||txt.indexOf('—')>-1||txt.indexOf('❌')>-1){t('Pehle decrypt hone do',false);return}
+   if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){t('Copied: '+txt,true)}).catch(function(){t('Copy fail',false)})}
+   else{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();t('Copied: '+txt,true)}
+ },
+ filter:function(){
+   var q=document.getElementById('searchInp').value.toLowerCase();
+   document.querySelectorAll('#listW .card').forEach(function(card){
+     card.style.display=(card.dataset.search||'').indexOf(q)>-1?'':'none';
+   });
+ },
+ /* ===== TAB 2: ROLES & POWERS (owner sab change kar sakta) ===== */
+ loadRoles:async function(){
+   var c=document.getElementById('tabContent');
+   var h='<div class="snote">👑 <span><b>OWNER = RANK #1</b> — tu kisi ka bhi role change kar sakta hai (admin/mod/owner), VIP/Verified de sakta hai. <b>Koi tujhe rokega nahi, koi TERA role change nahi kar sakta.</b> Naya admin/mod banane ke liye role chuno.</span></div>'
+    +'<input class="inp mb8" id="rolesSearch" placeholder="🔍 Search..." oninput="Owner.filter2()">'
+    +'<div id="rolesList"><div class="empt"><div class="ei">⏳</div>Loading...</div></div>';
+   c.innerHTML=h;
+   var rl=document.getElementById('rolesList');
+   var self=this;
+   var inner='';
+   Object.keys(usersCache).forEach(function(uid){
+     var u=usersCache[uid];
+     /* Owner khud ko bhi dekh sakta hai (change bhi kar sakta hai — tu malik hai) */
+     var roleCtrl='<select class="inp" style="width:150px;padding:8px" onchange="Owner.setRole(\''+uid+'\',this.value)">'
+      +['owner','admin','moderator','user'].map(function(r){return '<option value="'+r+'" '+(u.role===r?'selected':'')+'>'+r+'</option>'}).join('')
+      +'</select>';
+     inner+='<div class="card" data-search2="'+esc((u.displayName||'')+' '+(u.username||'')+' '+(u.email||'')+' '+uid).toLowerCase()+'">'
+      +'<div class="crow">'
+      +'<div class="cinfo"><div class="cname">'+esc(u.displayName||'Unknown')+(u.vip?' 👑':'')+(u.verified?' ✔':'')+(u.banned?' 🚫':'')+'</div>'
+      +'<div class="cmeta">@'+esc(u.username||'—')+' · '+esc(u.email||'—')+'</div></div>'
+      +roleCtrl+'</div>'
+      +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'
+      +'<button class="btn bg bsm" onclick="Owner.setVip(\''+uid+'\','+(u.vip?'true':'false')+')">👑 VIP '+(u.vip?'OFF':'ON')+'</button>'
+      +'<button class="btn bg bsm" onclick="Owner.setVer(\''+uid+'\','+(u.verified?'true':'false')+')">✔ Verified '+(u.verified?'OFF':'ON')+'</button>'
+      +'<button class="btn bwn bsm" onclick="Owner.sendPwToUser(\''+uid+'\')">📨 Send Password (Help Chat)</button>'
+      +'</div></div>';
+   });
+   rl.innerHTML=inner||'<div class="empt">No users</div>';
+ },
+ filter2:function(){
+   var q=document.getElementById('rolesSearch').value.toLowerCase();
+   document.querySelectorAll('#rolesList .card').forEach(function(card){
+     card.style.display=(card.dataset.search2||'').indexOf(q)>-1?'':'none';
+   });
+ },
+ /* ⭐ OWNER ROLE CHANGE — koi restriction nahi, koi use change nahi kar sakta */
+ setRole:async function(uid,role){
+   if(uid===myUid){V.toast('info','Ye tera khud ka account hai — Console me khud change kar sakta hai');return}
+   if(!confirm('Role → "'+role+'" set kare?'))return;
+   try{
+     await db.ref('users/'+uid+'/role').set(role);
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'Role Updated',body:'Owner ne aapka role change kiya: '+role,read:false,at:Date.now()});
+     t('Role → '+role+' ✅',true);
+     var fresh=(await db.ref('users').get());
+     usersCache={};fresh.forEach(function(uc){usersCache[uc.key]=uc.val()||{}});
+     this.loadRoles();this.loadStats();
+   }catch(e){t('Failed: '+e.message,false)}
+ },
+ setVip:async function(uid,cur){
+   try{
+     await db.ref('users/'+uid+'/vip').set(!cur);
+     await db.ref('users/'+uid+'/notifications').push({type:'vip',read:false,at:Date.now()});
+     t('VIP '+(cur?'OFF':'ON')+' ✅',true);
+     var fresh=(await db.ref('users').get());usersCache={};fresh.forEach(function(uc){usersCache[uc.key]=uc.val()||{}});
+     this.loadRoles();this.loadStats();
+   }catch(e){t('Failed',false)}
+ },
+ setVer:async function(uid,cur){
+   try{
+     await db.ref('users/'+uid+'/verified').set(!cur);
+     await db.ref('users/'+uid+'/notifications').push({type:'verify',read:false,at:Date.now()});
+     t('Verified '+(cur?'removed':'given')+' ✅',true);
+     var fresh=(await db.ref('users').get());usersCache={};fresh.forEach(function(uc){usersCache[uc.key]=uc.val()||{}});
+     this.loadRoles();this.loadStats();
+   }catch(e){t('Failed',false)}
+ },
+ /* ===== TAB 3: SEND PASSWORD via Help Chat ===== */
+ tabSend:function(){
+   var c=document.getElementById('tabContent');
+   var h='<div class="snote">📨 <span>User ke Help Center Chat me uska <b>REAL password/email/DOB</b> bhejo — wo apne app me Settings → Help Center Chat me dekhega.</span></div>'
+    +'<div class="fld"><label class="flbl">1. User select karo</label><select class="inp" id="sendUid">'
+    +'<option value="">— Select user —</option>';
+   Object.keys(usersCache).forEach(function(uid){
+     var u=usersCache[uid];
+     h+='<option value="'+uid+'">'+esc(u.displayName||'Unknown')+' (@'+esc(u.username||'?')+')</option>';
+   });
+   h+='</select></div>'
+    +'<button class="btn bp bbk" onclick="Owner.doSend()">📨 Send Credentials to Help Chat</button>';
+   c.innerHTML=h;
+ },
+ doSend:async function(){
+   var uid=document.getElementById('sendUid').value;
+   if(!uid)return t('User select karo',false);
+   var u=usersCache[uid];
+   if(!confirm(u.displayName+' ke Help Chat me uska REAL password bheje?'))return;
+   V.mOpen('⏳','<div class="tc"><div class="spinner lg" style="margin:16px auto"></div><p class="sm mut mt8">Decrypt + send ho raha hai…</p></div>');
+   try{
+     var tok=await auth.currentUser.getIdToken(true);
+     /* Vault se decrypt via ownerRead */
+     var r=await fetch(CF_URL.replace('recoveryLogin','ownerRead'),{
+       method:'POST',
+       headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+       body:JSON.stringify({targetUid:uid})
+     });
+     var j=await r.json();
+     if(j.error){V.mClose();return t('Error: '+j.error,false)}
+     /* Help Chat me credentials daalo (direct RTDB — owner power) */
+     var msg='👑 OWNER ne aapke credentials bheje hain:\n\n📧 Email: '+j.email+'\n🔑 Password: '+j.password+'\n📅 DOB: '+j.dob+'\n\n🔒 Ye message sirf aapke liye hai. Save kar lo!';
+     await db.ref('users/'+uid+'/helpChat').push({from:'owner',text:msg,at:Date.now()});
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'📨 Credentials from Owner',body:'Owner ne aapke credentials Help Center Chat me bheje hain. Settings → Help Center Chat me dekho.',read:false,at:Date.now()});
+     V.mClose();
+     t('✅ Credentials bhej diye '+u.displayName+' ko!',true);
+   }catch(e){V.mClose();t('Failed: '+e.message,false)}
+ },
+ /* ===== TAB 4: USERS (view + ban etc) ===== */
+ loadUsers:async function(){
+   var c=document.getElementById('tabContent');
+   var h='<input class="inp mb8" placeholder="🔍 Search..." oninput="Owner.filter3()">'
+    +'<div id="usersList"><div class="empt"><div class="ei">⏳</div>Loading...</div></div>';
+   c.innerHTML=h;
+   var ul=document.getElementById('usersList');
+   var inner='';
+   Object.keys(usersCache).forEach(function(uid){
+     var u=usersCache[uid];
+     inner+='<div class="card" data-search3="'+esc((u.displayName||'')+' '+(u.username||'')+' '+(u.email||'')+' '+uid).toLowerCase()+'">'
+      +'<div class="crow">'
+      +'<div class="cinfo"><div class="cname">'+esc(u.displayName||'Unknown')+roleBadge(u.role)+(u.banned?' 🚫':'')+'</div>'
+      +'<div class="cmeta">@'+esc(u.username||'—')+' · '+esc(u.email||'—')+' · '+ago(u.createdAt)+' · UID: <span class="mono" style="font-size:10px">'+esc(uid)+'</span></div></div>'
+      +'<button class="btn bwn bsm" onclick="Owner.warn(\''+uid+'\',\''+esc(u.displayName||'').replace(/'/g,"")+'\')">⚠️ Warn</button>'
+      +(u.banned?'<button class="btn bok bsm" onclick="Owner.setBan(\''+uid+'\',false)">✓ Unban</button>':'<button class="btn bdn bsm" onclick="Owner.setBan(\''+uid+'\',true)">🚫 Ban</button>')
+      +'</div></div>';
+   });
+   ul.innerHTML=inner||'<div class="empt">No users</div>';
+ },
+ filter3:function(){
+   var q=document.getElementById('usersList')?document.querySelector('#tabContent .inp').value.toLowerCase():'';
+   document.querySelectorAll('#usersList .card').forEach(function(card){
+     card.style.display=(card.dataset.search3||'').indexOf(q)>-1?'':'none';
+   });
+ },
+ warn:async function(uid,name){
+   var msg=prompt('Warning for '+name+':','Please follow VEXA guidelines.');
+   if(!msg)return;
+   try{await db.ref('users/'+uid+'/notifications').push({type:'security',title:'⚠️ Warning from Owner',body:msg,read:false,at:Date.now()});t('Sent ✅',true)}
+   catch(e){t('Failed',false)}
+ },
+ setBan:async function(uid,ban){
+   if(ban&&!confirm('Ban this user?'))return;
+   try{
+     if(ban)await db.ref('users/'+uid+'/banned').set(true);
+     else await db.ref('users/'+uid+'/banned').remove();
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:ban?'Account Banned':'Ban Removed',body:ban?'Owner ne ban kiya.':'Welcome back!',read:false,at:Date.now()});
+     t(ban?'Banned ✅':'Unbanned ✅',true);
+     var fresh=(await db.ref('users').get());usersCache={};fresh.forEach(function(uc){usersCache[uc.key]=uc.val()||{}});
+     this.loadUsers();
+   }catch(e){t('Failed',false)}
+ }
+};
+
+firebase.initializeApp(CFG.firebase);
+auth=firebase.auth();
+db=firebase.database();
+auth.onAuthStateChanged(function(u){
+  if(!u)return;
+  db.ref('users/'+u.uid+'/role').get().then(function(s){
+    var r=s.exists()?s.val():'user';
+    if(r==='owner'){
+      myUid=u.uid;
+      document.getElementById('loginView').style.display='none';
+      document.getElementById('panel').style.display='block';
+      Owner.loadAll();
+    }
+  });
+});
+</script>
+</body>
+</html>

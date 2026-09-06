@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>VEXA Moderator Panel</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg1:#0a0f0a;--bg2:#121a12;--bg3:#1a241a;--bg4:#223022;--tx:#f0f5f0;--tx2:#9ab09a;--tx3:#6a806a;--ac:#2ecc71;--acs:rgba(46,204,113,.15);--ok:#2ecc71;--oks:rgba(46,204,113,.12);--wn:#f39c12;--wns:rgba(243,156,18,.12);--dn:#e74c3c;--dns:rgba(231,76,60,.12);--bd:rgba(255,255,255,.09);--bds:rgba(255,255,255,.16);--gr:linear-gradient(135deg,#2ecc71,#7dffa0)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg1);color:var(--tx);font-size:14.5px;line-height:1.5;min-height:100vh}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;color:inherit;transition:.15s}
+.btn:active{transform:scale(.97)}
+.bp{background:var(--gr);color:#0a1508}.bg{background:var(--bg3)}.bok{background:var(--ok);color:#fff}.bwn{background:var(--wn);color:#fff}.bdn{background:var(--dn);color:#fff}
+.bsm{padding:6px 12px;font-size:12px}.bbk{width:100%}
+.inp,.txta{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;font-size:14px;color:inherit;outline:none;font-family:inherit}
+.inp:focus,.txta:focus{border-color:var(--ac)}
+.flbl{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px}
+.fld{margin-bottom:14px}
+.mut{color:var(--tx2)}.sm{font-size:12px}.mono{font-family:monospace}.tc{text-align:center}
+.mt8{margin-top:8px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}
+#loginView{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% -10%,var(--acs),transparent 55%),var(--bg1)}
+.lcard{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:28px 24px}
+.llogo{font-size:28px;font-weight:900;letter-spacing:5px;text-align:center;background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
+.lsub{text-align:center;font-size:12px;color:var(--tx2);margin-bottom:22px}
+.lerr{background:var(--dns);border:1px solid var(--dn);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#ff8a80;display:none;margin-bottom:12px;line-height:1.6}
+.lerr.show{display:block}
+#panel{display:none;padding:16px;max-width:900px;margin:0 auto}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--bd);margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.ph .pt{font-size:20px;font-weight:800}
+.ph .pt span{background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{display:inline-flex;font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;margin-left:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:15px;text-align:center}
+.stat .sv{font-size:22px;font-weight:900}.stat .sl{font-size:10.5px;color:var(--tx2);font-weight:700}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:14px}
+.tab{padding:9px 16px;border-radius:99px;font-size:13px;font-weight:600;background:var(--bg2);border:1px solid var(--bd);cursor:pointer;white-space:nowrap}
+.tab.act{background:var(--acs);border-color:var(--ac);color:#7dffa0}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.crow{display:flex;align-items:center;gap:11px}
+.cav{width:42px;height:42px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background-size:cover;flex-shrink:0}
+.cinfo{flex:1;min-width:0}
+.cname{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cmeta{font-size:11.5px;color:var(--tx2);word-break:break-all;line-height:1.5}
+.role-sel{padding:7px 10px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:8px;color:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.role-fixed{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:800;background:var(--acs);border:1.5px solid var(--ac);color:#7dffa0}
+.empt{padding:40px 20px;text-align:center;color:var(--tx2)}
+.empt .ei{font-size:40px;opacity:.6;margin-bottom:8px}
+.rep-reason{font-size:13px;background:var(--wns);border-left:3px solid var(--wn);padding:8px 11px;border-radius:6px;margin:8px 0}
+.toastbox{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;width:min(92vw,360px)}
+.toast{padding:11px 15px;background:var(--bg4);border:1px solid var(--bds);border-radius:10px;font-size:13px;animation:tin .25s}
+.toast.ok{border-left:3px solid var(--ok)}.toast.er{border-left:3px solid var(--dn)}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+.snote{display:flex;gap:8px;align-items:flex-start;background:var(--bg3);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--tx2);margin-top:6px;line-height:1.5}
+.hbtns{display:flex;gap:8px}
+.thgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.thc{border:2px solid var(--bd);border-radius:10px;overflow:hidden;cursor:pointer}
+.thc.sel{border-color:var(--ac)}
+.thp{height:60px;position:relative;padding:8px}
+.thp .tb{height:10px;border-radius:99px;margin-bottom:6px}
+.thp .td{position:absolute;bottom:7px;right:7px;width:17px;height:17px;border-radius:50%}
+.thc .tcn{font-size:11px;font-weight:700;padding:6px 8px;border-top:1px solid var(--bd)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.fcard{border:2px solid var(--bd);border-radius:10px;padding:13px 11px;cursor:pointer;text-align:center;background:var(--bg2)}
+.fcard.sel{border-color:var(--ac)}
+.fcard .fs{font-size:18px;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcard .fn{font-size:10px;color:var(--tx2)}
+.fcard .fn.hl{color:var(--ac);font-weight:700}
+.scwrap{display:flex;flex-direction:column;height:60vh}
+.scmsgs{flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:8px}
+.scrow{display:flex;flex-direction:column;max-width:80%}
+.scrow.me{align-self:flex-end;align-items:flex-end}
+.scrow.them{align-self:flex-start;align-items:flex-start}
+.scbub{background:var(--bg3);border-radius:12px;padding:8px 12px;font-size:13.5px;word-break:break-word;white-space:pre-wrap}
+.scrow.me .scbub{background:var(--acs)}
+.scwho{font-size:10.5px;color:var(--tx3);margin-bottom:2px}
+#genModal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;display:none;align-items:center;justify-content:center;padding:16px}
+#genModal .gmbox{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;padding:20px}
+#genModal .gmhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+#genModal .gmhd b{font-size:16px}
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="lcard">
+    <div class="llogo">VEXA MOD</div>
+    <div class="lsub">Moderator Panel — moderation + roles + recoveries</div>
+    <div class="lerr" id="lErr"></div>
+    <div class="fld"><label class="flbl">Email</label><input type="email" class="inp" id="lEm" placeholder="moderator@vexa.com"></div>
+    <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="lPw" placeholder="••••••••"></div>
+    <button class="btn bp bbk" id="lBtn" onclick="Mod.login()">Login</button>
+    <div class="sm mut tc mt16">⚠️ Sirf role=moderator/admin/owner.<br>User app: <a href="../index.html" style="color:var(--ac)">../index.html</a> · Admin: <a href="../admin/admin.html" style="color:var(--ac)">../admin/admin.html</a> · Owner: <a href="../owner/owner.html" style="color:var(--ac)">../owner/owner.html</a></div>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="ph">
+    <div class="pt">VEXA <span>MOD</span><span class="badge" id="myRoleBadge" style="background:var(--oks);color:#7dffa0">MODERATOR</span></div>
+    <div class="hbtns">
+      <button class="btn bg bsm" onclick="Theme.open()" title="Themes">🎨</button>
+      <button class="btn bg bsm" onclick="FontPicker.open()" title="Fonts">🔤</button>
+      <button class="btn bg bsm" onclick="Mod.logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="stats" id="statsRow"></div>
+
+  <div class="tabs">
+    <div class="tab act" data-t="recoveries" onclick="Mod.tab('recoveries')">🔐 Recoveries <span id="recCount"></span></div>
+    <div class="tab" data-t="help" onclick="Mod.tab('help')">🆘 Help <span id="helpCount"></span></div>
+    <div class="tab" data-t="manage" onclick="Mod.tab('manage')">🛠️ Manage</div>
+    <div class="tab" data-t="roles" onclick="Mod.tab('roles')">🔄 Roles</div>
+    <div class="tab" data-t="reports" onclick="Mod.tab('reports')">🚩 Reports <span id="repCount"></span></div>
+    <div class="tab" data-t="posts" onclick="Mod.tab('posts')">📝 Posts</div>
+    <div class="tab" data-t="staffchat" onclick="Mod.tab('staffchat')">💬 Staff Chat</div>
+  </div>
+
+  <div id="tabContent"></div>
+</div>
+
+<div id="genModal"><div class="gmbox"><div class="gmhd"><b id="gmTitle"></b><button class="btn bg bsm" onclick="Mod.mClose()">✕</button></div><div id="gmBody"></div></div></div>
+<div class="toastbox" id="toasts"></div>
+
+<script>
+const CFG={firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"}};
+let auth,db,myRole=null,myUid=null;
+
+function t(msg,ok){var e=document.createElement('div');e.className='toast '+(ok?'ok':'er');e.textContent=msg;document.getElementById('toasts').appendChild(e);setTimeout(function(){e.remove()},3000)}
+function esc(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML}
+function ago(ts){if(!ts)return'';var s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return new Date(ts).toLocaleDateString()}
+
+if(location.protocol==='file:'){
+  window.addEventListener('DOMContentLoaded',function(){
+    var eb=document.getElementById('lErr');
+    if(eb){
+      eb.innerHTML='⚠️ <b>file:// se khola hai!</b><br>Kuch features kaam nahi karenge.<br><br>✅ FIX: VS Code → Live Server → <b>http://localhost:5500/moderator/moderator.html</b> kholo';
+      eb.classList.add('show');
+    }
+  });
+}
+
+/* ---------- THEME ---------- */
+function hexA(h,a){var n=parseInt(h.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')'}
+function lighten(h){var n=parseInt(h.slice(1),16);function f(x){return Math.min(255,Math.round(x*1.22))}return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
+const Theme={
+ bases:[['Forest Green','#2ecc71','#0a0f0a','#121a12','#1a241a','#f0f5f0','#9ab09a'],['Emerald','#2ecc71','#061109','#0c1d10','#122c18','#e8f8ee','#8abb9c'],['AMOLED','#7dffa0','#000000','#070707','#101010','#eafaf0','#7fa88c'],['Mint','#1abc9c','#071210','#0d1f1c','#132c28','#e7f6f2','#85b3a8'],['Teal','#16a085','#06110f','#0c1d1a','#122c28','#e6f6f3','#83b3ab'],['Ocean','#2e86de','#0a0f1a','#101828','#182236','#eef4fb','#8fa8c4'],['Midnight','#6c5ce7','#0a0a0f','#12121a','#1a1a26','#f0f0f5','#9a9ab0'],['Cyber','#00ffd0','#03110e','#062019','#092e24','#e2fff9','#7ac0b2'],['Golden','#d4a017','#12100a','#1d1a10','#282417','#faf5e6','#c2b48c'],['Ice','#74b9ff','#0a0e14','#101722','#182031','#eef4fb','#8ba3bd'],['Rose','#e84393','#130810','#1e0c19','#2a1122','#fceef5','#c28bab'],['Sunny','#f39c12','#120e07','#1d160b','#291f0f','#faf3e6','#c4ad8c']],
+ variants:['Dark','Light','AMOLED'],
+ list:function(){var out=[];for(var i=0;i<this.bases.length;i++){for(var j=0;j<this.variants.length;j++){out.push({id:'m'+i+'_'+j,name:this.bases[i][0]+' '+this.variants[j],ac:this.bases[i][1],i:i,j:j})}}return out},
+ apply:function(id){
+   var t2=null,lst=this.list();
+   for(var k=0;k<lst.length;k++){if(lst[k].id===id){t2=lst[k];break}}
+   if(!t2)t2=lst[0];
+   var b=this.bases[t2.i],j=t2.j;
+   var light=(j===1),amoled=(j===2);
+   var R=document.documentElement.style;
+   R.setProperty('--ac',b[1]);
+   R.setProperty('--gr','linear-gradient(135deg,'+b[1]+','+hexA(b[1],0.8)+')');
+   R.setProperty('--acs',hexA(b[1],light?0.12:0.16));
+   R.setProperty('--oks',hexA(b[1],0.12));
+   R.setProperty('--bg1',light?'#f4f5fa':amoled?'#000000':b[2]);
+   R.setProperty('--bg2',light?'#ffffff':amoled?'#070707':b[3]);
+   R.setProperty('--bg3',light?'#eef0f5':amoled?'#101010':b[4]);
+   R.setProperty('--bg4',light?'#e3e6ee':amoled?'#1a1a1a':lighten(b[4]));
+   R.setProperty('--tx',light?'#17171f':b[5]);
+   R.setProperty('--tx2',light?'#55556a':b[6]);
+   R.setProperty('--tx3',light?'#8a8aa0':'#6a806a');
+   R.setProperty('--bd',light?'rgba(0,0,0,.09)':'rgba(255,255,255,.09)');
+   R.setProperty('--bds',light?'rgba(0,0,0,.16)':'rgba(255,255,255,.16)');
+   try{localStorage.setItem('modTheme',id)}catch(e){}
+ },
+ open:function(){
+   var cur='m0_0';try{cur=localStorage.getItem('modTheme')||'m0_0'}catch(e){}
+   var h='<div class="thgrid">';
+   this.list().forEach(function(x){
+     var bg=(x.j===1)?'#f4f5fa':(x.j===2)?'#000':Theme.bases[x.i][2];
+     h+='<div class="thc'+(x.id===cur?' sel':'')+'" onclick="Theme.pick(\''+x.id+'\')"><div class="thp" style="background:'+bg+'"><div class="tb" style="background:'+x.ac+'"></div><div class="td" style="background:'+x.ac+'"></div></div><div class="tcn">'+x.name+'</div></div>';
+   });
+   h+='</div>';
+   Mod.modal('🎨 Themes',h);
+ },
+ pick:function(id){this.apply(id);this.open();t('Theme ✅',true)},
+ init:function(){var id='m0_0';try{id=localStorage.getItem('modTheme')||'m0_0'}catch(e){}this.apply(id)}
+};
+
+/* ---------- FONTS ---------- */
+const FontPicker={
+ featured:[{name:'Pacifico',tag:'Surf Script',desc:'Fun bold brush script'},{name:'Cedarville Cursive',tag:'Handwriting',desc:'Neat handwriting'},{name:'Bukhari Script',tag:'Logo',desc:'Thick bold monoline'},{name:'Dancing Script',tag:'Cursive',desc:'Lively cursive'},{name:'Great Vibes',tag:'Elegant',desc:'Flowing formal script'}],
+ list:['Inter','Roboto','Open Sans','Poppins','Montserrat','Oswald','Raleway','Nunito','Work Sans','Rubik','DM Sans','Outfit','Sora','Space Grotesk','Lexend','Archivo','Barlow','Fira Sans','PT Sans','Ubuntu','Cabin','Exo 2','Quicksand','Comfortaa','Josefin Sans','Dosis','Heebo','Bitter','Roboto Slab','Roboto Mono','Zilla Slab','Arvo','Rokkitt','Playfair Display','Merriweather','Lora','Crimson Text','Libre Baskerville','EB Garamond','Cormorant','Spectral','Vollkorn','Alegreya','Noto Serif','Noto Sans','Bodoni Moda','DM Serif Display','Marcellus','Cinzel','Prata','Domine','Bree Serif','Kreon','Alfa Slab One','Abril Fatface','Lobster','Pacifico','Dancing Script','Great Vibes','Cedarville Cursive','Bukhari Script','Satisfy','Courgette','Sacramento','Yellowtail','Kaushan Script','Cookie','Allura','Parisienne','Tangerine','Berkshire Swash','Leckerli One','Yesteryear','Grand Hotel','Italianno','Homemade Apple','Caveat','Shadows Into Light','Indie Flower','Patrick Hand','Handlee','Gochi Hand','Rock Salt','Architects Daughter','Coming Soon','Permanent Marker','Amatic SC','Bangers','Luckiest Guy','Comic Neue','Titan One','Shrikhand','Modak','Bungee','Rubik Glitch','Silkscreen','Pixelify Sans','Press Start 2P','VT323','Russo One','Black Ops One','Sigmar One','Staatliches','Anton','Days One','Oxanium','Chakra Petch','Rajdhani','Teko','Kanit','IBM Plex Sans','IBM Plex Mono','JetBrains Mono','Source Code Pro','Space Mono','Fira Code','Poiret One','Syncopate','Michroma','Zen Dots','Bubblegum Sans','DynaPuff','Concert One','Chewy','Baloo 2','Fredoka','Righteous','Lilita One','Paytone One','Gluten','Caprasimo','Nabla','Unbounded','Ma Shan Zheng','Zcool KuaiLe','Catamaran','Young Serif','Readex Pro','Cairo','Amiri','Changa','Lalezar','Mada','Sono','K2D','Mali','Pridi','Athiti','Pattaya','Sriracha','Mr Dafoe','Rochester','Water Brush','Whisper','Kalam','Lemon','Londrina Solid','Love Ya Like A Sister','Luxurious Script','Moon Dance','Nanum Brush Script','Nerko One','Oleo Script','Pirata One','Rowdies','Rye','Salsa','Sansita','Sarina','Schoolbell','Shantell Sans','Signika','Six Caps','Smooch','Special Elite','Style Script','Suez One','Syne','Tilt Neon','Train One','Trirong','Vampiro One','Varela Round','Vibur','Vina Sans','Wellfleet','Wendy One','Yaldevi','Yeon Sung','Yrsa'],
+ loaded:{},
+ loadCss:function(f){if(this.loaded[f])return;var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(f).replace(/%20/g,'+')+':wght@400;600&display=swap';document.head.appendChild(l);this.loaded[f]=true},
+ apply:function(f){this.loadCss(f);document.body.style.fontFamily="'"+f+"',sans-serif";try{localStorage.setItem('modFont',f)}catch(e){}},
+ open:function(){
+   var cur='Inter';try{cur=localStorage.getItem('modFont')||'Inter'}catch(e){}
+   var h='<div style="font-weight:800;font-size:12.5px;color:var(--tx2);margin:0 0 9px">✍️ POPULAR CURSIVE</div><div class="fgrid">';
+   this.featured.forEach(function(f){
+     h+='<div class="fcard'+(f.name===cur?' sel':'')+'" onclick="FontPicker.pick(\''+f.name+'\')"><div class="fs" style="font-family:\''+f.name+'\'">'+f.name+'</div><div class="fn hl">'+f.tag+'</div><div class="fn" style="white-space:normal">'+f.desc+'</div></div>';
+   });
+   h+='</div><div class="mt16"><div style="font-weight:800;font-size:12.5px;color:var(--tx2);margin-bottom:9px">🔤 ALL FONTS</div><input class="inp mb8" placeholder="Search..." oninput="FontPicker.filter(this.value)"><div class="fgrid" id="fgrid">';
+   this.list.forEach(function(f){h+='<div class="fcard" data-f="'+f+'" onclick="FontPicker.pick(\''+f+'\')"><div class="fs" style="font-family:\''+f+'\'">'+f+'</div><div class="fn">'+f+'</div></div>'});
+   h+='</div></div>';
+   Mod.modal('🔤 Fonts',h);
+   this.loadCss('Pacifico');this.loadCss('Cedarville Cursive');this.loadCss('Bukhari Script');this.loadCss('Dancing Script');this.loadCss('Great Vibes');
+   for(var i=0;i<40&&i<this.list.length;i++)this.loadCss(this.list[i]);
+ },
+ filter:function(q){q=q.toLowerCase();document.querySelectorAll('#fgrid .fcard').forEach(function(c){c.style.display=c.dataset.f.toLowerCase().indexOf(q)>-1?'':'none'})},
+ pick:function(f){this.apply(f);Mod.mClose();t('Font: '+f,true)},
+ init:function(){var f='Inter';try{f=localStorage.getItem('modFont')||'Inter'}catch(e){}this.apply(f)}
+};
+
+/* ---------- STAFF CHAT ---------- */
+const StaffChat={
+ unsub:null,
+ start:function(){
+   this.stop();
+   this.unsub=db.ref('staffChat').limitToLast(100).on('value',function(s){
+     var w=document.getElementById('scMsgs');if(!w)return;
+     w.innerHTML='';
+     if(!s.exists()){w.innerHTML='<div class="empt" style="padding:20px"><div class="ei">💬</div>Staff room khali hai!</div>';return}
+     var arr=[];s.forEach(function(c){arr.push(c.val())});
+     for(var i=0;i<arr.length;i++){
+       var m=arr[i];
+       var meM=(m.uid===myUid);
+       var d=document.createElement('div');
+       d.className='scrow '+(meM?'me':'them');
+       d.innerHTML='<div class="scwho">'+esc(m.name||'?')+' ('+(m.role||'staff')+') · '+ago(m.at)+'</div><div class="scbub">'+esc(m.text)+'</div>';
+       w.appendChild(d);
+     }
+     w.scrollTop=w.scrollHeight;
+   });
+ },
+ send:async function(){
+   var inp=document.getElementById('scInput');
+   var txt=inp.value.trim();
+   if(!txt)return;
+   inp.value='';
+   try{
+     var nm='Staff';
+     try{nm=(await db.ref('users/'+myUid+'/displayName').get()).val()||'Staff'}catch(e){}
+     await db.ref('staffChat').push({uid:myUid,name:nm,role:myRole,text:txt.slice(0,500),at:Date.now()});
+   }catch(e){t('Send failed',false)}
+ },
+ stop:function(){if(this.unsub){db.ref('staffChat').off('value',this.unsub);this.unsub=null}}
+};
+
+/* ---------- MODERATOR MAIN ---------- */
+const Mod={
+ curTab:'recoveries',staffTabRendered:false,
+ modal:function(title,body){
+   document.getElementById('gmTitle').textContent=title;
+   document.getElementById('gmBody').innerHTML=body;
+   document.getElementById('genModal').style.display='flex';
+ },
+ mClose:function(){document.getElementById('genModal').style.display='none'},
+ login:async function(){
+   var em=document.getElementById('lEm').value.trim(),pw=document.getElementById('lPw').value;
+   var eb=document.getElementById('lErr');eb.classList.remove('show');
+   if(!em||!pw){eb.textContent='Email aur password daalo';eb.classList.add('show');return}
+   var b=document.getElementById('lBtn');b.disabled=true;b.textContent='Checking...';
+   try{
+     var cred=await auth.signInWithEmailAndPassword(em,pw);
+     myUid=cred.user.uid;
+     var s=await db.ref('users/'+myUid+'/role').get();
+     var r=s.exists()?s.val():'user';
+     if(r!=='moderator'&&r!=='admin'&&r!=='owner'){
+       await auth.signOut();
+       eb.textContent='❌ Access denied — role "'+r+'" hai. Moderator banane ke liye Roles tab use hota hai (kisi MOD se bol).';
+       eb.classList.add('show');
+       b.disabled=false;b.textContent='Login';
+       return;
+     }
+     myRole=r;
+     var badge=document.getElementById('myRoleBadge');
+     badge.textContent=(r==='owner')?'👑 OWNER':(r==='admin')?'👑 ADMIN':'🛡️ MODERATOR';
+     this.showPanel();
+   }catch(e){
+     var code=(e&&e.code)||'';
+     var msgMap={
+       'auth/invalid-credential':'Galat email ya password.',
+       'auth/user-not-found':'Account exist nahi karta.',
+       'auth/too-many-requests':'Bahut tries. 5 min baad.',
+       'auth/configuration-not-found':'⚠️ FIX: Firebase Console → Authentication → Email/Password → Enable',
+       'auth/unauthorized-domain':'⚠️ FIX: Firebase Console → Authentication → Settings → Authorized domains → add: <b>'+location.hostname+'</b>',
+       'auth/network-request-failed':'Network error.'
+     };
+     eb.innerHTML=msgMap[code]||('Error ['+code+']: '+esc((e&&e.message)||''));
+     eb.classList.add('show');
+   }
+   b.disabled=false;b.textContent='Login';
+ },
+ showPanel:function(){
+   document.getElementById('loginView').style.display='none';
+   document.getElementById('panel').style.display='block';
+   this.loadStats();
+   this.tab('recoveries');
+ },
+ logout:async function(){
+   StaffChat.stop();
+   await auth.signOut().catch(function(){});
+   document.getElementById('panel').style.display='none';
+   document.getElementById('loginView').style.display='flex';
+ },
+ tab:function(tn){
+   this.curTab=tn;
+   document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('act',x.dataset.t===tn)});
+   if(tn!=='staffchat'&&this.staffTabRendered){StaffChat.stop();this.staffTabRendered=false}
+   if(tn==='recoveries')this.tabRecoveries();
+   if(tn==='help')this.tabHelp();
+   if(tn==='manage')this.loadManage();
+   if(tn==='roles')this.tabRoles();
+   if(tn==='reports')this.loadReports();
+   if(tn==='posts')this.loadPosts();
+   if(tn==='staffchat')this.tabStaffChat();
+ },
+ loadStats:async function(){
+   var row=document.getElementById('statsRow');
+   row.innerHTML='<div class="stat"><div class="sv">—</div><div class="sl">USERS</div></div><div class="stat"><div class="sv">—</div><div class="sl">POSTS</div></div><div class="stat"><div class="sv">—</div><div class="sl">REPORTS</div></div><div class="stat"><div class="sv">—</div><div class="sl">RECOVERY</div></div>';
+   try{
+     var u=await db.ref('users').get();
+     var uc=u.exists()?u.numChildren():0;
+     var p=await db.ref('posts').get();
+     var pc=p.exists()?p.numChildren():0;
+     var recPend=0,helpPend=0;
+     var recS=await db.ref('recoveryRequests').get();
+     if(recS.exists())recS.forEach(function(us){us.forEach(function(rs){if(rs.val().status==='pending')recPend++})});
+     var helpS=await db.ref('helpRequests').get();
+     if(helpS.exists())helpS.forEach(function(c){if(c.val().status==='open')helpPend++});
+     document.getElementById('recCount').textContent=recPend?('('+recPend+')'):'';
+     document.getElementById('helpCount').textContent=helpPend?('('+helpPend+')'):'';
+     var repS=await db.ref('reports').get();
+     var rc=repS.exists()?repS.numChildren():0;
+     var pend=0;
+     if(repS.exists())repS.forEach(function(c){if(c.val().status==='pending')pend++});
+     document.getElementById('repCount').textContent=pend?('('+pend+')'):'';
+     row.innerHTML='<div class="stat"><div class="sv">'+uc+'</div><div class="sl">USERS</div></div><div class="stat"><div class="sv">'+pc+'</div><div class="sl">POSTS</div></div><div class="stat"><div class="sv">'+rc+'</div><div class="sl">REPORTS</div></div><div class="stat"><div class="sv">'+recPend+'</div><div class="sl">RECOVERY</div></div>';
+   }catch(e){}
+ },
+ /* ===== RECOVERY APPROVAL ===== */
+ tabRecoveries:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading recovery requests...</div>';
+   try{
+     var s=await db.ref('recoveryRequests').get();
+     if(!s.exists()){c.innerHTML='<div class="empt"><div class="ei">🔐</div>No recovery requests</div>';return}
+     var h='<div class="snote" style="margin-bottom:12px">🔐 RECOVERY APPROVAL:<br>• <b>DEVICE ✓</b> = registered device, safe<br>• <b>⚠️ UNREGISTERED</b> = 6-hour "Lost Device" report chahiye (Help tab me dekho)<br>• 👁️ Last Online check karo (Manage tab)<br>• Approve = user ko <b>AUTO-LOGIN</b> + purane credentials + 24h lock</div>';
+     var found=0;
+     s.forEach(function(uSnap){
+       var uid=uSnap.key;
+       uSnap.forEach(function(rSnap){
+         var v=rSnap.val();
+         if(v.status!=='pending')return;
+         found++;
+         h+='<div class="card"><div class="crow"><div style="font-size:20px">🔐</div>'
+          +'<div class="cinfo"><div class="cname">Recovery Request '+(v.deviceTrusted?'<span class="badge" style="background:var(--oks);color:#7dffa0">DEVICE ✓</span>':'<span class="badge" style="background:var(--wns);color:#ffd27d">⚠️ UNREGISTERED</span>')+'</div>'
+          +'<div class="cmeta">UID: <span class="mono">'+esc(uid.slice(0,14))+'…</span> · Device: '+esc(v.devName||'?')+' · '+ago(v.createdAt)+'</div>'
+          +'<div class="cmeta" style="color:var(--wn)">⚠️ Help tab me user ki report verify karo!</div></div></div>'
+          +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'
+          +'<button class="btn bok bsm" onclick="Mod.approveRec(\''+uid+'\',\''+rSnap.key+'\')">✓ Approve Entry</button>'
+          +'<button class="btn bwn bsm" onclick="Mod.needsReport(\''+uid+'\',\''+rSnap.key+'\')">⏰ 6h Report</button>'
+          +'<button class="btn bdn bsm" onclick="Mod.rejectRec(\''+uid+'\',\''+rSnap.key+'\')">✕ Reject</button>'
+          +'</div></div>';
+       });
+     });
+     c.innerHTML=h||'<div class="empt"><div class="ei">✅</div>No pending requests</div>';
+     document.getElementById('recCount').textContent=found?('('+found+')'):'';
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ approveRec:async function(uid,reqId){
+   if(!confirm('APPROVE? User ko AUTO-LOGIN + purane credentials + 24h lock milenge.'))return;
+   try{
+     await db.ref('recoveryRequests/'+uid+'/'+reqId+'/status').set('approved');
+     await db.ref('users/'+uid+'/recovery/lockUntil').set(Date.now()+24*3600*1000);
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'✅ Recovery Approved',body:'AUTO-LOGIN ho raha hai! Purane credentials Help Center Chat me mile.',read:false,at:Date.now()});
+     t('Approved ✅',true);this.tabRecoveries();
+   }catch(e){t('Failed: '+e.message,false)}
+ },
+ rejectRec:async function(uid,reqId){
+   if(!confirm('REJECT?'))return;
+   try{
+     await db.ref('recoveryRequests/'+uid+'/'+reqId+'/status').set('rejected');
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'❌ Recovery Rejected',body:'Help Center se contact karo.',read:false,at:Date.now()});
+     t('Rejected',true);this.tabRecoveries();
+   }catch(e){t('Failed',false)}
+ },
+ needsReport:async function(uid,reqId){
+   try{
+     await db.ref('recoveryRequests/'+uid+'/'+reqId+'/status').set('needs_report');
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'⚠️ 6-Hour Rule',body:'Device unregistered. Pehle Help Center se "Device Lost" report karo.',read:false,at:Date.now()});
+     t('6h rule message gaya',true);this.tabRecoveries();
+   }catch(e){t('Failed',false)}
+ },
+ /* ===== HELP REQUESTS ===== */
+ tabHelp:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading help requests...</div>';
+   try{
+     var s=await db.ref('helpRequests').get();
+     if(!s.exists()){c.innerHTML='<div class="empt"><div class="ei">🆘</div>No help requests</div>';return}
+     var h='<div class="snote" style="margin-bottom:12px">🆘 User reports — recovery approval se pehle inko dekho!</div>';
+     var arr=[];
+     s.forEach(function(x){arr.push({id:x.key,val:x.val()})});
+     arr.sort(function(a,b){return (b.val.at||0)-(a.val.at||0)});
+     var typeIc={lost_account:'📱',lost_device:'🔒',hacked:'🚨',other:'💬'};
+     arr.forEach(function(r){
+       var v=r.val;
+       h+='<div class="card"><div class="crow"><div style="font-size:20px">'+(typeIc[v.type]||'💬')+'</div>'
+        +'<div class="cinfo"><div class="cname">'+esc(v.type||'help')+' <span class="badge" style="background:'+(v.status==='open'?'var(--wns);color:#ffd27d':'var(--oks);color:#7dffa0')+'">'+esc(v.status||'open')+'</span></div>'
+        +'<div class="cmeta">User: <b>@'+esc(v.username||'?')+'</b> · Device: '+esc(v.device||'?')+' · '+ago(v.at)+'</div>'
+        +(v.detail?'<div class="rep-reason">'+esc(v.detail)+'</div>':'')
+        +'</div></div>'
+        +'<div style="display:flex;gap:6px;margin-top:10px">'
+        +'<button class="btn bok bsm" onclick="Mod.resolveHelp(\''+r.id+'\')">✓ Resolved</button>'
+        +'<button class="btn bdn bsm" onclick="Mod.delHelp(\''+r.id+'\')">🗑️</button>'
+        +'</div></div>';
+     });
+     c.innerHTML=h;
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ resolveHelp:async function(id){
+   try{await db.ref('helpRequests/'+id+'/status').set('resolved');t('Resolved ✅',true);this.tabHelp()}
+   catch(e){t('Failed',false)}
+ },
+ delHelp:async function(id){
+   try{await db.ref('helpRequests/'+id).remove();t('Deleted',true);this.tabHelp()}
+   catch(e){t('Failed',false)}
+ },
+ /* ===== MANAGE USERS ===== */
+ loadManage:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading...</div>';
+   try{
+     var s=await db.ref('users').get();
+     if(!s.exists()){c.innerHTML='<div class="empt">No users</div>';return}
+     var h='<input class="inp" placeholder="Search users..." oninput="Mod.filterCards(this.value)" style="margin-bottom:12px">'
+      +'<div class="snote" style="margin-bottom:12px">🛠️ Moderator: VIP/Verified, Warn, Ban/Unban. Role change = Roles tab.</div>';
+     s.forEach(function(uc){
+       var uid=uc.key,u=uc.val()||{};
+       var cav='<div class="cav">'+esc((u.displayName||'?').charAt(0).toUpperCase())+'</div>';
+       if(u.profilePhoto&&u.profilePhoto.indexOf('data:')!==0)cav='<div class="cav" style="background-image:url(\''+esc(u.profilePhoto)+'\')"></div>';
+       else if(u.profilePhoto&&u.profilePhoto.indexOf('data:')===0)cav='<div class="cav" style="background-image:url('+u.profilePhoto+')"></div>';
+       var roleB='';
+       if(u.role==='owner')roleB=' <span class="badge" style="background:var(--acs);color:var(--ac)">👑 OWNER</span>';
+       else if(u.role==='admin')roleB=' <span class="badge" style="background:var(--dns);color:#ff8a80">ADMIN</span>';
+       else if(u.role==='moderator')roleB=' <span class="badge" style="background:var(--oks);color:#7dffa0">MOD</span>';
+       h+='<div class="card" data-search="'+esc((u.displayName||'')+' '+(u.username||'')+' '+(u.email||'')).toLowerCase()+'">'
+        +'<div class="crow">'+cav
+        +'<div class="cinfo"><div class="cname">'+esc(u.displayName||'Unknown')+(u.verified?' ✔':'')+(u.vip?' <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);color:#3a2a00">VIP</span>':'')+roleB+(u.banned?' <span class="badge" style="background:var(--dns);color:#ff8a80">BANNED</span>':'')+'</div>'
+        +'<div class="cmeta">@'+esc(u.username||'—')+' · '+esc(u.email||'—')+'</div></div></div>'
+        +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'
+        +'<button class="btn bg bsm" onclick="Mod.setVip(\''+uid+'\','+(u.vip?'true':'false')+')">👑 VIP '+(u.vip?'OFF':'ON')+'</button>'
+        +'<button class="btn bg bsm" onclick="Mod.setVer(\''+uid+'\','+(u.verified?'true':'false')+')">✔ Verified '+(u.verified?'OFF':'ON')+'</button>'
+        +'<button class="btn bwn bsm" onclick="Mod.warn(\''+uid+'\',\''+esc(u.displayName||'').replace(/'/g,"")+'\')">⚠️ Warn</button>'
+        +'<button class="btn bg bsm" onclick="Mod.viewOnline(\''+uid+'\')">👁️ Last Online</button>'
+        +(u.banned?'<button class="btn bok bsm" onclick="Mod.unban(\''+uid+'\')">✓ Unban</button>':'<button class="btn bdn bsm" onclick="Mod.ban(\''+uid+'\')">🚫 Ban</button>')
+        +'</div></div>';
+     });
+     c.innerHTML=h;
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ filterCards:function(q){
+   q=q.toLowerCase();
+   document.querySelectorAll('#tabContent .card').forEach(function(card){
+     card.style.display=(card.dataset.search||'').indexOf(q)>-1?'':'none';
+   });
+ },
+ viewOnline:async function(uid){
+   try{
+     var p=(await db.ref('presence/'+uid).get()).val()||{};
+     var u=((await db.ref('users/'+uid).get()).val())||{};
+     var devS=(await db.ref('users/'+uid+'/devices').get());
+     var devCount=devS.exists()?devS.numChildren():0;
+     var st=p.online?'🟢 ONLINE NOW':'⚪ Offline — last seen: '+ago(p.lastSeen);
+     Mod.modal('👁️ Status — '+(u.displayName||'User'),
+      '<div class="tc mb8">@'+(u.username||'?')+'</div>'
+      +'<div class="card"><div class="cname">Online Status</div><div class="cmeta" style="font-size:14px;margin-top:4px">'+st+'</div></div>'
+      +'<div class="card"><div class="cname">📱 Devices: '+devCount+'</div></div>'
+      +'<div class="card"><div class="cname">🛡️</div><div class="cmeta">Banned: '+(u.banned?'YES 🚫':'No')+' · Role: '+esc(u.role||'user')+'</div></div>'
+      +'<div class="snote">💡 Recovery approval se pehle yahi check karo!</div>');
+   }catch(e){t('Failed',false)}
+ },
+ setVip:async function(uid,cur){
+   try{
+     await db.ref('users/'+uid+'/vip').set(!cur);
+     await db.ref('users/'+uid+'/notifications').push({type:'vip',read:false,at:Date.now()});
+     t('VIP '+(cur?'removed':'given')+' ✅',true);this.loadManage();
+   }catch(e){t('Failed',false)}
+ },
+ setVer:async function(uid,cur){
+   try{
+     await db.ref('users/'+uid+'/verified').set(!cur);
+     await db.ref('users/'+uid+'/notifications').push({type:'verify',read:false,at:Date.now()});
+     t('Verified '+(cur?'removed':'given')+' ✅',true);this.loadManage();
+   }catch(e){t('Failed',false)}
+ },
+ warn:async function(uid,name){
+   var msg=prompt('Warning for '+name+':','Please follow VEXA community guidelines.');
+   if(!msg)return;
+   try{
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'⚠️ Warning from Moderator',body:msg,read:false,at:Date.now()});
+     t('Warning sent ✅',true);
+   }catch(e){t('Failed',false)}
+ },
+ ban:async function(uid){
+   if(!confirm('Ban this user?'))return;
+   try{
+     await db.ref('users/'+uid+'/banned').set(true);
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'Account Banned',body:'Moderator ne ban kiya. Contact support.',read:false,at:Date.now()});
+     t('Banned ✅',true);this.loadManage();
+   }catch(e){t('Failed',false)}
+ },
+ unban:async function(uid){
+   try{
+     await db.ref('users/'+uid+'/banned').remove();
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'Ban Removed',body:'Welcome back!',read:false,at:Date.now()});
+     t('Unbanned ✅',true);this.loadManage();
+   }catch(e){t('Failed',false)}
+ },
+ /* ===== ROLES (Owner/Admin protected) ===== */
+ tabRoles:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading...</div>';
+   try{
+     var s=await db.ref('users').get();
+     if(!s.exists()){c.innerHTML='<div class="empt">No users</div>';return}
+     var h='<input class="inp" placeholder="Search users..." oninput="Mod.filterCards(this.value)" style="margin-bottom:12px">'
+      +'<div class="snote" style="margin-bottom:12px">🔄 Roles:<br>• user → moderator bana sakte ho<br>• moderator → user bana sakte ho<br>• 👑 OWNER (Rank 1) + ADMIN (Rank 2) protected — koi nahi chhoo sakta<br>• Apna khud ka role nahi badal sakte</div>';
+     s.forEach(function(uc){
+       var uid=uc.key,u=uc.val()||{};
+       var roleCtrl;
+       if(u.role==='owner'){
+         roleCtrl='<span class="role-fixed" style="background:var(--acs);color:var(--ac)">👑 OWNER (Rank 1 — protected)</span>';
+       }else if(u.role==='admin'){
+         roleCtrl='<span class="role-fixed" style="background:var(--dns);border-color:var(--dn);color:#ff8a80">👑 ADMIN (Rank 2 — protected)</span>';
+       }else{
+         roleCtrl='<select class="role-sel" onchange="Mod.setRole(\''+uid+'\',this.value)">'
+          +'<option value="user" '+(u.role!=='moderator'?'selected':'')+'>user</option>'
+          +'<option value="moderator" '+(u.role==='moderator'?'selected':'')+'>moderator</option>'
+          +'</select>';
+       }
+       h+='<div class="card" data-search="'+esc((u.displayName||'')+' '+(u.username||'')+' '+(u.email||'')).toLowerCase()+'">'
+        +'<div class="crow">'
+        +'<div class="cinfo"><div class="cname">'+esc(u.displayName||'Unknown')+(u.verified?' ✔':'')+(u.vip?' 👑':'')+'</div>'
+        +'<div class="cmeta">@'+esc(u.username||'—')+' · '+esc(u.email||'—')+'</div></div>'
+        +roleCtrl+'</div></div>';
+     });
+     c.innerHTML=h;
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ setRole:async function(uid,role){
+   /* OWNER + ADMIN protected — sirf Moderator ka role change ho sakta hai */
+   if(role==='admin'||role==='owner'){t('❌ Owner/Admin role sirf Firebase Console se',false);this.tabRoles();return}
+   if(uid===myUid){t('❌ Apna role nahi badal sakte (safety)',false);this.tabRoles();return}
+   if(!confirm('Set role to "'+role+'"?'))return;
+   try{
+     await db.ref('users/'+uid+'/role').set(role);
+     var msg=(role==='moderator')?'Aapko VEXA Moderator bana diya gaya hai! 🛡️':'Aapka moderator role hata diya gaya.';
+     await db.ref('users/'+uid+'/notifications').push({type:'security',title:'Role Updated',body:msg,read:false,at:Date.now()});
+     t('Role → '+role+' ✅',true);
+     this.tabRoles();
+   }catch(e){t('Failed: '+e.message,false)}
+ },
+ /* ===== REPORTS ===== */
+ loadReports:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading reports...</div>';
+   try{
+     var s=await db.ref('reports').get();
+     if(!s.exists()){c.innerHTML='<div class="empt"><div class="ei">✅</div>No reports!</div>';return}
+     var h='';
+     var arr=[];
+     s.forEach(function(x){arr.push({id:x.key,val:x.val()})});
+     arr.sort(function(a,b){return (b.val.at||0)-(a.val.at||0)});
+     arr.forEach(function(r){
+       var v=r.val;
+       h+='<div class="card"><div class="crow"><div style="font-size:20px">🚩</div>'
+        +'<div class="cinfo"><div class="cname">'+esc(v.type)+' report <span class="badge" style="background:'+(v.status==='pending'?'var(--wns);color:#ffd27d':'var(--oks);color:#7dffa0')+'">'+esc(v.status||'pending')+'</span></div>'
+        +'<div class="rep-reason">Reason: '+esc(v.reason||'—')+'</div>'
+        +'<div class="cmeta">Target: <span class="mono">'+esc(v.targetId||'—')+'</span> · '+ago(v.at)+'</div></div></div>'
+        +'<div style="display:flex;gap:6px;margin-top:10px">'
+        +'<button class="btn bok bsm" onclick="Mod.resolve(\''+r.id+'\',\'resolved\')">✓ Resolve</button>'
+        +'<button class="btn bg bsm" onclick="Mod.resolve(\''+r.id+'\',\'dismissed\')">✕ Dismiss</button>'
+        +'</div></div>';
+     });
+     c.innerHTML=h;
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ resolve:async function(id,status){
+   try{await db.ref('reports/'+id+'/status').set(status);t('Report '+status+' ✅',true);this.loadReports();this.loadStats()}
+   catch(e){t('Failed',false)}
+ },
+ /* ===== POSTS ===== */
+ loadPosts:async function(){
+   var c=document.getElementById('tabContent');
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Loading posts...</div>';
+   try{
+     var s=await db.ref('posts').limitToLast(50).get();
+     if(!s.exists()){c.innerHTML='<div class="empt"><div class="ei">📭</div>No posts</div>';return}
+     var h='';
+     var arr=[];
+     s.forEach(function(x){arr.push({id:x.key,val:x.val()})});
+     arr.reverse();
+     arr.forEach(function(p){
+       var v=p.val;
+       h+='<div class="card"><div class="crow"><div style="font-size:18px">📝</div>'
+        +'<div class="cinfo"><div class="cname">'+esc((v.caption||'(no caption)').slice(0,60))+'</div>'
+        +'<div class="cmeta">By: <span class="mono">'+esc(v.userId)+'</span> · '+ago(v.createdAt)+'</div></div></div>'
+        +'<div style="display:flex;gap:6px;margin-top:10px">'
+        +'<button class="btn bdn bsm" onclick="Mod.delPost(\''+p.id+'\')">🗑️ Remove post</button>'
+        +'</div></div>';
+     });
+     c.innerHTML=h;
+   }catch(e){c.innerHTML='<div class="empt">Error: '+esc(e.message)+'</div>'}
+ },
+ delPost:async function(id){
+   if(!confirm('Remove this post?'))return;
+   try{await db.ref('posts/'+id).remove();await db.ref('likes/'+id).remove();t('Removed ✅',true);this.loadPosts();this.loadStats()}
+   catch(e){t('Failed: '+e.message,false)}
+ },
+ /* ===== STAFF CHAT ===== */
+ tabStaffChat:function(){
+   var c=document.getElementById('tabContent');
+   if(this.staffTabRendered)return;
+   c.innerHTML='<div class="card"><div class="cname" style="margin-bottom:8px">💬 Staff Group Chat <span class="sm mut">(Admin + Moderators)</span></div>'
+    +'<div class="scwrap"><div class="scmsgs" id="scMsgs"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<input class="inp" id="scInput" placeholder="Message..." onkeydown="if(event.key===\'Enter\'){StaffChat.send()}">'
+    +'<button class="btn bp bsm" onclick="StaffChat.send()">➤</button>'
+    +'</div></div></div>';
+   this.staffTabRendered=true;
+   StaffChat.start();
+ }
+};
+
+/* ---------- BOOT ---------- */
+try{
+  firebase.initializeApp(CFG.firebase);
+  auth=firebase.auth();
+  db=firebase.database();
+  Theme.init();
+  FontPicker.init();
+  auth.onAuthStateChanged(function(u){
+    if(!u)return;
+    db.ref('users/'+u.uid+'/role').get().then(function(s){
+      var r=s.exists()?s.val():'user';
+      if(r==='moderator'||r==='admin'||r==='owner'){
+        myUid=u.uid;
+        myRole=r;
+        Mod.showPanel();
+      }
+    });
+  });
+}catch(e){
+  var eb=document.getElementById('lErr');
+  if(eb){eb.textContent='⚠️ Init error: '+e.message;eb.classList.add('show')}
+}
+</script>
+</body>
+</html>
