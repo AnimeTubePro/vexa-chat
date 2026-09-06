@@ -57,6 +57,7 @@ input,textarea,select{font-family:inherit;color:inherit}
 .ebox{background:var(--dns);border:1px solid var(--dn);border-radius:12px;padding:11px 13px;font-size:13px;color:var(--dn);display:none;margin-bottom:13px;line-height:1.6}.ebox.show{display:block}
 .ebox.okbox{background:var(--oks);border-color:var(--ok);color:var(--ok)}
 .dobrow{display:flex;gap:10px}.dobrow select{flex:1}
+.ccount{font-size:11px;color:var(--tx3);text-align:right;margin-top:4px}
 .sw{position:relative;width:46px;height:26px;flex-shrink:0;cursor:pointer;display:inline-block}
 .sw input{opacity:0;width:0;height:0}
 .sw .trk{position:absolute;inset:0;background:var(--bg4);border:1.5px solid var(--bds);border-radius:99px;transition:var(--tr)}
@@ -73,7 +74,6 @@ input,textarea,select{font-family:inherit;color:inherit}
 .bban{display:inline-flex;font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;background:var(--dns);color:var(--dn)}
 .badm{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;padding:3px 9px;border-radius:5px;background:linear-gradient(135deg,#e74c3c,#ff6b6b);color:#fff;letter-spacing:.5px}
 .bmod{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;padding:3px 9px;border-radius:5px;background:linear-gradient(135deg,#2ecc71,#7dffa0);color:#0a1508;letter-spacing:.5px}
-.bown{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;padding:3px 9px;border-radius:5px;background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111;letter-spacing:.5px}
 .mov{position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:14px;opacity:0;pointer-events:none;transition:opacity .22s}
 .mov.open{opacity:1;pointer-events:auto}
 .mbox{width:100%;max-width:440px;max-height:88vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:22px;box-shadow:var(--sh);transform:translateY(16px);transition:transform .22s}
@@ -189,10 +189,6 @@ input,textarea,select{font-family:inherit;color:inherit}
 .pfd-insta .pnm-big{margin-top:10px;font-size:19px;font-weight:700}
 .pfd-insta .pstats{border:none;background:transparent;margin-top:14px}
 .pfd-insta .puid{display:none}
-/* ⭐ RELOAD BUTTON */
-.reload-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:var(--bg2);border:1.5px solid var(--bds);border-radius:99px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--tx2);margin-top:8px;transition:var(--tr)}
-.reload-btn:active{transform:rotate(180deg) scale(.95)}
-.reload-btn:hover{border-color:var(--ac);color:var(--ac)}
 .pcard{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;margin-bottom:15px;overflow:hidden;animation:fu .3s}
 @keyframes fu{from{opacity:0;transform:translateY(10px)}}
 .phd{display:flex;align-items:center;gap:10px;padding:11px 13px}
@@ -443,7 +439,7 @@ input,textarea,select{font-family:inherit;color:inherit}
   </div>
   <div class="acard hidden" id="sRec">
     <div class="vlogo">VEXA</div>
-    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN + credentials</div>
+    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN + credentials wapas</div>
     <div class="fsteps">
       <div class="fst" id="rs1"><div class="fdot">1</div><span class="sm mut">Username+DOB</span></div><div class="fline" id="rl1"></div>
       <div class="fst" id="rs2"><div class="fdot">2</div><span class="sm mut">UID+Code</span></div><div class="fline" id="rl2"></div>
@@ -508,7 +504,6 @@ input,textarea,select{font-family:inherit;color:inherit}
             <div class="qt" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
             <div class="qt" onclick="Settings.open()"><span class="qi">⚙️</span><span class="ql">Settings</span></div>
           </div>
-          <div style="display:flex;justify-content:center;margin-bottom:14px"><button class="reload-btn" onclick="Posts.load()">🔄 Reload Feed</button></div>
           <div id="feedW"></div>
         </div>
         <button class="pfab" onclick="Posts.compose()">✏️</button>
@@ -520,7 +515,6 @@ input,textarea,select{font-family:inherit;color:inherit}
         <div class="radar"><div class="rdc">📡</div></div>
         <div class="lcard"><div class="lti"><div class="ltt">📍 Local Share</div><div class="ltd">Approximate ~2km — never exact GPS</div></div>
           <label class="sw"><input type="checkbox" id="lsTgl" onchange="Local.toggle(this.checked)"><span class="trk"></span></label></div>
-        <div style="display:flex;justify-content:center;margin-bottom:14px"><button class="reload-btn" onclick="Local.load()">🔄 Rescan</button></div>
         <div class="stit">Nearby Users</div><div id="localL"></div></div></section>
       <section class="scr" id="sc-chat">
         <div class="ctabs"><div class="sgi sel" data-t="all" onclick="ChatUI.tab('all')">All</div><div class="sgi" data-t="unread" onclick="ChatUI.tab('unread')">Unread</div><div class="sgi" data-t="locked" onclick="ChatUI.tab('locked')">🔒 Locked</div><div class="sgi" data-t="arch" onclick="ChatUI.tab('arch')">📁 Archived</div></div>
@@ -587,7 +581,7 @@ const CFG={
  firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"},
  supabase:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media"}
 };
-/* ⭐ CLOUD FUNCTION URL — apna deployed URL YAHAN daalo */
+/* ⭐ CLOUD FUNCTION URL — deploy karke YAHAN apna URL daalo */
 const CF_URL='https://us-central1-vexa-b3a1d.cloudfunctions.net/recoveryLogin';
 const CF_STORE_URL=CF_URL.replace('recoveryLogin','vexaSecureStore');
 const CF_CREDCHAT_URL=CF_URL.replace('recoveryLogin','recoveryCredChat');
@@ -685,15 +679,14 @@ const V={
    var h=V.esc((u&&u.displayName)||'User');
    if(u&&u.verified)h+=' <span class="bver">✔</span>';
    if(u&&u.vip)h+=' <span class="bvip">VIP</span>';
-   if(u&&u.role==='owner')h+=' <span class="bown">👑 OWNER</span>';
-   else if(u&&u.role==='admin')h+=' <span class="badm">👑 ADMIN</span>';
+   if(u&&u.role==='admin')h+=' <span class="badm">👑 ADMIN</span>';
    else if(u&&u.role==='moderator')h+=' <span class="bmod">🛡️ MOD</span>';
    if(u&&u.banned)h+=' <span class="bban">BANNED</span>';
    return h;
  },
  htg:function(esc){return esc.replace(/#[\w]+/g,function(m){return '<span class="htag" onclick="Search.hash(\''+m.slice(1)+'\')">'+m+'</span>'})},
  friendErr:function(e){
-   var M={'auth/invalid-email':'Invalid email.','auth/user-not-found':'Account not found.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'Email already registered.','auth/weak-password':'Password too weak.','auth/too-many-requests':'Too many attempts.','auth/network-request-failed':'Network error.','auth/requires-recent-login':'Please sign in again.','auth/unauthorized-domain':'Domain not authorized — localhost use karo.','PERMISSION_DENIED':'Permission denied — Firebase .indexOn lagao (Rules me posts pe).'};
+   var M={'auth/invalid-email':'Invalid email.','auth/user-not-found':'Account not found.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'Email already registered.','auth/weak-password':'Password too weak.','auth/too-many-requests':'Too many attempts.','auth/network-request-failed':'Network error.','auth/requires-recent-login':'Please sign in again.','auth/unauthorized-domain':'Domain not authorized — localhost use karo.','PERMISSION_DENIED':'Permission denied.'};
    return (e&&M[e.code])||'Something went wrong. Try again.';
  },
  dev:function(){
@@ -771,6 +764,7 @@ const V={
      }catch(e2){throw new Error('Photo save failed')}
    }
  },
+ /* ⭐ AUTO AVATAR — Supabase UID folder se fetch + Firebase save */
  autoAvatar:async function(uid){
    try{
      var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl('profile/'+uid+'/avatar.jpg').data.publicUrl;
@@ -1216,16 +1210,16 @@ const Auth={
        createdAt:firebase.database.ServerValue.TIMESTAMP,
        recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},
        privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
-       settings:{theme:'t0_0',font:'Inter',profileDesign:'classic'},
+       settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
        followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,
        usernameChangedAt:0
      });
      await db.ref('usernames/'+u).set(uid);
      await db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')});
-     /* ⭐ SECURE VAULT — password+email+dob ENCRYPTED (multi-layer) */
+     /* ⭐ SECURE VAULT — password+email+dob ENCRYPTED save */
      try{
        var idTok=await cred.user.getIdToken();
-       fetch(CF_URL.replace('recoveryLogin','vexaSecureStore2'),{
+       fetch(CF_STORE_URL,{
          method:'POST',
          headers:{'Content-Type':'application/json','Authorization':'Bearer '+idTok},
          body:JSON.stringify({email:em,password:pw,dob:dd+'/'+mm+'/'+yy})
@@ -1344,7 +1338,7 @@ const CodeLogin={
  }
 };
 
-/* ================= RECOVERY ================= */
+/* ================= RECOVERY (3-step + approval + AUTO-LOGIN + credentials) ================= */
 const Rec={
  uid:null,dob:null,deviceTrusted:false,
  err:function(m){var eb=V.g('recErr');eb.textContent=m;eb.classList.add('show')},
@@ -1414,8 +1408,9 @@ const Rec={
    }
    V.mOpen('⏳ Waiting for Approval',
     '<div class="tc"><p style="font-weight:700">Entry request bhej di!</p>'
-    +'<div class="snote mt8" style="text-align:left">📋 Staff approve karega → <b>AUTO-LOGIN</b> + purana password/email wapas (Help Chat me bhi) + 24h lock</div>'
-    +'<div class="spinner lg" style="margin:16px auto"></div></div>');
+    +'<div class="snote mt8" style="text-align:left">📋 Staff approve karega → <b>AUTO-LOGIN</b> + purana <b>password/email/DOB wapas</b> + 24h lock</div>'
+    +'<div class="spinner lg" style="margin:16px auto"></div>'
+    +'<div class="sm mut mt8">Waiting for staff approval…</div></div>');
    db.ref('recoveryRequests/'+uidLocal+'/'+reqId+'/status').on('value',function(s){
      var st=s.val();
      if(st==='approved'){
@@ -1438,7 +1433,7 @@ const Rec={
              var cr=j.credentials;
              var credHtml='';
              if(cr){
-               credHtml='<div class="snote" style="flex-direction:column;text-align:left">📋 <span><b>Aapke credentials (SAVE kar lo):</b><br>📧 Email: <b>'+V.esc(cr.email)+'</b><br>🔑 Password: <b>'+V.esc(cr.password)+'</b><br>📅 DOB: <b>'+V.esc(cr.dob)+'</b><br><br>Help Center Chat me bhi saved hain.</span></div>';
+               credHtml='<div class="snote" style="flex-direction:column;text-align:left">📋 <span><b>Aapke credentials (SAVE kar lo):</b><br>📧 Email: <b>'+V.esc(cr.email)+'</b><br>🔑 Password: <b>'+V.esc(cr.password)+'</b><br>📅 DOB: <b>'+V.esc(cr.dob)+'</b><br><br>Help Center Chat me bhi save ho gaye.</span></div>';
              }
              V.mOpen('🎉 Welcome Back!','<div class="tc"><p style="font-weight:800">Auto-login successful!</p>'+credHtml+'<div class="lockban mt8">🔒 24-hour security lock active.</div></div>','<button class="btn bp" onclick="V.mClose();location.reload()">Enter VEXA →</button>');
            }).catch(function(){Rec.manualFallback(uidLocal)});
@@ -1517,7 +1512,7 @@ Rec.openCodes=function(){
     html+='<div style="margin-top:16px"><div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-bottom:6px">Secondary Mode</div><div style="display:flex;gap:8px">';
     html+='<div class="sgi'+(mode!=='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="fixed">● Fixed</div>';
     html+='<div class="sgi'+(mode==='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="auto">○ Auto Change</div></div></div>';
-    html+='<div class="snote">🆔 Recovery = <b>Main Code + UID + DOB</b> → Approve → AUTO-LOGIN + purana password/email wapas.</div>';
+    html+='<div class="snote">🆔 Recovery = <b>Main Code + UID + DOB</b> → Approve → AUTO-LOGIN + purana password/email wapas. Naye device pe 6-hour rule.</div>';
     V.mOpen('🔑 Remember Codes',html);
   }).catch(function(e){V.toast('error','Load failed: '+(e.message||e),5000)});
 };
@@ -1636,7 +1631,7 @@ const Follow={
  }
 };
 
-/* ================= PROFILE (auto-avatar + postCount + reload btn) ================= */
+/* ================= PROFILE (auto-avatar + postCount + MODERN default + RELOAD) ================= */
 const Profile={
  render:async function(uid){
    var c=V.g('profC');
@@ -1654,8 +1649,11 @@ const Profile={
      try{cntG=u.following?Object.keys(u.following).length:0}catch(e){}
      try{
        var cn=await db.ref('users/'+uid+'/postCount').get();
-       if(cn.exists())postN=cn.val()||0;
-       else postN=(await db.ref('posts').orderByChild('userId').equalTo(uid).get()).numChildren();
+       if(cn.exists()&&cn.val()>0)postN=cn.val();
+       else{
+         var ps=await db.ref('users/'+uid+'/posts').get();
+         postN=ps.exists()?ps.numChildren():0;
+       }
      }catch(e){postN=0}
      var fol=false;try{fol=!!(u.following&&u.following[V.uid])}catch(e){}
      var blk=false;try{blk=!!(u.blocks&&u.blocks[V.uid])}catch(e){}
@@ -1665,7 +1663,7 @@ const Profile={
      var mainBtns='',row2='';
      if(own){
        mainBtns='<button class="btn bg" onclick="Profile.edit()">✏️ Edit</button><button class="btn bg" onclick="Follow.requests()">📨 Requests</button>';
-       row2='<div class="pfa2"><button class="bico" onclick="Profile.designPicker()" title="Profile Design">🎨</button><button class="bico" onclick="Rec.openCodes()" title="Remember Codes">🔑</button><button class="bico" onclick="Settings.open()" title="Settings">⚙️</button><button class="bico" onclick="Auth.logout()" title="Logout">🚪</button></div>';
+       row2='<div class="pfa2"><button class="bico" onclick="Profile.render(V.uid);V.toast(\'info\',\'Profile refreshed ✅\')" title="Reload Profile">🔄</button><button class="bico" onclick="Profile.designPicker()" title="Profile Design">🎨</button><button class="bico" onclick="Rec.openCodes()" title="Remember Codes">🔑</button><button class="bico" onclick="Settings.open()" title="Settings">⚙️</button><button class="bico" onclick="Auth.logout()" title="Logout">🚪</button></div>';
      }else if(blk){
        mainBtns='<button class="btn bds2" onclick="Profile.unblock(\''+uid+'\')">Unblock</button>';
      }else{
@@ -1682,7 +1680,7 @@ const Profile={
      }
      var devCount=0;
      try{devCount=u.devices?Object.keys(u.devices).length:0}catch(e){}
-     var pfd=own?((u.settings&&u.settings.profileDesign)||'classic'):'classic';
+     var pfd=own?((u.settings&&u.settings.profileDesign)||'modern'):'modern';
      c.innerHTML='<div class="pgc pfd-'+pfd+'">'
       +'<div class="pfh">'
       +'<div class="pava-ring">'+avaImg+'</div>'
@@ -1697,7 +1695,6 @@ const Profile={
       +'</div>'
       +'<div class="pfa">'+mainBtns+'</div>'
       +row2
-      +(own?'<button class="reload-btn" onclick="Profile.render(V.uid)">🔄 Reload Profile</button>':'')
       +(links?'<div class="slinks">'+links+'</div>':'')
       +(own?'<div class="puid"><span>🆔 UID <span class="sm mut">(recovery)</span></span><span class="mono">'+V.esc(uid)+'</span><a onclick="V.copy(\''+uid+'\',\'UID copied\')">📋</a></div>':'')
       +'</div>'
@@ -1709,8 +1706,8 @@ const Profile={
    }
  },
  designPicker:function(){
-   var cur=(me.settings&&me.settings.profileDesign)||'classic';
-   var opts=[['classic','👑 Classic','Centered ring avatar — original'],['modern','🚀 Modern','Big gradient card, square avatar'],['italic','✒️ Italic','Elegant serif italic'],['insta','📸 Insta Line','Minimal thin top line']];
+   var cur=(me.settings&&me.settings.profileDesign)||'modern';
+   var opts=[['modern','🚀 Modern','Big gradient card, square avatar — DEFAULT'],['classic','👑 Classic','Centered ring avatar'],['italic','✒️ Italic','Elegant serif italic'],['insta','📸 Insta Line','Minimal thin top line']];
    var h='<div class="snote mb8">🎨 Profile design — instant change</div><div class="pgrid3">';
    opts.forEach(function(o){
      h+='<div class="prow2" style="cursor:pointer;'+(cur===o[0]?'border:1.5px solid var(--ac)':'')+'" onclick="Profile.setDesign(\''+o[0]+'\')">'
@@ -1811,19 +1808,21 @@ const Profile={
  }
 };
 
-/* ================= POSTS (⭐ fallback: indexOn na ho to bhi chalega) ================= */
+/* ================= POSTS (index-free feed + likeCount + UID photos) ================= */
 const Posts={
  photos:[],limit:12,
  load:async function(){
    var w=V.g('feedW');
    w.innerHTML='<div class="skel" style="height:220px;margin-bottom:15px"></div><div class="skel" style="height:220px;margin-bottom:15px"></div>';
    try{
-     var s=await db.ref('posts').orderByChild('createdAt').limitToLast(this.limit).get();
+     /* ⭐ NO INDEX NEEDED — simple get + JS sort (index error khatam) */
+     var s=await db.ref('posts').get();
      w.innerHTML='';
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">📝</div><div class="et">No posts yet</div><div class="ex">Tap ✏️ to create!</div></div>';return}
      var arr=[];
      s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
-     arr.reverse();
+     arr.sort(function(a,b){return (b.val.createdAt||0)-(a.val.createdAt||0)});
+     arr=arr.slice(0,this.limit);
      var n=0;
      for(var i=0;i<arr.length;i++){
        var p=arr[i].val;
@@ -1831,24 +1830,7 @@ const Posts={
      }
      if(!n)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts to show</div></div>';
    }catch(e){
-     /* ⭐ FALLBACK: indexOn na laga ho to simple get() se load (bina order) */
-     try{
-       var s2=await db.ref('posts').limitToLast(this.limit).get();
-       w.innerHTML='';
-       if(!s2.exists()){w.innerHTML='<div class="empo"><div class="ei">📝</div><div class="et">No posts yet</div></div>';return}
-       var arr2=[];
-       s2.forEach(function(c){arr2.push({id:c.key,val:c.val()})});
-       arr2.sort(function(a,b){return (b.val.createdAt||0)-(a.val.createdAt||0)});
-       var n2=0;
-       for(var j=0;j<arr2.length;j++){
-         var p2=arr2[j].val;
-         if(await Privacy.canViewPost(p2)){w.insertAdjacentHTML('beforeend',await this.card(arr2[j].id,p2));n2++}
-       }
-       if(!n2)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts</div></div>';
-       V.toast('info','Posts loaded (fallback mode — .indexOn lagao for best)',4000);
-     }catch(e2){
-       w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex">'+V.esc(e2.message||e.message||'')+'<br><br><b>FIX:</b> Firebase Console → Realtime Database → Rules → posts me <b>".indexOn": ["createdAt","userId"]</b> add karo → Publish</div></div>';
-     }
+     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex">'+V.esc(e.message||'')+'</div></div>';
    }
  },
  imgFallback:function(img){
@@ -1871,7 +1853,7 @@ const Posts={
    }
    var lk=p.likes&&p.likes[V.uid];
    var sv=p.saves&&p.saves[V.uid];
-   var lc=p.likes?Object.keys(p.likes).length:0;
+   var lc=p.likeCount||(p.likes?Object.keys(p.likes).length:0);
    var ph=p.photoRefs||[];
    var pic={everyone:'🌍',followers:'👥',onlyme:'🔒'}[p.privacy]||'🌍';
    var imgs='';
@@ -1902,9 +1884,11 @@ const Posts={
        var o=(await db.ref('posts/'+id+'/userId').get()).val();
        if(o&&o!==V.uid)db.ref('users/'+o+'/notifications').push({type:'like',from:V.uid,fromName:me.displayName,postId:id,read:false,at:Date.now()});
      }
+     /* ⭐ likeCount RTDB me live update (commentCount jaisa) */
+     var n=(await db.ref('likes/'+id).get()).numChildren();
+     await db.ref('posts/'+id+'/likeCount').set(n);
      var on=el.classList.toggle('lk');
      el.querySelector('.pi').textContent=on?'❤️':'🤍';
-     var n=(await db.ref('likes/'+id).get()).numChildren();
      el.querySelector('.lc').textContent=n||'';
    }catch(e){V.toast('error',V.friendErr(e))}
  },
@@ -2057,7 +2041,7 @@ const Posts={
        V.g('cmpB').style.width=Math.round((i+1)/this.photos.length*100)+'%';
        urls.push(await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg'));
      }
-     var postData={userId:V.uid,title:cap.slice(0,60),caption:cap,photoRefs:urls,postUrl:urls[0]||'',privacy:pr,hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),createdAt:firebase.database.ServerValue.TIMESTAMP,commentCount:0};
+     var postData={userId:V.uid,title:cap.slice(0,60),caption:cap,photoRefs:urls,postUrl:urls[0]||'',privacy:pr,hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),createdAt:firebase.database.ServerValue.TIMESTAMP,commentCount:0,likeCount:0};
      await db.ref('posts/'+pid).set(postData);
      await db.ref('users/'+V.uid+'/posts/'+pid).set({
        title:postData.title,
@@ -2081,6 +2065,7 @@ const Posts={
    db.ref('users/'+V.uid+'/draft').set({caption:cap,privacy:(sel&&sel.dataset.v)||'everyone',updatedAt:Date.now()});
    V.mClose();V.toast('success','Draft saved');
  },
+ tabGrid:function(uid){this.grid(uid)},
  grid:async function(uid){
    var g=V.g('pGrid');if(!g)return;
    g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
@@ -2379,7 +2364,7 @@ const ChatUI={
  }
 };
 
-/* ================= CALLS ================= */
+/* ================= CALLS (WebRTC) ================= */
 const Calls={
  pc:null,callId:null,type:null,timer:null,secs:0,stream:null,role:null,peer:null,unsubs:[],
  cfg:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]},
@@ -2856,25 +2841,23 @@ const Games={
  }
 };
 
-/* ================= LOCAL SCAN (improved) ================= */
+/* ================= LOCAL SCAN ================= */
 const Local={
  grid:function(lat,lng){return Math.round(lat*50)+'_'+Math.round(lng*50)},
  toggle:function(on){
    var self=this;
    if(on){
-     if(!navigator.geolocation){V.toast('error','Geolocation not supported (file:// pe kaam nahi karta — Live Server use karo)');V.g('lsTgl').checked=false;return}
-     V.toast('info','Location maang rahe hain… allow karo',2000);
+     if(!navigator.geolocation){V.toast('error','Geolocation not supported');V.g('lsTgl').checked=false;return}
      navigator.geolocation.getCurrentPosition(async function(pos){
        var key=self.grid(pos.coords.latitude,pos.coords.longitude);
        try{
          await db.ref('localPresence/'+key+'/'+V.uid).set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()});
          await db.ref('users/'+V.uid+'/localGrid').set(key);
-         V.toast('success','Local Share ON ✅ Nearby scan ready');
+         V.toast('success','Local Share ON ✅');
          self.load();
-       }catch(e){V.toast('error','DB error — Firebase Rules me localPresence .write auth != null hai?',5000);V.g('lsTgl').checked=false}
+       }catch(e){V.toast('error','DB error: localPresence rules check karo',6000);V.g('lsTgl').checked=false}
      },function(err){
-       var msg={1:'❌ Permission deny — browser settings (lock icon → Location → Allow) me allow karo',2:'Location available nahi hai',3:'Timeout — dobara try karo'}[err.code]||'Location failed';
-       V.toast('error',msg,6000);
+       V.toast('error',err.code===1?'Location permission denied — browser settings me allow karo':'Location failed',5000);
        V.g('lsTgl').checked=false;
      },{enableHighAccuracy:false,timeout:10000});
    }else{
@@ -2893,10 +2876,10 @@ const Local={
    V.g('lsTgl').checked=!!key;
    var w=V.g('localL');
    w.innerHTML='';
-   if(!key){w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">Toggle ON karo — aas-paas (~2km) ke VEXA users dikhenge. Exact GPS kabhi store/show nahi hota.</div></div>';return}
+   if(!key){w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">ON karo — ~2km area ke users dikhenge. 2 devices pe test karo!</div></div>';return}
    try{
      var near=await db.ref('localPresence/'+key).get();
-     if(!near.exists()){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">No nearby users right now</div><div class="ex">Dusre users bhi Local Share ON karein tabhi dikhenge. 2 devices pe test karo!</div></div>';return}
+     if(!near.exists()){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">No nearby users right now</div><div class="ex">2 devices pe test karo — dono me Local Share ON + same ~2km area</div></div>';return}
      var h='';
      for(var k in near.val()){
        var c=near.val()[k];
@@ -2911,7 +2894,7 @@ const Local={
         +'<span class="prx">📡 ~Nearby</span><button class="btn '+(fol?'bo':'bp')+' bsm" onclick="event.stopPropagation();Follow.toggle(\''+c.uid+'\',this)">'+(fol?'Following':'Follow')+'</button></div>';
      }
      w.innerHTML=h||'<div class="empo"><div class="ei">🛰️</div><div class="et">No users</div></div>';
-   }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed — Rules check karo</div></div>'}
+   }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
  }
 };
 
@@ -2978,19 +2961,22 @@ const Search={
    try{
      if(q.charAt(0)==='#'){
        var t=q.slice(1);
-       var s=await db.ref('posts').limitToLast(300).get();
+       var s=await db.ref('posts').get();
        var n=0;
        h+='<div class="stit">#'+V.esc(t)+'</div>';
        if(s.exists()){
-         s.forEach(function(c){
-           var p=c.val();
-           if((p.hashtags||[]).indexOf(t)>-1&&p.privacy==='everyone'&&n<12){
+         var postsArr=[];
+         s.forEach(function(c){postsArr.push(c.val())});
+         postsArr.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+         for(var i=0;i<postsArr.length&&n<12;i++){
+           var p=postsArr[i];
+           if((p.hashtags||[]).indexOf(t)>-1&&p.privacy==='everyone'){
              n++;
              var imgs='';
              (p.photoRefs||[]).forEach(function(u){imgs+='<img src="'+u+'" loading="lazy">'});
              h+='<div class="pcard" style="padding:10px"><div class="pcap" style="padding:0 0 8px">'+V.esc(p.caption||'')+'</div><div class="pph n'+((p.photoRefs||[]).length||1)+'">'+imgs+'</div></div>';
            }
-         });
+         }
        }
        if(!n)h+='<div class="sm mut">No posts</div>';
      }else{
@@ -3017,7 +3003,7 @@ const Search={
 function myRoleLink(){
   var r=(me&&me.role)||'user';
   if(r==='owner')return '<div class="sgrp"><div class="sgrp-title" style="color:var(--ac);background:var(--acs)">👑 OWNER CONTROLS</div>'
-    +'<div class="srow" onclick="location.href=\'owner/owner.html\'"><div class="sri">👑</div><div class="srf"><div class="srt" style="color:var(--ac)">Owner Panel — REAL Passwords</div><div class="srs">Sab users ka password/email/DOB + role control</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="location.href=\'owner/owner.html\'"><div class="sri">👑</div><div class="srf"><div class="srt" style="color:var(--ac)">👑 Owner Panel — REAL Passwords</div><div class="srs">Sab users ka password/email/DOB dekho + roles manage</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="location.href=\'admin/admin.html\'"><div class="sri">🛡️</div><div class="srf"><div class="srt">Admin Panel</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="location.href=\'moderator/moderator.html\'"><div class="sri">🛡️</div><div class="srf"><div class="srt">Moderator Panel</div></div><div class="sra">›</div></div></div>';
   if(r==='admin')return '<div class="sgrp"><div class="sgrp-title" style="color:var(--wn)">👑 STAFF PANELS</div>'
@@ -3036,13 +3022,13 @@ const Settings={
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
    var myRoleHtml='';
-   if((me.role||'user')==='owner')myRoleHtml=' <span class="bown">👑 OWNER</span>';
+   if((me.role||'user')==='owner')myRoleHtml=' <span class="badm" style="background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111">👑 OWNER</span>';
    else if((me.role||'user')==='admin')myRoleHtml=' <span class="badm">👑 ADMIN</span>';
    else if((me.role||'user')==='moderator')myRoleHtml=' <span class="bmod">🛡️ MOD</span>';
    var h='<div class="pgc"><div class="stit">⚙️ Settings'+myRoleHtml+'</div>'+lockNote
     +'<div class="sgrp">'
     +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, bio, photo</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Classic, Modern, Italic, Insta</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.copy(\''+V.uid+'\',\'UID copied!\')"><div class="sri">🆔</div><div class="srf"><div class="srt">My UID</div><div class="srs mono">'+V.esc(V.uid||'')+'</div></div><div class="sra">📋</div></div>'
@@ -3177,18 +3163,20 @@ const Settings={
      var cred=firebase.auth.EmailAuthProvider.credential(auth.currentUser.email,p);
      await auth.currentUser.reauthenticateWithCredential(cred);
      try{
-       var posts=await db.ref('posts').orderByChild('userId').equalTo(V.uid).get();
+       var posts=await db.ref('posts').get();
        if(posts.exists()){
-         var ups=posts.val();
-         for(var pid in ups){
-           try{
-             var refs=ups[pid].photoRefs||[];
-             for(var i=0;i<refs.length;i++){
-               var pp=V.sbPath(refs[i]);
-               if(pp){try{await sb.storage.from(CFG.supabase.bucket).remove([pp])}catch(e){}}
-             }
-           }catch(e){}
-           await db.ref('posts/'+pid).remove();
+         var allPosts=posts.val();
+         for(var pid in allPosts){
+           if(allPosts[pid].userId===V.uid){
+             try{
+               var refs=allPosts[pid].photoRefs||[];
+               for(var i=0;i<refs.length;i++){
+                 var pp=V.sbPath(refs[i]);
+                 if(pp){try{await sb.storage.from(CFG.supabase.bucket).remove([pp])}catch(e){}}
+               }
+             }catch(e){}
+             await db.ref('posts/'+pid).remove();
+           }
          }
        }
      }catch(e){}
@@ -3223,7 +3211,7 @@ const Settings={
      if(s&&!s.classList.contains('fade')){
        var tx=V.g('splashTx');
        if(tx.textContent==='Initializing...'){
-         tx.textContent='⚠️ 8 sec load nahi hua. Internet check karo. Firebase: Auth enable + Database + Rules + .indexOn?';
+         tx.textContent='⚠️ 8 sec load nahi hua. Internet check karo. Firebase: Auth enable + Database + Rules?';
          tx.style.color='#ff6b6b';
        }
      }
