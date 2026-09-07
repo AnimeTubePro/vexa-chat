@@ -110,6 +110,7 @@ input,textarea,select{font-family:inherit;color:inherit}
 .pup .ava.lg{cursor:pointer;position:relative}
 .pup .ava.lg::after{content:'📷';position:absolute;bottom:-2px;right:-2px;width:30px;height:30px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:2.5px solid var(--bg2)}
 .cdisp{font-family:'Courier New',monospace;font-size:20px;font-weight:800;letter-spacing:2px;text-align:center;background:var(--bg3);border:1.5px dashed var(--bds);border-radius:12px;padding:15px;user-select:all;word-break:break-all}
+.cacts{display:flex;justify-content:center;margin-top:8px}
 .fsteps{display:flex;align-items:center;margin-bottom:20px}
 .fst{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
 .fdot{width:26px;height:26px;border-radius:50%;background:var(--bg3);border:2px solid var(--bds);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--tx3)}
@@ -493,6 +494,7 @@ input,textarea,select{font-family:inherit;color:inherit}
       <div class="ava sm" id="topAva" style="cursor:pointer" onclick="V.openProfile(V.uid)"></div>
       <div class="topt" id="topTitle">VEXA</div>
       <button class="bico" onclick="V.go('notif')" style="position:relative">🔔<span class="nbdg hidden" id="bNotifTop" style="position:absolute;top:-4px;right:-4px">0</span></button>
+      <button class="bico" onclick="V.reloadApp()" title="Reload App">🔄</button>
       <button class="bico" onclick="Settings.open()">⚙️</button>
     </header>
     <main class="scarea" id="scrArea">
@@ -572,11 +574,29 @@ input,textarea,select{font-family:inherit;color:inherit}
 <div class="tcont" id="tcont"></div>
 
 <script>
-window.onerror=function(msg,src,line){
-  var el=document.getElementById('splashTx');
-  if(el){el.textContent='⚠️ Error: '+msg+' (line '+line+')';el.style.color='#ff6b6b'}
-  return false;
-};
+/* 🛡️ SAFETY NET — ALAG block: main script crash ho to bhi ye zinda rahega */
+window.addEventListener('error',function(e){
+  var el=document.getElementById('splashTx'),sp=document.getElementById('splash');
+  if(el&&sp&&!sp.classList.contains('fade')){
+    el.textContent='⚠️ Error: '+((e&&e.message)||'Script error');
+    el.style.color='#ff6b6b';
+  }
+},true);
+setTimeout(function(){
+  var s=document.getElementById('splash');
+  if(s&&!s.classList.contains('fade')){
+    s.classList.add('fade');
+    var ab=document.getElementById('authBox'),ap=document.getElementById('app');
+    if(ab&&ap&&!ap.classList.contains('act')){
+      ab.classList.remove('hidden');
+      var cards=document.querySelectorAll('#authBox .acard');
+      for(var i=0;i<cards.length;i++){if(cards[i].id==='sLogin'){cards[i].classList.remove('hidden');break}}
+    }
+  }
+},3000);
+</script>
+
+<script>
 const CFG={
  firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"},
  supabase:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media"}
@@ -681,7 +701,8 @@ const V={
    var h=V.esc((u&&u.displayName)||'User');
    if(u&&u.verified)h+=' <span class="bver">✔</span>';
    if(u&&u.vip)h+=' <span class="bvip">VIP</span>';
-   if(u&&u.role==='admin')h+=' <span class="badm">👑 ADMIN</span>';
+   if(u&&u.role==='owner')h+=' <span class="badm" style="background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111">👑 OWNER</span>';
+   else if(u&&u.role==='admin')h+=' <span class="badm">👑 ADMIN</span>';
    else if(u&&u.role==='moderator')h+=' <span class="bmod">🛡️ MOD</span>';
    if(u&&u.banned)h+=' <span class="bban">BANNED</span>';
    return h;
@@ -799,6 +820,14 @@ const V={
    set(V.g('topAva'));
  },
  fadeSplash:function(){var s=V.g('splash');if(s)s.classList.add('fade')},
+ /* 🔄 RELOAD APP — cache clear + fresh start */
+ reloadApp:function(){
+   try{
+     if('caches' in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}
+   }catch(e){}
+   try{sessionStorage.removeItem('vexaSid')}catch(e){}
+   location.reload(true);
+ },
  /* ⭐⭐ CRASH-PROOF requireAuth — splash KABHI stuck nahi hoga */
  requireAuth:function(cb){
    auth.onAuthStateChanged(async function(u){
@@ -2821,6 +2850,7 @@ const Games={
    if(g.status==='done')return '<div class="gtb">🏁 '+(g.winner==='draw'?'Draw!':(g.winner===V.uid?'You win! 🎉':'You lose!'))+'</div>';
    return '<div class="gtb '+(my?'my':'th')+'">'+(my?'🟢 Your turn':'🟡 Their turn')+'</div>';
  },
+ /* ⭐✅ FIXED: pehle yaha extra ] tha (st[w[0]]] ) — ab sahi hai */
  ttt:function(g,pu,b){
    var st=g.state||Array(9).fill('');
    var turnMine=(g.turn===V.uid&&g.status!=='done');
@@ -3183,6 +3213,9 @@ const Settings={
     +'<div class="srow" onclick="Themes.open()"><div class="sri">🎨</div><div class="srf"><div class="srt">Themes</div><div class="srs">204 themes</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Fonts.open()"><div class="sri">🔤</div><div class="srf"><div class="srt">App Fonts</div><div class="srs">Global — sab pe lagega</div></div><div class="sra">›</div></div>'
     +'</div>'
+    +'<div class="sgrp">'
+    +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>'
+    +'</div>'
     +myRoleLink()
     +'<div class="sgrp">'
     +'<div class="srow dng2" onclick="Settings.deleteAcct()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Account</div></div><div class="sra">›</div></div>'
@@ -3349,10 +3382,8 @@ const Settings={
        var authHidden=V.g('authBox').classList.contains('hidden');
        var appShown=V.g('app').classList.contains('act');
        if(!authHidden||appShown){
-         /* Already kuch dikh raha hai — sirf splash hatao */
          V.fadeSplash();
        }else{
-         /* Kuch nahi dikha — login screen dikhao */
          V.showAuth('sLogin');
          V.g('authBox').classList.remove('hidden');
          V.fadeSplash();
