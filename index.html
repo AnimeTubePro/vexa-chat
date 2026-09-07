@@ -414,7 +414,7 @@ input,textarea,select{font-family:inherit;color:inherit}
     <div class="vlogo">VEXA</div><div class="atag">Create your private identity</div>
     <div class="atit">Create Account</div>
     <div class="ebox" id="suErr"></div>
-    <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="Auth.previewPhoto(this)"><span class="sm mut">Profile photo (optional, max 300KB)</span></div>
+    <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="Auth.previewPhoto(this)"><span class="sm mut">Profile photo (optional)</span></div>
     <div class="fld"><label class="flbl">Display Name</label><input class="inp" id="suName" maxlength="30" placeholder="Your name"></div>
     <div class="fld"><label class="flbl">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="suUname" maxlength="20" placeholder="username" autocomplete="off" oninput="Auth.checkUname()"></div>
       <div class="ferr" id="suUnErr"></div><div class="fok" id="suUnOk">✓ Username available</div><div class="fhint">4–20 chars: letters, numbers, underscore</div></div>
@@ -429,17 +429,17 @@ input,textarea,select{font-family:inherit;color:inherit}
   <div class="acard hidden" id="sCodes">
     <div class="vlogo">VEXA</div>
     <div class="atit tc">🎉 Account Created!</div>
-    <div class="asub tc">Ye codes sambhal ke rakho — recovery entry ke liye chahiye</div>
+    <div class="asub tc">Ye codes sambhal ke rakho — recovery ke liye chahiye</div>
     <div class="stit">Main Remember Code</div><div class="cdisp" id="ncMain"></div>
     <div class="cacts"><button class="btn bg bsm" onclick="V.copy(document.getElementById('ncMain').textContent,'Main code copied')">📋 Copy</button></div>
     <div class="stit mt16">Secondary Remember Code</div><div class="cdisp" id="ncSec"></div>
     <div class="cacts"><button class="btn bg bsm" onclick="V.copy(document.getElementById('ncSec').textContent,'Secondary code copied')">📋 Copy</button></div>
-    <div class="snote">⚠️ <span><b>Recovery = AUTO-LOGIN</b> + purana password/email wapas! Yaad rakho: <b>Main Code + UID + DOB</b>. Naye device se recovery pe 6-hour rule!</span></div>
+    <div class="snote">⚠️ <span><b>Recovery = AUTO-LOGIN</b> + password/email wapas! Yaad rakho: <b>Main Code + UID + DOB</b>.</span></div>
     <button class="btn bp bbk blg mt16" onclick="Auth.finishSignup()">Continue to VEXA →</button>
   </div>
   <div class="acard hidden" id="sRec">
     <div class="vlogo">VEXA</div>
-    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN + credentials wapas</div>
+    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN</div>
     <div class="fsteps">
       <div class="fst" id="rs1"><div class="fdot">1</div><span class="sm mut">Username+DOB</span></div><div class="fline" id="rl1"></div>
       <div class="fst" id="rs2"><div class="fdot">2</div><span class="sm mut">UID+Code</span></div><div class="fline" id="rl2"></div>
@@ -472,10 +472,10 @@ input,textarea,select{font-family:inherit;color:inherit}
     <div class="ebox" id="hcErr"></div>
     <div id="hcStep1">
       <div class="snote mb8">📋 Pre-programmed messages:</div>
-      <div class="rrow" onclick="Help.report('lost_account')">📱 My account is lost — I will use Recovery System</div>
-      <div class="rrow" onclick="Help.report('lost_device')">🔒 My device is lost — need approval (6-hour rule)</div>
+      <div class="rrow" onclick="Help.report('lost_account')">📱 My account is lost</div>
+      <div class="rrow" onclick="Help.report('lost_device')">🔒 My device is lost (6-hour rule)</div>
       <div class="rrow" onclick="Help.report('hacked')">🚨 My account is hacked!</div>
-      <div class="rrow" onclick="Help.report('other')">💬 Other issue — I need help</div>
+      <div class="rrow" onclick="Help.report('other')">💬 Other issue</div>
     </div>
     <div id="hcStep2" class="hidden">
       <div class="snote mb8">✅ Selected. Apna username daalo:</div>
@@ -587,7 +587,7 @@ const CF_STORE_URL=CF_URL.replace('recoveryLogin','vexaSecureStore');
 const CF_CREDCHAT_URL=CF_URL.replace('recoveryLogin','recoveryCredChat');
 let auth=null,db=null,sb=null,me=null;
 
-/* ================= CORE ================= */
+/* ================= CORE (CRASH-PROOF) ================= */
 const V={
  g:function(id){return document.getElementById(id)},
  esc:function(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML},
@@ -604,11 +604,13 @@ const V={
  },
  toast:function(t,m,ms){
    ms=ms||3000;
-   var ic={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
-   var e=document.createElement('div');e.className='toast '+t;
-   e.innerHTML='<span>'+(ic[t]||'ℹ️')+'</span><span>'+V.esc(m)+'</span>';
-   var c=V.g('tcont');if(c)c.appendChild(e);
-   setTimeout(function(){e.classList.add('out');setTimeout(function(){e.remove()},250)},ms);
+   try{
+     var ic={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+     var e=document.createElement('div');e.className='toast '+t;
+     e.innerHTML='<span>'+(ic[t]||'ℹ️')+'</span><span>'+V.esc(m)+'</span>';
+     var c=V.g('tcont');if(c)c.appendChild(e);
+     setTimeout(function(){e.classList.add('out');setTimeout(function(){e.remove()},250)},ms);
+   }catch(err){}
  },
  copy:async function(t,m){
    m=m||'Copied!';
@@ -736,9 +738,8 @@ const V={
        i.src=pub;setTimeout(function(){res(false)},5000);
      });
      if(ok)return pub;
-     throw new Error('public URL read fail');
+     throw new Error('read fail');
    }catch(e1){
-     console.warn('Supabase → inline fallback:',e1.message||e1);
      try{
        var small=await new Promise(function(res,rej){
          var img=new Image();
@@ -764,7 +765,7 @@ const V={
      }catch(e2){throw new Error('Photo save failed')}
    }
  },
- /* ⭐ AUTO AVATAR — Supabase UID folder se fetch + Firebase save */
+ /* ⭐ AUTO AVATAR — CRASH-PROOF (kabhi block nahi karega) */
  autoAvatar:async function(uid){
    try{
      var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl('profile/'+uid+'/avatar.jpg').data.publicUrl;
@@ -776,7 +777,7 @@ const V={
        await db.ref('users/'+uid+'/profilePhoto').set(pub);
        return pub;
      }
-   }catch(e){}
+   }catch(e){console.warn('autoAvatar skip:',e.message)}
    return null;
  },
  sbPath:function(url){
@@ -798,34 +799,41 @@ const V={
    set(V.g('topAva'));
  },
  fadeSplash:function(){var s=V.g('splash');if(s)s.classList.add('fade')},
+ /* ⭐⭐ CRASH-PROOF requireAuth — splash KABHI stuck nahi hoga */
  requireAuth:function(cb){
    auth.onAuthStateChanged(async function(u){
+     /* SPLASH fade SABSE PEHLE — kisi bhi condition me */
+     V.fadeSplash();
      try{
        if(!u){
          V.showAuth('sLogin');
          V.g('authBox').classList.remove('hidden');
          V.g('app').classList.remove('act');
-         V.fadeSplash();
          return;
        }
+       /* Profile load — fail ho to default user (crash nahi) */
        try{
          var s=await db.ref('users/'+u.uid).get();
-         me=s.exists()?s.val():{displayName:'User',username:'unknown',email:u.email,role:'user'};
-       }catch(e){me={displayName:'User',username:'unknown',email:u.email,role:'user'}}
+         me=s.exists()?s.val():{displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'};
+       }catch(e){console.warn('profile load fail:',e);me={displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'}}
+       /* Ban check — fail ho to continue */
        try{
          var bn=(await db.ref('users/'+u.uid+'/banned').get());
          if(bn.exists()&&bn.val()===true){
            await auth.signOut();
            V.showAuth('sLogin');
            V.g('authBox').classList.remove('hidden');
-           V.fadeSplash();
            var le=V.g('loginErr');
            if(le){le.textContent='🚫 Account banned.';le.classList.add('show')}
            return;
          }
        }catch(e){}
+       /* Auto avatar — timeout ke saath, kabhi hang nahi */
        if(!me.profilePhoto){
-         var auto=await V.autoAvatar(u.uid);
+         var auto=await Promise.race([
+           V.autoAvatar(u.uid),
+           new Promise(function(res){setTimeout(function(){res(null)},6000)})
+         ]);
          if(auto)me.profilePhoto=auto;
        }
        V.uid=u.uid;
@@ -839,13 +847,16 @@ const V={
        var sid='s_'+Math.random().toString(36).slice(2,9);
        try{sessionStorage.setItem('vexaSid',sid)}catch(e){}
        try{db.ref('users/'+V.uid+'/sessions/'+sid).set({device:V.dev(),lastActive:Date.now()})}catch(e){}
-       if(cb)cb(u);
-       V.fadeSplash();
+       if(cb){
+         try{cb(u)}catch(e){console.error('cb error:',e)}
+       }
      }catch(err){
-       V.fadeSplash();
-       V.g('splashTx').textContent='⚠️ Auth error: '+err.message;
-       V.g('splashTx').style.color='#ff6b6b';
-       V.g('splash').classList.remove('fade');
+       /* KUCH BHI GALAT HO — splash fade + app dikhao (kabhi stuck nahi) */
+       console.error('requireAuth error:',err);
+       V.showAuth('sLogin');
+       V.g('authBox').classList.remove('hidden');
+       V.g('splashTx').textContent='⚠️ Warning: '+err.message+' — app still usable';
+       V.g('splashTx').style.color='#ff9b6b';
      }
    });
  }
@@ -862,29 +873,31 @@ const Themes={
  variants:['Dark','Light','AMOLED','Neon','Glass','Soft'],
  list:function(){var out=[];for(var i=0;i<this.bases.length;i++){for(var j=0;j<this.variants.length;j++){out.push({id:'t'+i+'_'+j,name:this.bases[i][0]+' '+this.variants[j],ac:this.bases[i][1],i:i,j:j})}}return out},
  apply:function(id){
-   var t=null,lst=this.list();
-   for(var k=0;k<lst.length;k++){if(lst[k].id===id){t=lst[k];break}}
-   if(!t)t=lst[0];
-   var b=this.bases[t.i],j=t.j;
-   var light=(j===1),amoled=(j===2);
-   var R=document.documentElement.style;
-   R.setProperty('--ac',b[1]);R.setProperty('--ac2',b[1]);
-   R.setProperty('--bg1',light?'#f4f5fa':amoled?'#000000':b[2]);
-   R.setProperty('--bg2',light?'#ffffff':amoled?'#070707':b[3]);
-   R.setProperty('--bg3',light?'#eef0f5':amoled?'#101010':b[4]);
-   R.setProperty('--bg4',light?'#e3e6ee':amoled?'#1a1a1a':lighten(b[4]));
-   R.setProperty('--tx',light?'#17171f':b[5]);
-   R.setProperty('--tx2',light?'#55556a':b[6]);
-   R.setProperty('--tx3',light?'#8a8aa0':'#6a6a80');
-   R.setProperty('--bd',light?'rgba(0,0,0,.09)':'rgba(255,255,255,.08)');
-   R.setProperty('--bds',light?'rgba(0,0,0,.16)':'rgba(255,255,255,.14)');
-   R.setProperty('--hov',light?'rgba(0,0,0,.04)':'rgba(255,255,255,.05)');
-   R.setProperty('--act',light?'rgba(0,0,0,.08)':'rgba(255,255,255,.09)');
-   R.setProperty('--gl',light?'rgba(255,255,255,.9)':amoled?'rgba(0,0,0,.85)':'rgba(14,14,20,.88)');
-   R.setProperty('--acs',hexA(b[1],light?0.12:0.16));
-   R.setProperty('--gr','linear-gradient(135deg,'+b[1]+','+hexA(b[1],0.75)+')');
-   try{localStorage.setItem('vexaTheme',id)}catch(e){}
-   if(me&&V.uid){try{db.ref('users/'+V.uid+'/settings/theme').set(id)}catch(e){}}
+   try{
+     var t=null,lst=this.list();
+     for(var k=0;k<lst.length;k++){if(lst[k].id===id){t=lst[k];break}}
+     if(!t)t=lst[0];
+     var b=this.bases[t.i],j=t.j;
+     var light=(j===1),amoled=(j===2);
+     var R=document.documentElement.style;
+     R.setProperty('--ac',b[1]);R.setProperty('--ac2',b[1]);
+     R.setProperty('--bg1',light?'#f4f5fa':amoled?'#000000':b[2]);
+     R.setProperty('--bg2',light?'#ffffff':amoled?'#070707':b[3]);
+     R.setProperty('--bg3',light?'#eef0f5':amoled?'#101010':b[4]);
+     R.setProperty('--bg4',light?'#e3e6ee':amoled?'#1a1a1a':lighten(b[4]));
+     R.setProperty('--tx',light?'#17171f':b[5]);
+     R.setProperty('--tx2',light?'#55556a':b[6]);
+     R.setProperty('--tx3',light?'#8a8aa0':'#6a6a80');
+     R.setProperty('--bd',light?'rgba(0,0,0,.09)':'rgba(255,255,255,.08)');
+     R.setProperty('--bds',light?'rgba(0,0,0,.16)':'rgba(255,255,255,.14)');
+     R.setProperty('--hov',light?'rgba(0,0,0,.04)':'rgba(255,255,255,.05)');
+     R.setProperty('--act',light?'rgba(0,0,0,.08)':'rgba(255,255,255,.09)');
+     R.setProperty('--gl',light?'rgba(255,255,255,.9)':amoled?'rgba(0,0,0,.85)':'rgba(14,14,20,.88)');
+     R.setProperty('--acs',hexA(b[1],light?0.12:0.16));
+     R.setProperty('--gr','linear-gradient(135deg,'+b[1]+','+hexA(b[1],0.75)+')');
+     try{localStorage.setItem('vexaTheme',id)}catch(e){}
+     if(me&&V.uid){try{db.ref('users/'+V.uid+'/settings/theme').set(id)}catch(e){}}
+   }catch(e){console.warn('theme fail',e)}
  },
  open:function(){
    var cur='t0_0';try{cur=localStorage.getItem('vexaTheme')||'t0_0'}catch(e){}
@@ -920,16 +933,18 @@ const Fonts={
    this.loaded[f]=true;
  },
  apply:function(f){
-   this.loadCss(f);
-   document.documentElement.style.setProperty('--fb',"'"+f+"',sans-serif");
-   document.documentElement.style.setProperty('--fc',"'"+f+"',sans-serif");
-   document.body.style.fontFamily="'"+f+"',sans-serif";
-   try{localStorage.setItem('vexaFont',f)}catch(e){}
-   if(me&&V.uid){try{db.ref('users/'+V.uid+'/settings/font').set(f)}catch(e){}}
+   try{
+     this.loadCss(f);
+     document.documentElement.style.setProperty('--fb',"'"+f+"',sans-serif");
+     document.documentElement.style.setProperty('--fc',"'"+f+"',sans-serif");
+     document.body.style.fontFamily="'"+f+"',sans-serif";
+     try{localStorage.setItem('vexaFont',f)}catch(e){}
+     if(me&&V.uid){try{db.ref('users/'+V.uid+'/settings/font').set(f)}catch(e){}}
+   }catch(e){}
  },
  open:function(){
    var cur='Inter';try{cur=localStorage.getItem('vexaFont')||'Inter'}catch(e){}
-   var h='<div class="snote mb8">🌐 Font <b>PURA APP</b> pe lagega — chat, profile, posts, sab!</div>';
+   var h='<div class="snote mb8">🌐 Font <b>PURA APP</b> pe lagega!</div>';
    h+='<div class="stit" style="margin-top:0">✍️ Popular Cursive Fonts</div><div class="fgrid">';
    this.featured.forEach(function(f){
      h+='<div class="fcard'+(f.name===cur?' sel':'')+'" data-f="'+f.name+'" onclick="Fonts.pick(\''+f.name+'\')">'
@@ -1105,7 +1120,7 @@ const Privacy={
  unblock:async function(uid){try{await db.ref('users/'+V.uid+'/blocks/'+uid).remove()}catch(e){}V.toast('success','Unblocked');this.blockedOpen()}
 };
 
-/* ================= AUTH ================= */
+/* ================= AUTH (CRASH-PROOF SIGNUP — profile HAMESHA banega) ================= */
 const Auth={
  to:null,suPhotoData:null,
  initDobs:function(){
@@ -1173,6 +1188,7 @@ const Auth={
      }catch(e){}
    },450);
  },
+ /* ⭐⭐ SIGNUP — CRASH-PROOF: profile HAMESHA banegi, har step try/catch me */
  signup:async function(){
    var name=V.g('suName').value.trim();
    var u=V.g('suUname').value.trim().toLowerCase();
@@ -1199,24 +1215,39 @@ const Auth={
      if(uS.exists())throw{code:'uname'};
      var cred=await auth.createUserWithEmailAndPassword(em,pw);
      var uid=cred.user.uid;
-     var photo=await this.uploadSignupPhoto(uid);
-     if(photo)V.toast('success','Photo saved ✅');
+     /* ⭐ PROFILE DATA — banega HAMESHA, har cheez try/catch me */
+     var photo='';
+     try{photo=await this.uploadSignupPhoto(uid)}catch(pe){console.warn('photo skip',pe)}
      var mainCode=V.genCode(4,4),secCode=V.genCode(3,4);
-     var mh=await V.sha(mainCode),sh=await V.sha(secCode);
-     var eh=await V.sha(em.toLowerCase()),dh=await V.sha(dd+'/'+mm+'/'+yy);
-     await db.ref('users/'+uid).set({
-       username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,
-       profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,
-       createdAt:firebase.database.ServerValue.TIMESTAMP,
-       recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},
-       privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
-       settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
-       followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,
-       usernameChangedAt:0
-     });
-     await db.ref('usernames/'+u).set(uid);
-     await db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')});
-     /* ⭐ SECURE VAULT — password+email+dob ENCRYPTED save */
+     var mh='',sh='',eh='',dh='';
+     try{mh=await V.sha(mainCode)}catch(e){}
+     try{sh=await V.sha(secCode)}catch(e){}
+     try{eh=await V.sha(em.toLowerCase())}catch(e){}
+     try{dh=await V.sha(dd+'/'+mm+'/'+yy)}catch(e){}
+     try{
+       await db.ref('users/'+uid).set({
+         username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,
+         profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,
+         createdAt:firebase.database.ServerValue.TIMESTAMP,
+         recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},
+         privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
+         settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
+         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,
+         usernameChangedAt:0
+       });
+     }catch(pe2){
+       /* ⭐ CRITICAL: set fail bhi hua to MINIMAL profile banao — user kabhi blank na rahe */
+       console.error('full profile fail, minimal try:',pe2);
+       try{
+         await db.ref('users/'+uid).set({username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,createdAt:Date.now(),settings:{profileDesign:'modern'},recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},usernameChangedAt:0});
+       }catch(pe3){
+         console.error('minimal profile bhi fail:',pe3);
+         V.toast('warning','Profile partially saved — app me fix ho jayega',5000);
+       }
+     }
+     try{await db.ref('usernames/'+u).set(uid)}catch(e){console.warn('uname idx fail')}
+     try{await db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')})}catch(e){}
+     /* Vault — fail ho to skip */
      try{
        var idTok=await cred.user.getIdToken();
        fetch(CF_STORE_URL,{
@@ -1225,15 +1256,18 @@ const Auth={
          body:JSON.stringify({email:em,password:pw,dob:dd+'/'+mm+'/'+yy})
        }).catch(function(){});
      }catch(ve){}
+     /* Device register — fail ho to skip */
      try{
        var devId='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
        await db.ref('users/'+uid+'/devices/'+devId).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
      }catch(de){}
-     await db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:V.dev(),at:Date.now()});
+     try{await db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:V.dev(),at:Date.now()})}catch(e){}
      try{await cred.user.sendEmailVerification()}catch(e){}
+     /* ⭐ SUCCESS — codes dikhao */
      V.g('ncMain').textContent=mainCode;
      V.g('ncSec').textContent=secCode;
      V.showAuth('sCodes');
+     V.toast('success','Account created! 🎉');
    }catch(e){
      V.toast('error',(e&&e.code==='uname')?'Username already taken':V.friendErr(e));
    }
@@ -1338,7 +1372,7 @@ const CodeLogin={
  }
 };
 
-/* ================= RECOVERY (3-step + approval + AUTO-LOGIN + credentials) ================= */
+/* ================= RECOVERY ================= */
 const Rec={
  uid:null,dob:null,deviceTrusted:false,
  err:function(m){var eb=V.g('recErr');eb.textContent=m;eb.classList.add('show')},
@@ -1433,7 +1467,7 @@ const Rec={
              var cr=j.credentials;
              var credHtml='';
              if(cr){
-               credHtml='<div class="snote" style="flex-direction:column;text-align:left">📋 <span><b>Aapke credentials (SAVE kar lo):</b><br>📧 Email: <b>'+V.esc(cr.email)+'</b><br>🔑 Password: <b>'+V.esc(cr.password)+'</b><br>📅 DOB: <b>'+V.esc(cr.dob)+'</b><br><br>Help Center Chat me bhi save ho gaye.</span></div>';
+               credHtml='<div class="snote" style="flex-direction:column;text-align:left">📋 <span><b>Aapke credentials (SAVE kar lo):</b><br>📧 Email: <b>'+V.esc(cr.email)+'</b><br>🔑 Password: <b>'+V.esc(cr.password)+'</b><br>📅 DOB: <b>'+V.esc(cr.dob)+'</b></span></div>';
              }
              V.mOpen('🎉 Welcome Back!','<div class="tc"><p style="font-weight:800">Auto-login successful!</p>'+credHtml+'<div class="lockban mt8">🔒 24-hour security lock active.</div></div>','<button class="btn bp" onclick="V.mClose();location.reload()">Enter VEXA →</button>');
            }).catch(function(){Rec.manualFallback(uidLocal)});
@@ -1512,7 +1546,7 @@ Rec.openCodes=function(){
     html+='<div style="margin-top:16px"><div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-bottom:6px">Secondary Mode</div><div style="display:flex;gap:8px">';
     html+='<div class="sgi'+(mode!=='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="fixed">● Fixed</div>';
     html+='<div class="sgi'+(mode==='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="auto">○ Auto Change</div></div></div>';
-    html+='<div class="snote">🆔 Recovery = <b>Main Code + UID + DOB</b> → Approve → AUTO-LOGIN + purana password/email wapas. Naye device pe 6-hour rule.</div>';
+    html+='<div class="snote">🆔 Recovery = <b>Main Code + UID + DOB</b> → Approve → AUTO-LOGIN + purana password/email wapas.</div>';
     V.mOpen('🔑 Remember Codes',html);
   }).catch(function(e){V.toast('error','Load failed: '+(e.message||e),5000)});
 };
@@ -1558,7 +1592,7 @@ Rec.setMode=function(el){
   V.toast('info','Mode: '+(el.dataset.v==='auto'?'Auto Change':'Fixed'));
 };
 
-/* ================= FOLLOW ================= */
+/* ================= FOLLOW (Accept ALL) ================= */
 const Follow={
  toggle:async function(uid,btn){
    var chk=await Privacy.check('follow',uid);
@@ -1596,6 +1630,31 @@ const Follow={
    try{await db.ref('users/'+V.uid+'/followRequests/'+uid).remove()}catch(e){}
    if(el&&el.closest('.nrow, .urow'))el.closest('.nrow, .urow').remove();
  },
+ /* ⭐ ACCEPT ALL — ek click me saare requests */
+ acceptAll:async function(){
+   var b=document.getElementById('acceptAllB');
+   if(b){b.disabled=true;b.textContent='Accepting…'}
+   try{
+     var s=await db.ref('users/'+V.uid+'/followRequests').get();
+     if(!s.exists()){V.mClose();return}
+     var ups=[];
+     s.forEach(function(c){
+       var k=c.key;
+       ups.push(
+         db.ref('users/'+V.uid+'/followers/'+k).set(true),
+         db.ref('users/'+k+'/following/'+V.uid).set(true),
+         db.ref('users/'+V.uid+'/followRequests/'+k).remove(),
+         db.ref('users/'+k+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()})
+       );
+     });
+     await Promise.all(ups);
+     V.mClose();
+     V.toast('success','🎉 All requests accepted!');
+   }catch(e){
+     V.toast('error','Failed: '+(e.message||''),5000);
+     if(b){b.disabled=false;b.textContent='✓ Accept ALL'}
+   }
+ },
  list:async function(uid,type,title){
    try{
      var lock=false;
@@ -1618,30 +1677,45 @@ const Follow={
    try{
      var s=await db.ref('users/'+V.uid+'/followRequests').get();
      var h='';
-     if(!s.exists())h='<div class="empo"><div class="ei">📭</div><div class="et">No requests</div></div>';
+     if(!s.exists()){h='<div class="empo"><div class="ei">📭</div><div class="et">No requests</div></div>';}
      else{
-       for(var k in s.val()){
-         var uu=(await db.ref('users/'+k).get().catch(function(){return null}));
-         var u=(uu&&uu.val())||{displayName:'User',username:k};
-         h+='<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div><div class="uun">@'+(u.username||'')+'</div></div><div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="Follow.accept(\''+k+'\',this)">✓</button><button class="btn bds2 bsm" onclick="Follow.reject(\''+k+'\',this)">✕</button></div></div>';
-       }
+       var total=s.numChildren();
+       h='<button class="btn bp bbk mb8" id="acceptAllB" onclick="Follow.acceptAll()">✓ Accept ALL ('+total+')</button>';
+       s.forEach(function(c){
+         var k=c.key;
+         h+='<div class="urow" id="fr-'+k+'"><div class="uinf"><div class="unm">Loading…</div></div><div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="Follow.accept(\''+k+'\',this)">✓</button><button class="btn bds2 bsm" onclick="Follow.reject(\''+k+'\',this)">✕</button></div></div>';
+         db.ref('users/'+k).get().then(function(us){
+           var u=(us&&us.val())||{displayName:'User',username:k};
+           var row=document.getElementById('fr-'+k);
+           if(row)row.innerHTML=V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName||'User')+'</div><div class="uun">@'+(u.username||'')+'</div></div><div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="Follow.accept(\''+k+'\',this)">✓</button><button class="btn bds2 bsm" onclick="Follow.reject(\''+k+'\',this)">✕</button></div>';
+         });
+       });
      }
      V.mOpen('📨 Follow Requests',h);
    }catch(e){V.toast('error','Load failed')}
  }
 };
 
-/* ================= PROFILE (auto-avatar + postCount + MODERN default + RELOAD) ================= */
+/* ================= PROFILE (crash-proof + username change + reload + modern) ================= */
 const Profile={
  render:async function(uid){
    var c=V.g('profC');
    c.innerHTML='<div class="pgc"><div class="skel" style="height:300px"></div></div>';
    try{
      var s=await db.ref('users/'+uid).get();
-     if(!s.exists()){c.innerHTML='<div class="empo"><div class="ei">❓</div><div class="et">User not found</div></div>';return}
+     if(!s.exists()){
+       /* ⭐ PROFILE EXIST NAHI KARTA? BANA DO (new device fix) */
+       try{
+         await db.ref('users/'+uid).set({
+           username:'user'+uid.slice(0,6),displayName:(auth.currentUser&&auth.currentUser.email?auth.currentUser.email.split('@')[0]:'User'),email:auth.currentUser?auth.currentUser.email:'',dob:'',profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,createdAt:Date.now(),recovery:{lockUntil:0},settings:{profileDesign:'modern',theme:'t0_0',font:'Inter'},followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,usernameChangedAt:0
+         });
+         s=await db.ref('users/'+uid).get();
+       }catch(pe){console.error('auto-profile fail:',pe)}
+       if(!s.exists()){c.innerHTML='<div class="empo"><div class="ei">❓</div><div class="et">User not found</div></div>';return}
+     }
      var u=s.val(),own=(uid===V.uid);
      if(!u.profilePhoto){
-       var auto=await V.autoAvatar(uid);
+       var auto=await Promise.race([V.autoAvatar(uid),new Promise(function(res){setTimeout(function(){res(null)},6000)})]);
        if(auto){u.profilePhoto=auto;if(own){me.profilePhoto=auto;V.refreshMe()}}
      }
      var cntF=0,cntG=0,postN=0;
@@ -1663,7 +1737,7 @@ const Profile={
      var mainBtns='',row2='';
      if(own){
        mainBtns='<button class="btn bg" onclick="Profile.edit()">✏️ Edit</button><button class="btn bg" onclick="Follow.requests()">📨 Requests</button>';
-       row2='<div class="pfa2"><button class="bico" onclick="Profile.render(V.uid);V.toast(\'info\',\'Profile refreshed ✅\')" title="Reload Profile">🔄</button><button class="bico" onclick="Profile.designPicker()" title="Profile Design">🎨</button><button class="bico" onclick="Rec.openCodes()" title="Remember Codes">🔑</button><button class="bico" onclick="Settings.open()" title="Settings">⚙️</button><button class="bico" onclick="Auth.logout()" title="Logout">🚪</button></div>';
+       row2='<div class="pfa2"><button class="bico" onclick="Profile.render(V.uid);V.toast(\'info\',\'Profile refreshed ✅\')" title="Reload">🔄</button><button class="bico" onclick="Profile.designPicker()" title="Profile Design">🎨</button><button class="bico" onclick="Rec.openCodes()" title="Remember Codes">🔑</button><button class="bico" onclick="Settings.open()" title="Settings">⚙️</button><button class="bico" onclick="Auth.logout()" title="Logout">🚪</button></div>';
      }else if(blk){
        mainBtns='<button class="btn bds2" onclick="Profile.unblock(\''+uid+'\')">Unblock</button>';
      }else{
@@ -1702,7 +1776,8 @@ const Profile={
       +'<div id="pGrid"></div></div>';
      Posts.grid(uid);
    }catch(e){
-     c.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Couldn\u2019t load</div></div>';
+     console.error('profile render error:',e);
+     c.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Couldn\u2019t load</div><div class="ex"><button class="btn bg bsm" onclick="Profile.render(V.uid)">🔄 Retry</button></div></div>';
    }
  },
  designPicker:function(){
@@ -1770,11 +1845,14 @@ const Profile={
  edit:function(){
    V.mOpen('Edit Profile',
     '<div class="fld"><label class="flbl">Display Name</label><input class="inp" id="edName" maxlength="30" value="'+V.esc(me.displayName||'')+'"></div>'
+    +'<div class="fld"><label class="flbl">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="edUname" maxlength="20" value="'+V.esc(me.username||'')+'" oninput="Auth.checkEditUname()"></div><div class="ferr" id="edUnErr"></div><div class="fok" id="edUnOk">✓ Username available</div><div class="fhint">7-day cooldown · old username 30 days reserved</div></div>'
     +'<div class="fld"><label class="flbl">Bio</label><textarea class="txta" id="edBio" maxlength="150">'+V.esc(me.bio||'')+'</textarea><div class="ccount"><span id="edBioC">'+(me.bio||'').length+'</span>/150</div></div>'
     +'<div class="fld"><label class="flbl">Profile Photo</label><button class="btn bg bbk" id="photoBtn" onclick="Profile.pickPhoto()">📷 Choose photo</button><div class="uprog hidden" id="photoProg" style="margin-top:8px"><div class="ubar" style="width:40%"></div></div></div>',
     '<button class="btn bp" onclick="Profile.save()">Save</button>');
    V.g('edBio').addEventListener('input',function(e){V.g('edBioC').textContent=e.target.value.length});
+   this._newUname=me.username;
  },
+ checkEditUname:null,
  pickPhoto:function(){
    var i=document.createElement('input');i.type='file';i.accept='image/*';
    i.onchange=async function(){
@@ -1795,27 +1873,63 @@ const Profile={
    };
    i.click();
  },
+ /* ⭐ SAVE — username change bhi + photo bhi */
  save:async function(){
    var name=V.g('edName').value.trim(),bio=V.g('edBio').value.trim();
+   var newU=V.g('edUname')?V.g('edUname').value.trim().toLowerCase():me.username;
    if(!name)return V.toast('warning','Name required');
    try{
+     /* Username change check */
+     if(newU&&newU!==me.username){
+       if(!V.uname(newU))return V.toast('error','Invalid username format');
+       var ex=await db.ref('usernames/'+newU).get();
+       if(ex.exists())return V.toast('error','Username already taken');
+       var res=await db.ref('reservedUsernames/'+newU).get();
+       if(res.exists()&&res.val().uid!==V.uid&&res.val().until>Date.now())return V.toast('error','Username reserved');
+       var last=(await db.ref('users/'+V.uid+'/usernameChangedAt').get()).val()||0;
+       if(Date.now()-last<7*86400000)return V.toast('error','Cooldown: 1 change per week');
+       var old=me.username;
+       await db.ref('usernames/'+newU).set(V.uid);
+       await db.ref('reservedUsernames/'+old).set({uid:V.uid,until:Date.now()+30*86400000});
+       await db.ref('usernames/'+old).remove();
+       await db.ref('users/'+V.uid).update({username:newU,usernameChangedAt:Date.now(),prevUsername:old});
+       try{await db.ref('recoveryCheck/'+V.uid+'/user').set(newU)}catch(e){}
+       me.username=newU;
+       V.toast('success','Username → @'+newU+' ✅',4000);
+     }
      await db.ref('users/'+V.uid).update({displayName:name,bio:bio});
      me.displayName=name;me.bio=bio;
-     V.mClose();V.toast('success','Profile updated');
+     V.mClose();V.toast('success','Profile updated ✅');
      V.g('topTitle').textContent=name;
      Profile.render(V.uid);
    }catch(e){V.toast('error',V.friendErr(e))}
  }
 };
+/* Edit username live check */
+Auth.checkEditUname=function(){
+  clearTimeout(Auth._eto2);
+  var u=V.g('edUname')?V.g('edUname').value.trim().toLowerCase():'';
+  var ok=V.g('edUnOk'),err=V.g('edUnErr');
+  if(!ok||!err)return;
+  ok.classList.remove('show');err.classList.remove('show');
+  if(!u||u===me.username)return;
+  if(!V.uname(u)){err.textContent='Invalid format';err.classList.add('show');return}
+  Auth._eto2=setTimeout(async function(){
+    try{
+      var s=await db.ref('usernames/'+u).get();
+      if(s.exists()&&s.val()!==V.uid){err.textContent='❌ Taken';err.classList.add('show')}
+      else ok.classList.add('show');
+    }catch(e){}
+  },450);
+};
 
-/* ================= POSTS (index-free feed + likeCount + UID photos) ================= */
+/* ================= POSTS (index-free + likeCount) ================= */
 const Posts={
  photos:[],limit:12,
  load:async function(){
    var w=V.g('feedW');
    w.innerHTML='<div class="skel" style="height:220px;margin-bottom:15px"></div><div class="skel" style="height:220px;margin-bottom:15px"></div>';
    try{
-     /* ⭐ NO INDEX NEEDED — simple get + JS sort (index error khatam) */
      var s=await db.ref('posts').get();
      w.innerHTML='';
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">📝</div><div class="et">No posts yet</div><div class="ex">Tap ✏️ to create!</div></div>';return}
@@ -1848,7 +1962,7 @@ const Posts={
    var au=(await db.ref('users/'+p.userId).get().catch(function(){return null}));
    var a=(au&&au.val())||{displayName:'Unknown',username:'?'};
    if(!a.profilePhoto){
-     var auto=await V.autoAvatar(p.userId);
+     var auto=await Promise.race([V.autoAvatar(p.userId),new Promise(function(res){setTimeout(function(){res(null)},4000)})]);
      if(auto){a.profilePhoto=auto}
    }
    var lk=p.likes&&p.likes[V.uid];
@@ -1868,11 +1982,32 @@ const Posts={
     +(p.caption?'<div class="pcap">'+V.htg(V.esc(p.caption))+'</div>':'')
     +'<div class="pph n'+Math.max(ph.length,1)+'">'+imgs+'</div>'
     +'<div class="pacts">'
-    +'<span class="pab'+(lk?' lk':'')+'" onclick="Posts.like(\''+id+'\',this)"><span class="pi">'+(lk?'❤️':'🤍')+'</span><span class="lc">'+(lc||'')+'</span></span>'
+    +'<span class="pab'+(lk?' lk':'')+'" onclick="Posts.like(\''+id+'\',this)"><span class="pi">'+(lk?'❤️':'🤍')+'</span><span class="lc" onclick="event.stopPropagation();Posts.showLikers(\''+id+'\')" style="cursor:pointer">'+(lc||'')+'</span></span>'
     +'<span class="pab" onclick="Posts.comments(\''+id+'\')"><span class="pi">💬</span><span class="cc">'+(p.commentCount||0)+'</span></span>'
     +'<span class="pab'+(sv?' sv':'')+'" onclick="Posts.save(\''+id+'\',this)"><span class="pi">'+(sv?'🔖':'📑')+'</span></span>'
     +'<span class="pab" onclick="Posts.share(\''+id+'\')"><span class="pi">↗️</span></span>'
     +'</div></div>';
+ },
+ /* ⭐ LIKERS LIST — kaun like kiya + total */
+ showLikers:async function(id){
+   V.mOpen('❤️ Likes','<div id="lkL"><div class="spn" style="margin:18px auto"></div></div>');
+   var s=await db.ref('likes/'+id).get().catch(function(){return null});
+   var list=document.getElementById('lkL');
+   if(!list)return;
+   if(!s||!s.exists()){list.innerHTML='<div class="empo" style="padding:22px"><div class="ei">🤍</div><div class="et">No likes yet</div></div>';return}
+   var total=s.numChildren();
+   var h='<div class="stit" style="margin:0 0 8px">Total: '+total+' likes</div>';
+   list.innerHTML=h;
+   s.forEach(function(c){
+     var uid=c.key;
+     db.ref('users/'+uid).get().then(function(us){
+       var u=(us&&us.val())||{displayName:'User',username:'?'};
+       var row=document.createElement('div');
+       row.className='urow';
+       row.innerHTML=V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+(u.username||'')+'</div></div>';
+       list.appendChild(row);
+     });
+   });
  },
  like:async function(id,el){
    try{
@@ -1884,7 +2019,6 @@ const Posts={
        var o=(await db.ref('posts/'+id+'/userId').get()).val();
        if(o&&o!==V.uid)db.ref('users/'+o+'/notifications').push({type:'like',from:V.uid,fromName:me.displayName,postId:id,read:false,at:Date.now()});
      }
-     /* ⭐ likeCount RTDB me live update (commentCount jaisa) */
      var n=(await db.ref('likes/'+id).get()).numChildren();
      await db.ref('posts/'+id+'/likeCount').set(n);
      var on=el.classList.toggle('lk');
@@ -1952,11 +2086,13 @@ const Posts={
    V.mClose();V.toast('success','Reported');
  },
  comments:function(id){
-   V.mOpen('Comments','<div id="cmL"><div class="spn" style="margin:18px auto"></div></div>'
+   V.mOpen('Comments','<div id="cmTotal" class="stit" style="margin:0 0 8px">💬 Loading…</div><div id="cmL"><div class="spn" style="margin:18px auto"></div></div>'
     +'<div style="display:flex;gap:8px;margin-top:13px"><input class="inp" id="cmI" placeholder="Add a comment..." maxlength="300"><button class="bico ok" id="cmS">➤</button></div>');
    var list=V.g('cmL');
    var cbn=db.ref('comments/'+id).on('value',async function(s){
-     if(!s.exists()){list.innerHTML='<div class="empo" style="padding:22px"><div class="ei">💬</div><div class="et">No comments</div></div>';return}
+     var tot=document.getElementById('cmTotal');
+     if(tot)tot.textContent='💬 Total: '+s.numChildren()+' comments';
+     if(!s.exists()){list.innerHTML='<div class="empo" style="padding:22px"><div class="ei">💬</div><div class="et">No comments yet</div></div>';return}
      list.innerHTML='';
      var arr=[];
      s.forEach(function(c){arr.push({cid:c.key,val:c.val()})});
@@ -2364,7 +2500,7 @@ const ChatUI={
  }
 };
 
-/* ================= CALLS (WebRTC) ================= */
+/* ================= CALLS ================= */
 const Calls={
  pc:null,callId:null,type:null,timer:null,secs:0,stream:null,role:null,peer:null,unsubs:[],
  cfg:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]},
@@ -2857,7 +2993,7 @@ const Local={
          self.load();
        }catch(e){V.toast('error','DB error: localPresence rules check karo',6000);V.g('lsTgl').checked=false}
      },function(err){
-       V.toast('error',err.code===1?'Location permission denied — browser settings me allow karo':'Location failed',5000);
+       V.toast('error',err.code===1?'Location permission denied':'Location failed',5000);
        V.g('lsTgl').checked=false;
      },{enableHighAccuracy:false,timeout:10000});
    }else{
@@ -3003,7 +3139,7 @@ const Search={
 function myRoleLink(){
   var r=(me&&me.role)||'user';
   if(r==='owner')return '<div class="sgrp"><div class="sgrp-title" style="color:var(--ac);background:var(--acs)">👑 OWNER CONTROLS</div>'
-    +'<div class="srow" onclick="location.href=\'owner/owner.html\'"><div class="sri">👑</div><div class="srf"><div class="srt" style="color:var(--ac)">👑 Owner Panel — REAL Passwords</div><div class="srs">Sab users ka password/email/DOB dekho + roles manage</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="location.href=\'owner/owner.html\'"><div class="sri">👑</div><div class="srf"><div class="srt" style="color:var(--ac)">👑 Owner Panel — REAL Passwords</div><div class="srs">Sab users ka password/email/DOB + roles</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="location.href=\'admin/admin.html\'"><div class="sri">🛡️</div><div class="srf"><div class="srt">Admin Panel</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="location.href=\'moderator/moderator.html\'"><div class="sri">🛡️</div><div class="srf"><div class="srt">Moderator Panel</div></div><div class="sra">›</div></div></div>';
   if(r==='admin')return '<div class="sgrp"><div class="sgrp-title" style="color:var(--wn)">👑 STAFF PANELS</div>'
@@ -3027,7 +3163,7 @@ const Settings={
    else if((me.role||'user')==='moderator')myRoleHtml=' <span class="bmod">🛡️ MOD</span>';
    var h='<div class="pgc"><div class="stit">⚙️ Settings'+myRoleHtml+'</div>'+lockNote
     +'<div class="sgrp">'
-    +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, bio, photo</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
@@ -3189,7 +3325,7 @@ const Settings={
  }
 };
 
-/* ================= BOOT ================= */
+/* ================= BOOT (CRASH-PROOF — splash kabhi stuck nahi) ================= */
 (function(){
  try{
    if(typeof firebase==='undefined'){
@@ -3205,17 +3341,27 @@ const Settings={
    Fonts.init();
    Auth.initDobs();
    if(!navigator.onLine)V.g('offBan').classList.remove('hidden');
-   V.requireAuth(function(){Posts.load()});
+   V.requireAuth(function(){try{Posts.load()}catch(e){}});
+   /* ⭐ SAFETY NET: 10 sec ke baad bhi splash stuck hai to login screen dikhao */
    setTimeout(function(){
      var s=V.g('splash');
      if(s&&!s.classList.contains('fade')){
-       var tx=V.g('splashTx');
-       if(tx.textContent==='Initializing...'){
-         tx.textContent='⚠️ 8 sec load nahi hua. Internet check karo. Firebase: Auth enable + Database + Rules?';
-         tx.style.color='#ff6b6b';
+       var authHidden=V.g('authBox').classList.contains('hidden');
+       var appShown=V.g('app').classList.contains('act');
+       if(!authHidden||appShown){
+         /* Already kuch dikh raha hai — sirf splash hatao */
+         V.fadeSplash();
+       }else{
+         /* Kuch nahi dikha — login screen dikhao */
+         V.showAuth('sLogin');
+         V.g('authBox').classList.remove('hidden');
+         V.fadeSplash();
+         var tx=V.g('splashTx');
+         tx.textContent='⚠️ Slow load — internet check karo';
+         tx.style.color='#ff9b6b';
        }
      }
-   },8000);
+   },10000);
  }catch(e){
    V.g('splashTx').textContent='⚠️ Init error: '+e.message;
    V.g('splashTx').style.color='#ff6b6b';
