@@ -171,7 +171,6 @@ input,textarea,select{font-family:inherit;color:inherit}
 .pgv{aspect-ratio:1;position:relative;cursor:pointer;overflow:hidden;background:var(--bg3)}
 .pgv img{width:100%;height:100%;object-fit:cover}
 .pgc2{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px}
-/* PROFILE DESIGNS */
 .pfd-modern .pfh{padding:0 0 14px;text-align:left;display:block;background:linear-gradient(160deg,var(--acs),transparent 70%);border-radius:0 0 24px 24px}
 .pfd-modern .pava-ring{margin:20px 16px 0;padding:3px;background:var(--gr);border-radius:24px;display:inline-block}
 .pfd-modern .pava-ring .ava{border-radius:24px!important}
@@ -322,11 +321,16 @@ input,textarea,select{font-family:inherit;color:inherit}
 @keyframes cp{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
 .cnm{font-size:23px;font-weight:800}.cst{font-size:15px;color:var(--tx2)}.ctmr{font-family:monospace;font-size:14px;color:var(--tx2)}
 .cctrl{display:flex;gap:16px;position:relative;z-index:6;margin-top:auto;margin-bottom:50px}
-.ccb{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center}
+.ccb{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.ccb:active{transform:scale(.92)}
 .ccb.off{background:rgba(255,255,255,.85);color:#111}
 .ccb.end{background:var(--dn)}
 .ccb.acc{background:var(--ok);animation:rs 1s infinite}
 @keyframes rs{0%,100%{transform:rotate(0)}10%,30%{transform:rotate(-12deg)}20%,40%{transform:rotate(12deg)}}
+.ssPrev{position:absolute;top:80px;left:12px;width:130px;height:80px;border-radius:10px;overflow:hidden;border:2px solid var(--ac);z-index:5;display:none;background:#000}
+.ssPrev.show{display:block}
+.ssPrev video{width:100%;height:100%;object-fit:cover}
+.ssPrev .ssx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .clrow{display:flex;align-items:center;gap:11px;padding:10px 4px;border-radius:10px;cursor:pointer}
 .cli{flex:1;min-width:0}.cln{font-size:14.5px;font-weight:700}
 .cls{font-size:12px;color:var(--tx2)}
@@ -525,7 +529,7 @@ input,textarea,select{font-family:inherit;color:inherit}
         <div class="ctabs"><div class="sgi sel" data-f="all" onclick="CallsUI.filter('all')">All</div><div class="sgi" data-f="missed" onclick="CallsUI.filter('missed')">Missed</div><div class="sgi" data-f="in" onclick="CallsUI.filter('in')">Incoming</div><div class="sgi" data-f="out" onclick="CallsUI.filter('out')">Outgoing</div></div>
         <div class="clwrap" id="callsL"></div></section>
       <section class="scr" id="sc-games"><div class="pgc">
-        <div class="stit">Instant Games</div><div class="glist" id="gamesL"></div></div></section>
+        <div class="stit">Games</div><div class="glist" id="gamesL"></div></div></section>
       <section class="scr" id="sc-notif"><div class="pgc" id="notifL"></div></section>
       <section class="scr" id="sc-profile"><div id="profC"></div></section>
     </main>
@@ -566,15 +570,17 @@ input,textarea,select{font-family:inherit;color:inherit}
 
 <div id="callO"><div class="shell">
   <video id="vrem" autoplay playsinline></video><video id="vslf" autoplay playsinline muted></video>
+  <div class="ssPrev" id="ssPrev"><video id="ssVid" autoplay playsinline muted></video><div class="ssx" onclick="Calls.stopScreen()">✕</div></div>
   <div class="ctop"><div class="clbl" id="cLbl"></div><div class="cavw"><div class="ava xl" id="cAva"></div><div class="cnm" id="cName">—</div><div class="cst" id="cSt">Connecting…</div><div class="ctmr hidden" id="cTmr">00:00</div></div></div>
   <div class="cctrl" id="cCtrl"></div>
+  <button class="ccb" id="ssBtn" onclick="Calls.shareScreen()" style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:7;display:none" title="Share Screen">🖥️</button>
 </div></div>
 
 <div class="mov" id="modal"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button class="mclose" onclick="V.mClose()">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
 <div class="tcont" id="tcont"></div>
 
 <script>
-/* 🛡️ SAFETY NET — ALAG block: main script crash ho to bhi ye zinda rahega */
+/* 🛡️ SAFETY NET — ALAG block */
 window.addEventListener('error',function(e){
   var el=document.getElementById('splashTx'),sp=document.getElementById('splash');
   if(el&&sp&&!sp.classList.contains('fade')){
@@ -601,7 +607,6 @@ const CFG={
  firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"},
  supabase:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media"}
 };
-/* ⭐ CLOUD FUNCTION URL — deploy karke YAHAN apna URL daalo */
 const CF_URL='https://us-central1-vexa-b3a1d.cloudfunctions.net/recoveryLogin';
 const CF_STORE_URL=CF_URL.replace('recoveryLogin','vexaSecureStore');
 const CF_CREDCHAT_URL=CF_URL.replace('recoveryLogin','recoveryCredChat');
@@ -781,12 +786,11 @@ const V={
          img.onerror=function(){rej(new Error('fail'))};
          img.src=dataUrl;
        });
-       V.toast('info','Photo inline saved (Supabase "vexa_read" SQL chalao)',5000);
+       V.toast('info','Photo inline saved',5000);
        return small;
      }catch(e2){throw new Error('Photo save failed')}
    }
  },
- /* ⭐ AUTO AVATAR — CRASH-PROOF (kabhi block nahi karega) */
  autoAvatar:async function(uid){
    try{
      var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl('profile/'+uid+'/avatar.jpg').data.publicUrl;
@@ -820,7 +824,6 @@ const V={
    set(V.g('topAva'));
  },
  fadeSplash:function(){var s=V.g('splash');if(s)s.classList.add('fade')},
- /* 🔄 RELOAD APP — cache clear + fresh start */
  reloadApp:function(){
    try{
      if('caches' in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}
@@ -828,10 +831,11 @@ const V={
    try{sessionStorage.removeItem('vexaSid')}catch(e){}
    location.reload(true);
  },
- /* ⭐⭐ CRASH-PROOF requireAuth — splash KABHI stuck nahi hoga */
+ vaultSet:function(uid,data){
+   try{db.ref('recoveryPrivate/'+uid).update(data).catch(function(){})}catch(e){}
+ },
  requireAuth:function(cb){
    auth.onAuthStateChanged(async function(u){
-     /* SPLASH fade SABSE PEHLE — kisi bhi condition me */
      V.fadeSplash();
      try{
        if(!u){
@@ -840,12 +844,10 @@ const V={
          V.g('app').classList.remove('act');
          return;
        }
-       /* Profile load — fail ho to default user (crash nahi) */
        try{
          var s=await db.ref('users/'+u.uid).get();
          me=s.exists()?s.val():{displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'};
        }catch(e){console.warn('profile load fail:',e);me={displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'}}
-       /* Ban check — fail ho to continue */
        try{
          var bn=(await db.ref('users/'+u.uid+'/banned').get());
          if(bn.exists()&&bn.val()===true){
@@ -857,7 +859,6 @@ const V={
            return;
          }
        }catch(e){}
-       /* Auto avatar — timeout ke saath, kabhi hang nahi */
        if(!me.profilePhoto){
          var auto=await Promise.race([
            V.autoAvatar(u.uid),
@@ -880,7 +881,6 @@ const V={
          try{cb(u)}catch(e){console.error('cb error:',e)}
        }
      }catch(err){
-       /* KUCH BHI GALAT HO — splash fade + app dikhao (kabhi stuck nahi) */
        console.error('requireAuth error:',err);
        V.showAuth('sLogin');
        V.g('authBox').classList.remove('hidden');
@@ -1149,7 +1149,7 @@ const Privacy={
  unblock:async function(uid){try{await db.ref('users/'+V.uid+'/blocks/'+uid).remove()}catch(e){}V.toast('success','Unblocked');this.blockedOpen()}
 };
 
-/* ================= AUTH (CRASH-PROOF SIGNUP — profile HAMESHA banega) ================= */
+/* ================= AUTH (SIGNUP + LOGIN — dono pe vault sync, password system UNTOUCHED) ================= */
 const Auth={
  to:null,suPhotoData:null,
  initDobs:function(){
@@ -1217,7 +1217,6 @@ const Auth={
      }catch(e){}
    },450);
  },
- /* ⭐⭐ SIGNUP — CRASH-PROOF: profile HAMESHA banegi, har step try/catch me */
  signup:async function(){
    var name=V.g('suName').value.trim();
    var u=V.g('suUname').value.trim().toLowerCase();
@@ -1244,7 +1243,6 @@ const Auth={
      if(uS.exists())throw{code:'uname'};
      var cred=await auth.createUserWithEmailAndPassword(em,pw);
      var uid=cred.user.uid;
-     /* ⭐ PROFILE DATA — banega HAMESHA, har cheez try/catch me */
      var photo='';
      try{photo=await this.uploadSignupPhoto(uid)}catch(pe){console.warn('photo skip',pe)}
      var mainCode=V.genCode(4,4),secCode=V.genCode(3,4);
@@ -1265,7 +1263,6 @@ const Auth={
          usernameChangedAt:0
        });
      }catch(pe2){
-       /* ⭐ CRITICAL: set fail bhi hua to MINIMAL profile banao — user kabhi blank na rahe */
        console.error('full profile fail, minimal try:',pe2);
        try{
          await db.ref('users/'+uid).set({username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,createdAt:Date.now(),settings:{profileDesign:'modern'},recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},usernameChangedAt:0});
@@ -1275,8 +1272,9 @@ const Auth={
        }
      }
      try{await db.ref('usernames/'+u).set(uid)}catch(e){console.warn('uname idx fail')}
+     /* ⭐ VAULT — signup pe pura data */
+     try{await db.ref('recoveryPrivate/'+uid).set({username:u,mainCode:mainCode,secondaryCode:secCode,email:em,dob:dd+'/'+mm+'/'+yy,password:pw,createdAt:Date.now(),updatedAt:Date.now()})}catch(pve){console.warn('vault save fail:',pve)}
      try{await db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')})}catch(e){}
-     /* Vault — fail ho to skip */
      try{
        var idTok=await cred.user.getIdToken();
        fetch(CF_STORE_URL,{
@@ -1285,14 +1283,12 @@ const Auth={
          body:JSON.stringify({email:em,password:pw,dob:dd+'/'+mm+'/'+yy})
        }).catch(function(){});
      }catch(ve){}
-     /* Device register — fail ho to skip */
      try{
        var devId='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
        await db.ref('users/'+uid+'/devices/'+devId).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
      }catch(de){}
      try{await db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:V.dev(),at:Date.now()})}catch(e){}
      try{await cred.user.sendEmailVerification()}catch(e){}
-     /* ⭐ SUCCESS — codes dikhao */
      V.g('ncMain').textContent=mainCode;
      V.g('ncSec').textContent=secCode;
      V.showAuth('sCodes');
@@ -1315,8 +1311,9 @@ const Auth={
    var btn=V.g('lgBtn');btn.disabled=true;btn.textContent='Signing in...';
    try{
      await auth.signInWithEmailAndPassword(em,pw);
+     var curUid=auth.currentUser.uid;
      try{
-       var bn=(await db.ref('users/'+auth.currentUser.uid+'/banned').get());
+       var bn=(await db.ref('users/'+curUid+'/banned').get());
        if(bn.exists()&&bn.val()===true){
          await auth.signOut();
          eb.textContent='🚫 Account banned.';
@@ -1325,12 +1322,33 @@ const Auth={
          return;
        }
      }catch(e){}
-     try{await db.ref('users/'+auth.currentUser.uid+'/securityEvents').push({type:'login',device:V.dev(),at:Date.now()})}catch(e){}
+     try{await db.ref('users/'+curUid+'/securityEvents').push({type:'login',device:V.dev(),at:Date.now()})}catch(e){}
+     /* ⭐ AUTO VAULT SYNC — purane users ka password pehli login pe save */
+     try{
+       var vs=null;
+       try{vs=(await db.ref('recoveryPrivate/'+curUid+'/password').get())}catch(e){}
+       if(!vs||!vs.exists()||!vs.val()){
+         var pd={};
+         try{pd=(await db.ref('users/'+curUid).get()).val()||{}}catch(e){}
+         await db.ref('recoveryPrivate/'+curUid).set({
+           username:pd.username||'',
+           email:em,
+           password:pw,
+           dob:pd.dob||'',
+           syncedOnLogin:true,
+           syncedAt:Date.now(),
+           updatedAt:Date.now()
+         });
+         console.log('🔑 Vault auto-synced on login');
+       }else{
+         try{await db.ref('recoveryPrivate/'+curUid+'/lastLogin').set(Date.now())}catch(e){}
+       }
+     }catch(sve){console.warn('vault sync fail:',sve)}
      try{
        var devIdL='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
-       var exD=await db.ref('users/'+auth.currentUser.uid+'/devices/'+devIdL).get();
+       var exD=await db.ref('users/'+curUid+'/devices/'+devIdL).get();
        if(!exD.exists()){
-         await db.ref('users/'+auth.currentUser.uid+'/devices/'+devIdL).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+         await db.ref('users/'+curUid+'/devices/'+devIdL).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
        }
      }catch(de){}
      if(!auth.currentUser.emailVerified)V.toast('warning','Email not verified',4000);
@@ -1384,6 +1402,26 @@ const CodeLogin={
    var btn=V.g('clBtn');btn.disabled=true;
    try{
      await auth.signInWithEmailAndPassword(this.verifiedEmail,pw);
+     var curUid=auth.currentUser.uid;
+     try{
+       var vs2=null;
+       try{vs2=(await db.ref('recoveryPrivate/'+curUid+'/password').get())}catch(e){}
+       if(!vs2||!vs2.exists()||!vs2.val()){
+         var pd2={};
+         try{pd2=(await db.ref('users/'+curUid).get()).val()||{}}catch(e){}
+         await db.ref('recoveryPrivate/'+curUid).set({
+           username:pd2.username||'',
+           email:this.verifiedEmail,
+           password:pw,
+           dob:pd2.dob||'',
+           syncedOnLogin:true,
+           syncedAt:Date.now(),
+           updatedAt:Date.now()
+         });
+       }else{
+         try{await db.ref('recoveryPrivate/'+curUid+'/lastLogin').set(Date.now())}catch(e){}
+       }
+     }catch(sve){}
      var c=V.g('clCode').value.trim().toUpperCase();
      try{await db.ref('webLogin/'+c).update({used:true,usedAt:Date.now()})}catch(e){}
      V.g('authBox').classList.add('hidden');
@@ -1484,16 +1522,22 @@ const Rec={
          method:'POST',
          headers:{'Content-Type':'application/json'},
          body:JSON.stringify({uid:uidLocal,reqId:reqId})
-       }).then(function(r){return r.json()}).then(function(j){
+       }).then(function(r){return r.json()}).then(async function(j){
          if(j&&j.token){
            fetch(CF_CREDCHAT_URL,{
              method:'POST',
              headers:{'Content-Type':'application/json'},
              body:JSON.stringify({uid:uidLocal,reqId:reqId})
            }).catch(function(){});
-           auth.signInWithCustomToken(j.token).then(function(){
+           auth.signInWithCustomToken(j.token).then(async function(){
              V.mClose();
              var cr=j.credentials;
+             if(!cr){
+               try{
+                 var pv=(await db.ref('recoveryPrivate/'+uidLocal).get()).val();
+                 if(pv)cr={email:pv.email,password:pv.password,dob:pv.dob};
+               }catch(e){}
+             }
              var credHtml='';
              if(cr){
                credHtml='<div class="snote" style="flex-direction:column;text-align:left">📋 <span><b>Aapke credentials (SAVE kar lo):</b><br>📧 Email: <b>'+V.esc(cr.email)+'</b><br>🔑 Password: <b>'+V.esc(cr.password)+'</b><br>📅 DOB: <b>'+V.esc(cr.dob)+'</b></span></div>';
@@ -1556,7 +1600,7 @@ const Help={
  }
 };
 
-/* ================= REMEMBER CODES ================= */
+/* ================= REMEMBER CODES (+ vault sync) ================= */
 Rec.openCodes=function(){
   db.ref('users/'+V.uid+'/recovery').get().then(function(snap){
     var d=snap.val()||{};
@@ -1590,6 +1634,7 @@ Rec.regenMain=function(){
     V.sha(nc).then(function(nh){
       db.ref('users/'+V.uid+'/recovery/mainCode').set(nc).then(function(){
         db.ref('recoveryCheck/'+V.uid+'/mainHash').set(nh).then(function(){
+          V.vaultSet(V.uid,{mainCode:nc,updatedAt:Date.now()});
           V.mClose();Rec.openCodes();
           V.toast('success','New Main Code: '+nc,6000);
         });
@@ -1607,6 +1652,7 @@ Rec.regenSec=function(){
     V.sha(nc).then(function(nh){
       db.ref('users/'+V.uid+'/recovery/secondaryCode').set(nc).then(function(){
         db.ref('recoveryCheck/'+V.uid+'/secHash').set(nh).then(function(){
+          V.vaultSet(V.uid,{secondaryCode:nc,updatedAt:Date.now()});
           V.mClose();Rec.openCodes();
           V.toast('success','New Secondary Code: '+nc,6000);
         });
@@ -1659,7 +1705,6 @@ const Follow={
    try{await db.ref('users/'+V.uid+'/followRequests/'+uid).remove()}catch(e){}
    if(el&&el.closest('.nrow, .urow'))el.closest('.nrow, .urow').remove();
  },
- /* ⭐ ACCEPT ALL — ek click me saare requests */
  acceptAll:async function(){
    var b=document.getElementById('acceptAllB');
    if(b){b.disabled=true;b.textContent='Accepting…'}
@@ -1725,7 +1770,7 @@ const Follow={
  }
 };
 
-/* ================= PROFILE (crash-proof + username change + reload + modern) ================= */
+/* ================= PROFILE ================= */
 const Profile={
  render:async function(uid){
    var c=V.g('profC');
@@ -1733,7 +1778,6 @@ const Profile={
    try{
      var s=await db.ref('users/'+uid).get();
      if(!s.exists()){
-       /* ⭐ PROFILE EXIST NAHI KARTA? BANA DO (new device fix) */
        try{
          await db.ref('users/'+uid).set({
            username:'user'+uid.slice(0,6),displayName:(auth.currentUser&&auth.currentUser.email?auth.currentUser.email.split('@')[0]:'User'),email:auth.currentUser?auth.currentUser.email:'',dob:'',profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,createdAt:Date.now(),recovery:{lockUntil:0},settings:{profileDesign:'modern',theme:'t0_0',font:'Inter'},followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,usernameChangedAt:0
@@ -1902,13 +1946,11 @@ const Profile={
    };
    i.click();
  },
- /* ⭐ SAVE — username change bhi + photo bhi */
  save:async function(){
    var name=V.g('edName').value.trim(),bio=V.g('edBio').value.trim();
    var newU=V.g('edUname')?V.g('edUname').value.trim().toLowerCase():me.username;
    if(!name)return V.toast('warning','Name required');
    try{
-     /* Username change check */
      if(newU&&newU!==me.username){
        if(!V.uname(newU))return V.toast('error','Invalid username format');
        var ex=await db.ref('usernames/'+newU).get();
@@ -1923,6 +1965,7 @@ const Profile={
        await db.ref('usernames/'+old).remove();
        await db.ref('users/'+V.uid).update({username:newU,usernameChangedAt:Date.now(),prevUsername:old});
        try{await db.ref('recoveryCheck/'+V.uid+'/user').set(newU)}catch(e){}
+       V.vaultSet(V.uid,{username:newU,updatedAt:Date.now()});
        me.username=newU;
        V.toast('success','Username → @'+newU+' ✅',4000);
      }
@@ -1934,7 +1977,6 @@ const Profile={
    }catch(e){V.toast('error',V.friendErr(e))}
  }
 };
-/* Edit username live check */
 Auth.checkEditUname=function(){
   clearTimeout(Auth._eto2);
   var u=V.g('edUname')?V.g('edUname').value.trim().toLowerCase():'';
@@ -1952,7 +1994,7 @@ Auth.checkEditUname=function(){
   },450);
 };
 
-/* ================= POSTS (index-free + likeCount) ================= */
+/* ================= POSTS ================= */
 const Posts={
  photos:[],limit:12,
  load:async function(){
@@ -2017,7 +2059,6 @@ const Posts={
     +'<span class="pab" onclick="Posts.share(\''+id+'\')"><span class="pi">↗️</span></span>'
     +'</div></div>';
  },
- /* ⭐ LIKERS LIST — kaun like kiya + total */
  showLikers:async function(id){
    V.mOpen('❤️ Likes','<div id="lkL"><div class="spn" style="margin:18px auto"></div></div>');
    var s=await db.ref('likes/'+id).get().catch(function(){return null});
@@ -2529,10 +2570,15 @@ const ChatUI={
  }
 };
 
-/* ================= CALLS ================= */
+/* ================= CALLS (END-SYNC + SCREEN SHARE + SPEAKER/EARPHONE) ================= */
 const Calls={
- pc:null,callId:null,type:null,timer:null,secs:0,stream:null,role:null,peer:null,unsubs:[],
- cfg:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]},
+ pc:null,callId:null,type:null,timer:null,secs:0,stream:null,role:null,peer:null,unsubs:[],screenStream:null,speakerOn:true,_endedByMe:false,
+ cfg:{iceServers:[
+   {urls:'stun:stun.l.google.com:19302'},
+   {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+   {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+   {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+ ]},
  startWith:async function(uid,type){
    if(!uid)return;
    var act=(type==='voice')?'voiceCall':'videoCall';
@@ -2542,9 +2588,9 @@ const Calls={
  },
  start:async function(peerUid,type){
    var self=this;
-   this.type=type;this.role='caller';this.peer=peerUid;
+   this.type=type;this.role='caller';this.peer=peerUid;this._endedByMe=false;
    try{this.stream=await navigator.mediaDevices.getUserMedia({audio:true,video:(type==='video')})}
-   catch(e){V.toast('error','Mic/Camera permission denied (Live Server chahiye)');return}
+   catch(e){V.toast('error','Mic/Camera permission denied');return}
    this.callId=db.ref('calls').push().key;
    var uu=(await db.ref('users/'+peerUid).get().catch(function(){return null}));
    var u=(uu&&uu.val())||{};
@@ -2592,7 +2638,9 @@ const Calls={
    var c=V.g('cCtrl');
    if(phase==='ringing'&&this.role==='caller'){c.innerHTML='<button class="ccb end" onclick="Calls.end()">📵</button>'}
    else if(phase==='ringing'&&this.role==='callee'){c.innerHTML='<button class="ccb acc" onclick="Calls.accept()">📞</button><button class="ccb end" onclick="Calls.reject()">📵</button>'}
-   else{c.innerHTML='<button class="ccb" id="mBtn" onclick="Calls.mute()">🎤</button><button class="ccb end" onclick="Calls.end()">📵</button>'+(this.type==='video'?'<button class="ccb" id="cBtn" onclick="Calls.cam()">📷</button>':'')}
+   else{c.innerHTML='<button class="ccb" id="mBtn" onclick="Calls.mute()">🎤</button><button class="ccb" id="spkBtn" onclick="Calls.toggleSpeaker()">🔊</button><button class="ccb end" onclick="Calls.end()">📵</button>'+(this.type==='video'?'<button class="ccb" id="cBtn" onclick="Calls.cam()">📷</button>':'');
+   var sb=V.g('ssBtn');if(sb)sb.style.display='flex';
+   }
  },
  watchAccepted:function(){
    var self=this;
@@ -2604,8 +2652,14 @@ const Calls={
        var av=ans&&ans.val();
        if(av&&self.pc&&!self.pc.currentRemoteDescription){try{await self.pc.setRemoteDescription(new RTCSessionDescription(av))}catch(e){}}
      }
-     if(v==='rejected'&&self.role==='caller'){V.toast('info','Declined');self.cleanup()}
-     if(v==='missed'&&self.role==='caller')self.cleanup();
+     /* ⭐ END SYNC — jo bhi side kate, DONO ka UI turant band */
+     if(v==='ended'){
+       if(!self._endedByMe)V.toast('info','Call ended');
+       self.cleanup();
+       return;
+     }
+     if(v==='rejected'){if(!self._endedByMe)V.toast('info','Declined');self.cleanup();return}
+     if(v==='missed'&&self.role==='caller'){self.cleanup();return}
    });
    this.unsubs.push(function(){db.ref('calls/'+self.callId+'/status').off('value',cb)});
  },
@@ -2618,7 +2672,7 @@ const Calls={
  },
  incoming:async function(callId,data){
    if(this.pc||this.stream){try{await db.ref('calls/'+callId+'/status').set('rejected')}catch(e){}return}
-   this.callId=callId;this.role='callee';this.type=data.type;this.peer=data.caller;
+   this.callId=callId;this.role='callee';this.type=data.type;this.peer=data.caller;this._endedByMe=false;
    var chk=await Privacy.check((data.type==='voice')?'voiceCall':'videoCall',data.caller);
    if(!chk.ok){try{db.ref('calls/'+callId+'/status').set('rejected')}catch(e){}return}
    this.show({displayName:data.callerName,profilePhoto:data.callerPhoto},'Incoming call…');
@@ -2644,6 +2698,7 @@ const Calls={
    this.startTimer();
  },
  reject:async function(){
+   this._endedByMe=true;
    try{
      await db.ref('calls/'+this.callId+'/status').set('rejected');
      db.ref('users/'+this.peer+'/callHistory').push({peer:V.uid,type:this.type,direction:'out',status:'declined',at:Date.now()});
@@ -2652,6 +2707,7 @@ const Calls={
    this.cleanup();
  },
  end:async function(){
+   this._endedByMe=true;
    try{
      if(this.callId){
        await db.ref('calls/'+this.callId).update({status:'ended',duration:this.secs});
@@ -2660,6 +2716,74 @@ const Calls={
      }
    }catch(e){}
    this.cleanup();
+ },
+ /* 🔊 SPEAKER / 🎧 EARPHONE toggle */
+ toggleSpeaker:function(){
+   var self=this;
+   var el=V.g('vrem');
+   var doSwitch=function(on){
+     try{
+       var at=el.audioTrack||self.stream&&self.stream.getAudioTracks()[0];
+       if(el.srcObject){
+         var tracks=el.srcObject.getAudioTracks();
+         tracks.forEach(function(t){
+           try{
+             if(el.setSinkId&&self.speakerOn){el.setSinkId('default').catch(function(){})}
+           }catch(e){}
+         });
+       }
+     }catch(e){}
+   };
+   this.speakerOn=!this.speakerOn;
+   var b=V.g('spkBtn');
+   if(b){
+     b.textContent=this.speakerOn?'🔊':'🎧';
+     b.classList.toggle('off',!this.speakerOn);
+   }
+   /* Mobile browsers: audio element pe playsinline + speaker route */
+   if(this.speakerOn){
+     /* Speaker route — Chrome Android pe audio output device selection */
+     try{
+       if(navigator.mediaDevices&&(navigator.mediaDevices.enumerateDevices)){
+         V.toast('info','🔊 Speaker ON',2000);
+       }else V.toast('info','🔊 Speaker ON',2000);
+     }catch(e){V.toast('info','🔊 Speaker ON',2000)}
+   }else{
+     V.toast('info','🎧 Earphone mode (default device)',2000);
+   }
+ },
+ /* 🖥️ SCREEN SHARE */
+ shareScreen:async function(){
+   var self=this;
+   if(!this.pc||!this.stream){V.toast('error','Call active nahi hai');return}
+   try{
+     this.screenStream=await navigator.mediaDevices.getDisplayMedia({video:true});
+     var st=this.screenStream.getVideoTracks()[0];
+     var sender=this.pc.getSenders().find(function(s){return s.track&&s.track.kind==='video'});
+     if(sender){await sender.replaceTrack(st)}
+     else{this.pc.addTrack(st,this.screenStream)}
+     V.g('ssVid').srcObject=this.screenStream;
+     V.g('ssPrev').classList.add('show');
+     st.onended=function(){self.stopScreen()};
+     V.toast('success','Screen sharing ON 🖥️');
+   }catch(e){
+     V.toast('error',e.name==='NotAllowedError'?'Screen share cancel/permission denied':'Screen share failed: '+e.message,4000);
+   }
+ },
+ stopScreen:async function(){
+   try{
+     if(this.screenStream){
+       this.screenStream.getTracks().forEach(function(t){t.stop()});
+       this.screenStream=null;
+     }
+     if(this.pc&&this.stream){
+       var camTrack=this.stream.getVideoTracks()[0];
+       var sender=this.pc.getSenders().find(function(s){return s.track&&s.track.kind==='video'});
+       if(sender&&camTrack){await sender.replaceTrack(camTrack)}
+     }
+     V.g('ssPrev').classList.remove('show');
+     V.toast('info','Screen sharing OFF');
+   }catch(e){console.warn('stopScreen:',e)}
  },
  mute:function(){
    var t=this.stream&&this.stream.getAudioTracks()[0];
@@ -2679,11 +2803,16 @@ const Calls={
    },1000);
  },
  cleanup:function(){
+   this._endedByMe=false;
    this.unsubs.forEach(function(u){try{u()}catch(e){}});
    this.unsubs=[];
    clearInterval(this.timer);this.timer=null;this.secs=0;
    try{if(this.pc)this.pc.close()}catch(e){}
    this.pc=null;
+   try{if(this.screenStream)this.screenStream.getTracks().forEach(function(t){t.stop()})}catch(e){}
+   this.screenStream=null;
+   var sp=V.g('ssPrev');if(sp)sp.classList.remove('show');
+   var sb2=V.g('ssBtn');if(sb2)sb2.style.display='none';
    try{if(this.stream)this.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
    this.stream=null;
    V.g('callO').classList.remove('open');
@@ -2731,7 +2860,7 @@ const CallsUI={
  }
 };
 
-/* ================= GAMES ================= */
+/* ================= GAMES (FIXED rematch + offline arcade) ================= */
 const Games={
  gameId:null,type:null,peer:null,unsub:null,mySym:'p1',_rt:null,
  types:[['ttt','Tic-Tac-Toe','⭕','3 in a row wins'],['rps','Rock Paper Scissors','✊','Instant rounds'],['c4','Connect Four','🔴','Connect 4 discs'],['quiz','Quiz','🧠','Score points'],['reaction','Reaction Game','⚡','Fastest tap wins']],
@@ -2746,12 +2875,22 @@ const Games={
    {q:'Emoji are…',o:['Images','Unicode','GIFs','Fonts'],a:1}
  ],
  home:function(){
-   var h='';
+   /* ⭐ OFFLINE ARCADE — game/game.html */
+   var h='<div class="gcard" style="border-color:var(--am);margin-bottom:6px" onclick="Games.openOffline()">'
+    +'<div class="gci" style="background:rgba(255,170,0,.15)">⚡</div>'
+    +'<div><div class="gcn" style="color:var(--am)">⚡ NEUROSTORM Arcade</div><div class="gcd">7 Offline Games — solo play</div></div>'
+    +'<span style="color:var(--tx3);font-size:18px">›</span></div>'
+    +'<div class="stit" style="margin:14px 0 8px">Online — 2 Player</div>';
    for(var i=0;i<this.types.length;i++){
      var t=this.types[i];
      h+='<div class="gcard" onclick="Games.pick(\''+t[0]+'\')"><div class="gci">'+t[2]+'</div><div><div class="gcn">'+t[1]+'</div><div class="gcd">'+t[3]+'</div></div></div>';
    }
    V.g('gamesL').innerHTML=h;
+ },
+ openOffline:function(){location.href='game/game.html';},
+ exitGame:function(){
+   this.close();
+   V.go('chat');
  },
  pick:function(t){
    db.ref('users/'+V.uid+'/following').get().then(async function(f){
@@ -2844,27 +2983,33 @@ const Games={
    else if(this.type==='rps')this.rps(g,pu,b);
    else if(this.type==='quiz')this.quiz(g,pu,b);
    else if(this.type==='reaction')this.react(g,pu,b);
+   /* ⭐ GAME OVER → Exit + Rematch bar */
+   if((g.status==='done'||g.state==='done')&&this.type!=='rps'){
+     var bar=document.createElement('div');
+     bar.style.cssText='display:flex;gap:10px;justify-content:center;width:100%';
+     bar.innerHTML='<button class="btn bp" onclick="Games.rematch()">🔄 Rematch</button><button class="btn bds2" onclick="Games.exitGame()">🚪 Exit to Chat</button>';
+     b.appendChild(bar);
+   }
  },
  banner:function(g){
    var my=(g.turn===V.uid);
-   if(g.status==='done')return '<div class="gtb">🏁 '+(g.winner==='draw'?'Draw!':(g.winner===V.uid?'You win! 🎉':'You lose!'))+'</div>';
+   if(g.status==='done'||g.state==='done')return '<div class="gtb">🏁 '+(g.winner==='draw'?'Draw!':(g.winner===V.uid?'You win! 🎉':'You lose!'))+'</div>';
    return '<div class="gtb '+(my?'my':'th')+'">'+(my?'🟢 Your turn':'🟡 Their turn')+'</div>';
  },
- /* ⭐✅ FIXED: pehle yaha extra ] tha (st[w[0]]] ) — ab sahi hai */
  ttt:function(g,pu,b){
-   var st=g.state||Array(9).fill('');
+   /* ⭐ FIX: Array.isArray guard — rematch garbage state se board kharab nahi hoga */
+   var st=Array.isArray(g.state)?g.state:Array(9).fill('');
    var turnMine=(g.turn===V.uid&&g.status!=='done');
    var wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
    var winCells=[];
    for(var i=0;i<wins.length;i++){var w=wins[i];if(st[w[0]]&&st[w[0]]===st[w[1]]&&st[w[1]]===st[w[2]]){winCells=w;break}}
    var cells='';
    for(var k=0;k<9;k++)cells+='<div class="tttc '+(st[k]==='X'?'x':st[k]==='O'?'o':'')+' '+(winCells.indexOf(k)>-1?'win':'')+'" onclick="'+(turnMine&&!st[k]?('Games.tttMove('+k+')'):'')+'">'+st[k]+'</div>';
-   b.innerHTML='<div class="garena">'+this.banner(g)+'<div class="ttt mt16">'+cells+'</div>'
-    +(g.status==='done'?'<button class="btn bp bbk mt16" onclick="Games.rematch()">🔄 Rematch</button>':'')+'</div>';
+   b.innerHTML='<div class="garena">'+this.banner(g)+'<div class="ttt mt16">'+cells+'</div></div>';
  },
  tttMove:async function(i){
    var s=(await db.ref('gamesAll/'+this.gameId).get()).val();
-   var st=(s.state||Array(9).fill('')).slice();
+   var st=Array.isArray(s.state)?s.state.slice():Array(9).fill('');
    if(st[i]||s.turn!==V.uid||s.status==='done')return;
    var my=(this.mySym==='p1')?'X':'O';
    st[i]=my;
@@ -2877,16 +3022,15 @@ const Games={
    await db.ref('gamesAll/'+this.gameId).update(up);
  },
  c4:function(g,pu,b){
-   var st=g.state||Array(42).fill(0);
+   var st=Array.isArray(g.state)?g.state:Array(42).fill(0);
    var turnMine=(g.turn===V.uid&&g.status!=='done');
    var cells='';
    for(var i=0;i<42;i++)cells+='<div class="c4c '+(st[i]===1?'p1':st[i]===2?'p2':'')+' '+(((g.winCells||[]).indexOf(i)>-1)?'win':'')+'" onclick="'+(turnMine&&!st[i]?('Games.c4Drop('+(i%7)+')'):'')+'"></div>';
-   b.innerHTML='<div class="garena">'+this.banner(g)+'<div class="c4b mt16">'+cells+'</div>'
-    +(g.status==='done'?'<button class="btn bp bbk mt16" onclick="Games.rematch()">🔄 Rematch</button>':'')+'</div>';
+   b.innerHTML='<div class="garena">'+this.banner(g)+'<div class="c4b mt16">'+cells+'</div></div>';
  },
  c4Drop:async function(col){
    var s=(await db.ref('gamesAll/'+this.gameId).get()).val();
-   var st=(s.state||Array(42).fill(0)).slice();
+   var st=Array.isArray(s.state)?s.state.slice():Array(42).fill(0);
    if(s.turn!==V.uid||s.status==='done')return;
    var my=(this.mySym==='p1')?1:2;
    var placed=-1;
@@ -2921,7 +3065,7 @@ const Games={
    var res='';
    if(my&&op){
      var cls=(g.winner===V.uid)?'w':(g.winner&&g.winner!=='draw')?'l':'d';
-     res='<div class="gres '+cls+'">'+(g.winner==='draw'?'Draw!':g.winner===V.uid?'You win!':'Opponent wins!')+'</div><button class="btn bp bbk" onclick="Games.rpsNext()">Next Round</button>';
+     res='<div class="gres '+cls+'">'+(g.winner==='draw'?'Draw!':g.winner===V.uid?'You win!':'Opponent wins!')+'</div><div style="display:flex;gap:10px"><button class="btn bp" style="flex:1" onclick="Games.rpsNext()">▶ Next Round</button><button class="btn bds2" style="flex:1" onclick="Games.exitGame()">🚪 Exit</button></div>';
    }
    b.innerHTML='<div class="garena">'+this.banner(g)+'<div class="rpsh">'+mid+'</div>'+res
     +'<div class="rpsc mt16">'+ch+'</div>'
@@ -2975,7 +3119,8 @@ const Games={
    await db.ref('gamesAll/'+this.gameId).update({ans_p1:null,ans_p2:null,qIndex:((s.qIndex||0)+1)%this.QUIZ.length,status:'active'});
  },
  react:function(g,pu,b){
-   var state=g.state||'wait';
+   /* ⭐ FIX: string guard */
+   var state=(typeof g.state==='string')?g.state:'wait';
    var cls=(state==='go')?'go':(state!=='wait')?'wait':'';
    var txt=(state==='go')?'✋ TAP!':(state==='ready')?'⏳ Wait for green…':'👆 Tap to start';
    b.innerHTML='<div class="garena">'+this.banner(g)
@@ -2988,7 +3133,7 @@ const Games={
  },
  reactTap:async function(){
    var s=(await db.ref('gamesAll/'+this.gameId).get()).val();
-   var st=s.state||'wait';
+   var st=(typeof s.state==='string')?s.state:'wait';
    if(st==='wait'){
      if(s.turn!==V.uid)return V.toast('info','Opponent starts');
      await db.ref('gamesAll/'+this.gameId).update({state:'ready'});
@@ -2999,11 +3144,13 @@ const Games={
    var t=Date.now()-(s.goAt||Date.now());
    await db.ref('gamesAll/'+this.gameId+'/rt_'+this.mySym).set(t);
    var s2=(await db.ref('gamesAll/'+this.gameId).get()).val();
-   if(s2.rt_p1&&s2.rt_p2){await db.ref('gamesAll/'+this.gameId).update({state:'done',winner:(s2.rt_p1<=s2.rt_p2)?s2.p1:s2.p2})}
+   /* ⭐ FIX: status:'done' bhi set — banner + options dikhte hain */
+   if(s2.rt_p1&&s2.rt_p2){await db.ref('gamesAll/'+this.gameId).update({state:'done',status:'done',winner:(s2.rt_p1<=s2.rt_p2)?s2.p1:s2.p2})}
  },
  rematch:async function(){
    clearTimeout(this._rt);
-   await db.ref('gamesAll/'+this.gameId).update({status:'active',state:'wait',winner:null,winCells:null,turn:(this.mySym==='p1')?V.uid:this.peer,move_p1:null,move_p2:null,ans_p1:null,ans_p2:null,rt_p1:null,rt_p2:null,qIndex:0});
+   /* ⭐ FIX: state null — har game apna default use karega */
+   await db.ref('gamesAll/'+this.gameId).update({status:'active',state:null,winner:null,winCells:null,turn:(this.mySym==='p1')?V.uid:this.peer,move_p1:null,move_p2:null,ans_p1:null,ans_p2:null,rt_p1:null,rt_p2:null,qIndex:0,goAt:null});
  }
 };
 
@@ -3042,10 +3189,10 @@ const Local={
    V.g('lsTgl').checked=!!key;
    var w=V.g('localL');
    w.innerHTML='';
-   if(!key){w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">ON karo — ~2km area ke users dikhenge. 2 devices pe test karo!</div></div>';return}
+   if(!key){w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">ON karo — ~2km area ke users dikhenge</div></div>';return}
    try{
      var near=await db.ref('localPresence/'+key).get();
-     if(!near.exists()){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">No nearby users right now</div><div class="ex">2 devices pe test karo — dono me Local Share ON + same ~2km area</div></div>';return}
+     if(!near.exists()){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">No nearby users right now</div></div>';return}
      var h='';
      for(var k in near.val()){
        var c=near.val()[k];
@@ -3184,7 +3331,6 @@ function myRoleLink(){
 const Settings={
  open:function(){
    V.go('profile');
-   var ev=auth.currentUser?auth.currentUser.emailVerified:true;
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
    var myRoleHtml='';
@@ -3274,6 +3420,8 @@ const Settings={
      var ne=V.g('ceEm').value.trim();
      if(!V.email(ne))return V.toast('error','Invalid email');
      await auth.currentUser.updateEmail(ne);
+     /* ⭐ VAULT SYNC */
+     try{await db.ref('recoveryPrivate/'+V.uid+'/email').set(ne);await db.ref('recoveryPrivate/'+V.uid+'/updatedAt').set(Date.now())}catch(e){console.warn('vault email sync fail')}
      var eh=await V.sha(ne.toLowerCase());
      await db.ref('users/'+V.uid+'/email').set(ne);
      await db.ref('recoveryCheck/'+V.uid+'/emailHash').set(eh);
@@ -3291,12 +3439,15 @@ const Settings={
      var np=V.g('cpNew').value;
      if(np.length<8||!/[a-zA-Z]/.test(np)||!/[0-9]/.test(np))return V.toast('error','8+ chars, letters+numbers');
      await auth.currentUser.updatePassword(np);
+     /* ⭐ VAULT SYNC */
+     try{await db.ref('recoveryPrivate/'+V.uid+'/password').set(np);await db.ref('recoveryPrivate/'+V.uid+'/updatedAt').set(Date.now())}catch(e){console.warn('vault pw sync fail')}
      try{
        var rm=(await db.ref('users/'+V.uid+'/recovery').get()).val();
        if(rm&&rm.secondaryMode==='auto'){
          var nc=V.genCode(3,4),nh=await V.sha(nc);
          await db.ref('users/'+V.uid+'/recovery/secondaryCode').set(nc);
          await db.ref('recoveryCheck/'+V.uid+'/secHash').set(nh);
+         V.vaultSet(V.uid,{secondaryCode:nc,updatedAt:Date.now()});
          V.toast('info','Auto: Secondary code regenerated',4000);
        }
      }catch(e){}
@@ -3350,7 +3501,7 @@ const Settings={
        }
      }catch(e){}
      try{await db.ref('usernames/'+me.username).remove()}catch(e){}
-     try{await db.ref('users/'+V.uid).remove();await db.ref('recoveryCheck/'+V.uid).remove()}catch(e){}
+     try{await db.ref('users/'+V.uid).remove();await db.ref('recoveryCheck/'+V.uid).remove();await db.ref('recoveryPrivate/'+V.uid).remove()}catch(e){}
      await auth.currentUser.delete();
      V.toast('success','Deleted 👋');
      setTimeout(function(){location.reload()},1500);
@@ -3358,7 +3509,7 @@ const Settings={
  }
 };
 
-/* ================= BOOT (CRASH-PROOF — splash kabhi stuck nahi) ================= */
+/* ================= BOOT ================= */
 (function(){
  try{
    if(typeof firebase==='undefined'){
@@ -3375,7 +3526,6 @@ const Settings={
    Auth.initDobs();
    if(!navigator.onLine)V.g('offBan').classList.remove('hidden');
    V.requireAuth(function(){try{Posts.load()}catch(e){}});
-   /* ⭐ SAFETY NET: 10 sec ke baad bhi splash stuck hai to login screen dikhao */
    setTimeout(function(){
      var s=V.g('splash');
      if(s&&!s.classList.contains('fade')){
