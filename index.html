@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<title>AnimeTubePro Studio × VEXA — Connect Privately</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Great+Vibes&family=Caveat:wght@500;600&family=Dancing+Script:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+<script src="script.js"></script>
+</head>
+<body>
+
+<!-- ═══ SVG GRADIENT DEFS ═══ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="lgTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00d9ff"/><stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="mBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b2a86"/><stop offset="1" stop-color="#1a0f4d"/>
+    </linearGradient>
+    <linearGradient id="mFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#140a3a"/><stop offset="1" stop-color="#07031f"/>
+    </linearGradient>
+    <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="35"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ═══ ANIMATED BACKGROUND — FIXED (image ya gradient + particles upar) ═══ -->
+<div class="bg" id="bg">
+  <div class="bg-glow glow-left"></div>
+  <div class="bg-glow glow-right"></div>
+  <div class="bg-glow glow-horizon"></div>
+  <svg class="bg-mountains" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+    <ellipse cx="720" cy="315" rx="720" ry="55" fill="#00d9ff" opacity=".28" filter="url(#softBlur)"/>
+    <ellipse cx="1000" cy="320" rx="300" ry="35" fill="#ec4899" opacity=".22" filter="url(#softBlur)"/>
+    <path fill="url(#mBack)" opacity=".75"
+      d="M0 320 L0 200 L120 135 L260 210 L380 115 L520 200 L640 145 L760 210 L900 125 L1040 200 L1160 145 L1300 210 L1440 155 L1440 320 Z"/>
+    <path fill="url(#mFront)"
+      d="M0 320 L0 255 L160 190 L300 255 L460 170 L620 255 L780 200 L940 262 L1100 180 L1260 255 L1440 200 L1440 320 Z"/>
+  </svg>
+  <div class="bg-img" id="bgImg"></div>
+</div>
+
+<!-- ═══ PARTICLES — background ke UPAR ═══ -->
+<div class="fx-layer" id="fx"></div>
+
+<!-- ═══ SPLASH — ATP LOADER (4.5s + tap skip) ═══ -->
+<div id="splash">
+  <div class="loader-logo" id="splashLogo">
+    <svg class="atptri-big" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#04010f"/></svg>
+  </div>
+  <div class="loader-title agrad">AnimeTubePro</div>
+  <div class="loader-sub f-vibes agrad">Studio × VEXA</div>
+  <div class="loader-bar"><span id="loadBar"></span></div>
+  <div class="loader-pct" id="loadPct">0%</div>
+  <div id="splashTx" class="sm mut">Initializing...</div>
+  <div class="skiphint sm mut">👆 Tap to skip</div>
+</div>
+
+<div id="offBan" class="offban hidden">⚠️ You are offline</div>
+
+<!-- ═══ AUTH ═══ -->
+<div id="authBox" class="hidden"><div class="awrap2">
+  <div class="acard" id="sLogin">
+    <div class="vlogo">VEXA</div>
+    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+    <div class="atag">AnimeTubePro Studio × VEXA · Connect privately</div>
+    <div class="atit">Welcome back</div><div class="asub">Sign in with your email</div>
+    <div class="ebox" id="loginErr"></div>
+    <div class="fld"><label class="flbl">Email</label><div class="iwrap"><span class="iico">📧</span><input type="email" class="inp" id="lgEmail" placeholder="you@email.com" autocomplete="email"></div></div>
+    <div class="fld"><label class="flbl">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)">👁️</button></div></div>
+    <div style="text-align:right;margin:-5px 0 14px"><a class="sm" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
+    <button class="btn bp bbk blg" id="lgBtn" onclick="Auth.login()">Sign In</button>
+    <div class="aalt">Have a login code? <a onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
+    <div class="aalt">New to VEXA? <a onclick="V.showAuth('sSignup')">Create account</a></div>
+  </div>
+  <div class="acard hidden" id="sCodeLogin">
+    <div class="vlogo">VEXA</div>
+    <div class="atit">🔑 Login with Code</div>
+    <div class="asub">Dusre device ke Settings → Web Login Code se 6-digit code lo</div>
+    <div class="ebox" id="clErr"></div>
+    <div id="clStep1">
+      <div class="fld"><label class="flbl">6-Digit Login Code</label><input class="inp mono" id="clCode" placeholder="ABC123" maxlength="6" style="font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center"></div>
+      <button class="btn bp bbk blg" onclick="CodeLogin.verify()">Verify Code →</button>
+    </div>
+    <div id="clStep2" class="hidden">
+      <div class="snote mb8">✅ Verified! Account: <b id="clEmailShow"></b></div>
+      <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="clPw" placeholder="Account password"></div>
+      <button class="btn bp bbk blg" id="clBtn" onclick="CodeLogin.finish()">Sign In</button>
+    </div>
+    <div class="aalt"><a onclick="V.showAuth('sLogin')">← Back</a></div>
+  </div>
+  <div class="acard hidden" id="sSignup">
+    <div class="vlogo">VEXA</div>
+    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+    <div class="atag">Create your private identity</div>
+    <div class="atit">Create Account</div>
+    <div class="ebox" id="suErr"></div>
+    <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="Auth.previewPhoto(this)"><span class="sm mut">Profile photo (optional)</span></div>
+    <div class="fld"><label class="flbl">Display Name</label><input class="inp" id="suName" maxlength="30" placeholder="Your name"></div>
+    <div class="fld"><label class="flbl">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="suUname" maxlength="20" placeholder="username" autocomplete="off" oninput="Auth.checkUname()"></div>
+      <div class="ferr" id="suUnErr"></div><div class="fok" id="suUnOk">✓ Username available</div><div class="fhint">4–20 chars: letters, numbers, underscore</div></div>
+    <div class="fld"><label class="flbl">Email</label><input type="email" class="inp" id="suEmail" placeholder="you@email.com"></div>
+    <div class="fld"><label class="flbl">Date of Birth</label><div class="dobrow"><select class="selc" id="suDd"><option value="">DD</option></select><select class="selc" id="suMm"><option value="">MM</option></select><select class="selc" id="suYy"><option value="">YYYY</option></select></div></div>
+    <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="suPw" placeholder="Min 8 characters"><div class="fhint">8+ chars with letters & numbers</div></div>
+    <div class="fld"><label class="flbl">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••"></div>
+    <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the Terms & Conditions and Privacy Policy</span></label>
+    <button class="btn bp bbk blg" id="suBtn" onclick="Auth.signup()">CREATE ACCOUNT</button>
+    <div class="aalt">Already have an account? <a onclick="V.showAuth('sLogin')">Sign in</a></div>
+  </div>
+  <div class="acard hidden" id="sCodes">
+    <div class="vlogo">VEXA</div>
+    <div class="atit tc">🎉 Account Created!</div>
+    <div class="asub tc">Ye codes sambhal ke rakho — recovery ke liye chahiye</div>
+    <div class="stit">Main Remember Code</div><div class="cdisp" id="ncMain"></div>
+    <div class="cacts"><button class="btn bg bsm" onclick="V.copy(document.getElementById('ncMain').textContent,'Main code copied')">📋 Copy</button></div>
+    <div class="stit mt16">Secondary Remember Code</div><div class="cdisp" id="ncSec"></div>
+    <div class="cacts"><button class="btn bg bsm" onclick="V.copy(document.getElementById('ncSec').textContent,'Secondary code copied')">📋 Copy</button></div>
+    <div class="snote">⚠️ <span><b>Recovery = AUTO-LOGIN</b> + password/email wapas! Yaad rakho: <b>Main Code + UID + DOB</b>.</span></div>
+    <button class="btn bp bbk blg mt16" onclick="Auth.finishSignup()">Continue to VEXA →</button>
+  </div>
+  <div class="acard hidden" id="sRec">
+    <div class="vlogo">VEXA</div>
+    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN</div>
+    <div class="fsteps">
+      <div class="fst" id="rs1"><div class="fdot">1</div><span class="sm mut">Username+DOB</span></div><div class="fline" id="rl1"></div>
+      <div class="fst" id="rs2"><div class="fdot">2</div><span class="sm mut">UID+Code</span></div><div class="fline" id="rl2"></div>
+      <div class="fst" id="rs3"><div class="fdot">3</div><span class="sm mut">Main+DOB+UID</span></div>
+    </div>
+    <div class="ebox" id="recErr"></div>
+    <div id="recS1">
+      <div class="fld"><label class="flbl">Username</label><input class="inp" id="rUname" placeholder="your_username"></div>
+      <div class="fld"><label class="flbl">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1"><option value="">DD</option></select><select class="selc" id="rMm1"><option value="">MM</option></select><select class="selc" id="rYy1"><option value="">YYYY</option></select></div></div>
+      <button class="btn bp bbk blg" onclick="Rec.step1()">Verify Step 1 →</button>
+    </div>
+    <div id="recS2" class="hidden">
+      <div class="snote mb8">💡 UID Profile se copy kiya tha</div>
+      <div class="fld"><label class="flbl">Account UID</label><input class="inp mono" id="rUid" placeholder="e.g. xK9mP2vQ..."></div>
+      <div class="fld"><label class="flbl">Secondary Remember Code</label><input class="inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase"></div>
+      <button class="btn bp bbk blg" onclick="Rec.step2()">Verify Step 2 →</button>
+    </div>
+    <div id="recS3" class="hidden">
+      <div class="fld"><label class="flbl">Main Remember Code</label><input class="inp mono" id="rMain" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase"></div>
+      <div class="fld"><label class="flbl">Date of Birth (re-verify)</label><div class="dobrow"><select class="selc" id="rDd3"><option value="">DD</option></select><select class="selc" id="rMm3"><option value="">MM</option></select><select class="selc" id="rYy3"><option value="">YYYY</option></select></div></div>
+      <div class="fld"><label class="flbl">Account UID (re-verify)</label><input class="inp mono" id="rUid3" placeholder="Same UID again"></div>
+      <button class="btn bp bbk blg" onclick="Rec.step3()">Verify & Request Entry →</button>
+    </div>
+    <div class="aalt">Remembered? <a onclick="V.showAuth('sLogin')">Sign in</a> · <a onclick="V.showAuth('sHelp')">🆘 Help</a></div>
+  </div>
+  <div class="acard hidden" id="sHelp">
+    <div class="vlogo">VEXA</div>
+    <div class="atit tc">🆘 Help Center</div>
+    <div class="asub tc">Direct Admin/Moderator se contact</div>
+    <div class="ebox" id="hcErr"></div>
+    <div id="hcStep1">
+      <div class="snote mb8">📋 Pre-programmed messages:</div>
+      <div class="rrow" onclick="Help.report('lost_account')">📱 My account is lost</div>
+      <div class="rrow" onclick="Help.report('lost_device')">🔒 My device is lost (6-hour rule)</div>
+      <div class="rrow" onclick="Help.report('hacked')">🚨 My account is hacked!</div>
+      <div class="rrow" onclick="Help.report('other')">💬 Other issue</div>
+    </div>
+    <div id="hcStep2" class="hidden">
+      <div class="snote mb8">✅ Selected. Apna username daalo:</div>
+      <div class="fld"><label class="flbl">Your Username</label><input class="inp" id="hcUname" placeholder="your_username"></div>
+      <div class="fld"><label class="flbl">Extra details (optional)</label><textarea class="txta" id="hcDetail" maxlength="300"></textarea></div>
+      <button class="btn bp bbk blg" onclick="Help.send()">Send Report →</button>
+    </div>
+    <div class="aalt"><a onclick="V.showAuth('sLogin')">← Back</a></div>
+  </div>
+</div></div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <div class="shell">
+    <header class="topb">
+      <div class="ava sm" id="topAva" style="cursor:pointer" onclick="V.openProfile(V.uid)"></div>
+      <div class="topt" id="topTitle">ATP × VEXA</div>
+      <div class="music-wrap">
+        <button class="bico" id="musicBtn" title="Music Player">🎵</button>
+        <div class="music-panel" id="musicPanel">
+          <div class="mp-title">🎵 Music Player</div>
+          <div class="mp-now" id="mpNow">🎵 Ready</div>
+          <div class="mp-tabs">
+            <div class="mp-tab sel" data-mt="folder" onclick="Music.tab('folder')">🌐 Folder</div>
+            <div class="mp-tab" data-mt="local" onclick="Music.tab('local')">📁 Local</div>
+          </div>
+          <div class="mp-sec" id="secFolder">
+            <div class="mp-btns">
+              <button class="mp-btn hindi" id="mpHindi"><span class="micn">🎬</span><span>Hindi</span></button>
+              <button class="mp-btn english" id="mpEnglish"><span class="micn">🌍</span><span>English</span></button>
+            </div>
+            <div class="mp-count" id="mpCount"></div>
+          </div>
+          <div class="mp-sec hidden" id="secLocal">
+            <button class="mp-btn add" onclick="Music.pickLocal()">➕ Device se Songs Add karo</button>
+            <input type="file" id="mpFile" accept="audio/*" multiple class="hidden">
+            <div class="mp-list" id="mpList"></div>
+            <div class="mp-count" id="mpLocCount"></div>
+          </div>
+          <div class="mp-ctrl">
+            <button class="bico" onclick="Music.prev()">⏮</button>
+            <button class="bico ok mp-play" id="mpPlay" onclick="Music.togglePlay()">▶</button>
+            <button class="bico" onclick="Music.next()">⏭</button>
+            <button class="bico" onclick="Music.stop()">⏹</button>
+          </div>
+          <div class="mp-vol">🔊 <input type="range" id="mpVol" min="0" max="100" value="80"></div>
+        </div>
+      </div>
+      <button class="bico" id="moonBtn" title="Calm mode">🌙</button>
+      <button class="bico" onclick="V.go('notif')" style="position:relative">🔔<span class="nbdg hidden" id="bNotifTop" style="position:absolute;top:-4px;right:-4px">0</span></button>
+      <button class="bico" onclick="Settings.open()">⚙️</button>
+    </header>
+    <main class="scarea" id="scrArea">
+      <section class="scr act" id="sc-home">
+        <div class="pgc">
+          <div class="qgrid">
+            <div class="qt" onclick="V.go('local')"><span class="qi">📍</span><span class="ql">Local</span></div>
+            <div class="qt" onclick="V.go('calls')"><span class="qi">📞</span><span class="ql">Calls</span></div>
+            <div class="qt" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
+            <div class="qt" onclick="Settings.open()"><span class="qi">⚙️</span><span class="ql">Settings</span></div>
+          </div>
+          <div class="lnkcard" id="lnkCard"></div>
+          <div id="feedW"></div>
+        </div>
+        <button class="pfab" onclick="Posts.compose()">✏️</button>
+      </section>
+      <section class="scr" id="sc-search"><div class="pgc">
+        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Users or #hashtags..." oninput="Search.run()"></div>
+        <div id="sRes"></div></div></section>
+      <section class="scr" id="sc-local"><div class="pgc">
+        <div class="radar"><div class="rdc">📡</div></div>
+        <div class="lcard"><div class="lti"><div class="ltt">📍 Local Share</div><div class="ltd">Approximate ~2km — never exact GPS</div></div>
+          <label class="sw"><input type="checkbox" id="lsTgl" onchange="Local.toggle(this.checked)"><span class="trk"></span></label></div>
+        <div class="stit">Nearby Users</div><div id="localL"></div></div></section>
+      <section class="scr" id="sc-chat">
+        <div class="ctabs"><div class="sgi sel" data-t="all" onclick="ChatUI.tab('all')">All</div><div class="sgi" data-t="unread" onclick="ChatUI.tab('unread')">Unread</div><div class="sgi" data-t="locked" onclick="ChatUI.tab('locked')">🔒 Locked</div><div class="sgi" data-t="arch" onclick="ChatUI.tab('arch')">📁 Archived</div></div>
+        <div class="clwrap" id="chatL"></div></section>
+      <section class="scr" id="sc-calls">
+        <div class="ctabs"><div class="sgi sel" data-f="all" onclick="CallsUI.filter('all')">All</div><div class="sgi" data-f="missed" onclick="CallsUI.filter('missed')">Missed</div><div class="sgi" data-f="in" onclick="CallsUI.filter('in')">Incoming</div><div class="sgi" data-f="out" onclick="CallsUI.filter('out')">Outgoing</div></div>
+        <div class="clwrap" id="callsL"></div></section>
+      <section class="scr" id="sc-games"><div class="pgc">
+        <div class="stit">Games</div><div class="glist" id="gamesL"></div></div></section>
+      <section class="scr" id="sc-notif"><div class="pgc" id="notifL"></div></section>
+      <section class="scr" id="sc-profile"><div id="profC"></div></section>
+    </main>
+    <nav class="bnav">
+      <a class="bni act" data-sc="home" onclick="V.go('home')"><span class="bico2">🏠</span>Home</a>
+      <a class="bni" data-sc="search" onclick="V.go('search')"><span class="bico2">🔍</span>Search</a>
+      <a class="bni" data-sc="chat" onclick="V.go('chat')"><span class="bico2">💬</span>Chat<span class="nbdg hidden" id="bChatM">0</span></a>
+      <a class="bni" data-sc="games" onclick="V.go('games')"><span class="bico2">🎮</span>Games</a>
+      <a class="bni" data-sc="profile" onclick="V.openProfile(V.uid)"><span class="bico2">👤</span>Profile</a>
+    </nav>
+    <!-- ⚡ QUICK FAB -->
+    <button class="qfab" id="qfab" onclick="QFab.toggle()" title="Quick Actions">⚡</button>
+    <div class="qmenu" id="qmenu">
+      <div class="qmi" onclick="QFab.go('home')"><span>🏠</span>Home</div>
+      <div class="qmi" onclick="QFab.go('search')"><span>🔍</span>Search</div>
+      <div class="qmi" onclick="QFab.go('chat')"><span>💬</span>Chat</div>
+      <div class="qmi" onclick="QFab.go('calls')"><span>📞</span>Calls</div>
+      <div class="qmi" onclick="QFab.go('games')"><span>🎮</span>Games</div>
+      <div class="qmi" onclick="QFab.go('local')"><span>📍</span>Local</div>
+      <div class="qmi" onclick="QFab.go('notif')"><span>🔔</span>Notifications</div>
+      <div class="qmi" onclick="QFab.go('profile')"><span>👤</span>Profile</div>
+      <div class="qmi" onclick="QFab.go('settings')"><span>⚙️</span>Settings</div>
+      <div class="qmi" onclick="QFab.themes()"><span>🖼️</span>Image Themes</div>
+      <div class="qmi" onclick="QFab.music()"><span>🎵</span>Music Player</div>
+      <div class="qmi" onclick="QFab.calm()"><span>🌙</span>Calm Mode</div>
+      <div class="qmi" onclick="QFab.links()"><span>🔗</span>ATP Links</div>
+      <div class="qmi" onclick="QFab.reload()"><span>🔄</span>Reload App</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHAT VIEW ═══ -->
+<div id="chatV"><div class="shell">
+  <header class="chd">
+    <button class="bico" onclick="ChatUI.close()">←</button>
+    <div class="ava sm" id="cvAva" style="cursor:pointer" onclick="V.openProfile(ChatUI.peerUid)"></div>
+    <div class="chi" onclick="V.openProfile(ChatUI.peerUid)"><div class="chn" id="cvName">—</div><div class="chs" id="cvSt"></div></div>
+    <button class="bico" onclick="Calls.startWith(ChatUI.peerUid,'voice')">📞</button>
+    <button class="bico" onclick="Calls.startWith(ChatUI.peerUid,'video')">🎥</button>
+    <button class="bico" onclick="ChatUI.opts()">⋮</button>
+  </header>
+  <div class="emoP" id="emoP"></div>
+  <div class="cmsgs" id="cmsgs"></div>
+  <div class="cinp">
+    <button class="bico" onclick="ChatUI.emoji()">😊</button>
+    <button class="bico" onclick="ChatUI.gif()">GIF</button>
+    <textarea class="inp" id="cInput" rows="1" placeholder="Message..." oninput="ChatUI.grow(this);ChatUI.typing()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ChatUI.send()}"></textarea>
+    <button class="csend" onclick="ChatUI.send()">➤</button>
+  </div>
+  <button class="feye" id="feye" onclick="Games.toggle()">👁️</button>
+</div></div>
+
+<!-- ═══ GAME PANEL ═══ -->
+<div id="gpan"><div class="shell">
+  <header class="gph"><button class="bico" onclick="Games.close()">←</button><div class="gpt" id="gTitle">🎮</div><button class="bico" onclick="Games.toggle()">👁️</button></header>
+  <div class="gpb" id="gBody"></div>
+</div></div>
+
+<!-- ═══ CALL OVERLAY ═══ -->
+<div id="callO"><div class="shell">
+  <video id="vrem" autoplay playsinline></video><video id="vslf" autoplay playsinline muted></video>
+  <div class="ssPrev" id="ssPrev"><video id="ssVid" autoplay playsinline muted></video><div class="ssx" onclick="Calls.stopScreen()">✕</div></div>
+  <div class="ctop"><div class="clbl" id="cLbl"></div><div class="cavw"><div class="ava xl" id="cAva"></div><div class="cnm" id="cName">—</div><div class="cst" id="cSt">Connecting…</div><div class="ctmr hidden" id="cTmr">00:00</div></div></div>
+  <div class="cctrl" id="cCtrl"></div>
+  <button class="ccb" id="ssBtn" onclick="Calls.shareScreen()" style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:7;display:none" title="Share Screen">🖥️</button>
+</div></div>
+
+<div class="mov" id="modal"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button class="mclose" onclick="V.mClose()">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
+<div class="tcont" id="tcont"></div>
+
+</body>
+</html>
