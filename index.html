@@ -2,23 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0f">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="AnimeTubePro Studio × VEXA — private chat, calls, games aur social, sab ek jagah.">
 <title>AnimeTubePro Studio × VEXA — Connect Privately</title>
-<link rel="icon" href="logo 2.png">
+<link rel="icon" href="logo%202.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Great+Vibes&family=Caveat:wght@500;600&family=Dancing+Script:wght@500;600&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="style.css">
-<script src="script.js"></script>
+<script defer src="script.js"></script>
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute">
+<noscript><div style="position:fixed;inset:0;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;text-align:center;padding:20px">⚠️ VEXA chalane ke liye JavaScript enable karo.</div></noscript>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="lgTop" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#00d9ff"/><stop offset="1" stop-color="#a855f7"/>
@@ -39,7 +43,7 @@
   <div class="bg-glow glow-left"></div>
   <div class="bg-glow glow-right"></div>
   <div class="bg-glow glow-horizon"></div>
-  <svg class="bg-mountains" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="bg-mountains" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true" focusable="false">
     <ellipse cx="720" cy="315" rx="720" ry="55" fill="#00d9ff" opacity=".28" filter="url(#softBlur)"/>
     <ellipse cx="1000" cy="320" rx="300" ry="35" fill="#ec4899" opacity=".22" filter="url(#softBlur)"/>
     <path fill="url(#mBack)" opacity=".75"
@@ -50,69 +54,69 @@
   <div class="bg-img" id="bgImg"></div>
 </div>
 
-<div class="fx-layer" id="fx"></div>
+<div class="fx-layer" id="fx" aria-hidden="true"></div>
 
-<div id="splash">
+<div id="splash" role="status" aria-busy="true">
   <div class="loader-logo" id="splashLogo">
-    <svg class="atptri-big" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#04010f"/></svg>
+    <svg class="atptri-big" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#04010f"/></svg>
   </div>
   <div class="loader-title agrad">AnimeTubePro</div>
   <div class="loader-sub f-vibes agrad">Studio × VEXA</div>
-  <div class="loader-bar"><span id="loadBar"></span></div>
+  <div class="loader-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading"><span id="loadBar"></span></div>
   <div class="loader-pct" id="loadPct">0%</div>
   <div id="splashTx" class="sm mut">Initializing...</div>
   <div class="skiphint sm mut">👆 Tap to skip</div>
 </div>
 
-<div id="offBan" class="offban hidden">⚠️ You are offline</div>
+<div id="offBan" class="offban hidden" role="alert">⚠️ You are offline</div>
 
 <div id="authBox" class="hidden"><div class="awrap2">
   <div class="acard" id="sLogin">
     <div class="vlogo">VEXA</div>
-    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
     <div class="atag">AnimeTubePro Studio × VEXA · Connect privately</div>
     <div class="atit">Welcome back</div><div class="asub">Sign in with your email</div>
-    <div class="ebox" id="loginErr"></div>
-    <div class="fld"><label class="flbl">Email</label><div class="iwrap"><span class="iico">📧</span><input type="email" class="inp" id="lgEmail" placeholder="you@email.com" autocomplete="email" inputmode="email"></div></div>
-    <div class="fld"><label class="flbl">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)" aria-label="Show password">👁️</button></div></div>
-    <div style="text-align:right;margin:-5px 0 14px"><a class="sm" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
+    <div class="ebox" id="loginErr" role="alert" aria-live="polite"></div>
+    <div class="fld"><label class="flbl" for="lgEmail">Email</label><div class="iwrap"><span class="iico">📧</span><input type="email" class="inp" id="lgEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" enterkeyhint="next"></div></div>
+    <div class="fld"><label class="flbl" for="lgPw">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)" aria-label="Show password">👁️</button></div></div>
+    <div style="text-align:right;margin:-5px 0 14px"><a class="sm" role="button" tabindex="0" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
     <button type="button" class="btn bp bbk blg" id="lgBtn" onclick="Auth.login()">Sign In</button>
-    <div class="aalt">Have a login code? <a onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
-    <div class="aalt">New to VEXA? <a onclick="V.showAuth('sSignup')">Create account</a></div>
+    <div class="aalt">Have a login code? <a role="button" tabindex="0" onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
+    <div class="aalt">New to VEXA? <a role="button" tabindex="0" onclick="V.showAuth('sSignup')">Create account</a></div>
   </div>
   <div class="acard hidden" id="sCodeLogin">
     <div class="vlogo">VEXA</div>
     <div class="atit">🔑 Login with Code</div>
     <div class="asub">Dusre device ke Settings → Web Login Code se 6-digit code lo</div>
-    <div class="ebox" id="clErr"></div>
+    <div class="ebox" id="clErr" role="alert" aria-live="polite"></div>
     <div id="clStep1">
-      <div class="fld"><label class="flbl">6-Digit Login Code</label><input class="inp mono" id="clCode" placeholder="ABC123" maxlength="6" style="font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center" autocomplete="one-time-code"></div>
+      <div class="fld"><label class="flbl" for="clCode">6-Digit Login Code</label><input class="inp mono" id="clCode" placeholder="ABC123" maxlength="6" style="font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" enterkeyhint="next"></div>
       <button type="button" class="btn bp bbk blg" onclick="CodeLogin.verify()">Verify Code →</button>
     </div>
     <div id="clStep2" class="hidden">
       <div class="snote mb8">✅ Verified! Account: <b id="clEmailShow"></b></div>
-      <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="clPw" placeholder="Account password" autocomplete="current-password"></div>
+      <div class="fld"><label class="flbl" for="clPw">Password</label><input type="password" class="inp" id="clPw" placeholder="Account password" autocomplete="current-password" enterkeyhint="go"></div>
       <button type="button" class="btn bp bbk blg" id="clBtn" onclick="CodeLogin.finish()">Sign In</button>
     </div>
-    <div class="aalt"><a onclick="V.showAuth('sLogin')">← Back</a></div>
+    <div class="aalt"><a role="button" tabindex="0" onclick="V.showAuth('sLogin')">← Back</a></div>
   </div>
   <div class="acard hidden" id="sSignup">
     <div class="vlogo">VEXA</div>
-    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
     <div class="atag">Create your private identity</div>
     <div class="atit">Create Account</div>
-    <div class="ebox" id="suErr"></div>
-    <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()" role="button" aria-label="Choose profile photo">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="Auth.previewPhoto(this)"><span class="sm mut">Profile photo (optional)</span></div>
-    <div class="fld"><label class="flbl">Display Name</label><input class="inp" id="suName" maxlength="30" placeholder="Your name" autocomplete="name"></div>
-    <div class="fld"><label class="flbl">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="suUname" maxlength="20" placeholder="username" autocomplete="off" oninput="Auth.checkUname()"></div>
-      <div class="ferr" id="suUnErr"></div><div class="fok" id="suUnOk">✓ Username available</div><div class="fhint">4–20 chars: letters, numbers, underscore</div></div>
-    <div class="fld"><label class="flbl">Email</label><input type="email" class="inp" id="suEmail" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
-    <div class="fld"><label class="flbl">Date of Birth</label><div class="dobrow"><select class="selc" id="suDd" aria-label="Day"><option value="">DD</option></select><select class="selc" id="suMm" aria-label="Month"><option value="">MM</option></select><select class="selc" id="suYy" aria-label="Year"><option value="">YYYY</option></select></div></div>
-    <div class="fld"><label class="flbl">Password</label><input type="password" class="inp" id="suPw" placeholder="Min 8 characters" autocomplete="new-password"><div class="fhint">8+ chars with letters & numbers</div></div>
-    <div class="fld"><label class="flbl">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••" autocomplete="new-password"></div>
+    <div class="ebox" id="suErr" role="alert" aria-live="polite"></div>
+    <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()" role="button" tabindex="0" aria-label="Choose profile photo">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="Auth.previewPhoto(this)"><span class="sm mut">Profile photo (optional)</span></div>
+    <div class="fld"><label class="flbl" for="suName">Display Name</label><input class="inp" id="suName" maxlength="30" placeholder="Your name" autocomplete="name"></div>
+    <div class="fld"><label class="flbl" for="suUname">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="suUname" maxlength="20" placeholder="username" autocomplete="off" autocapitalize="none" spellcheck="false" oninput="Auth.checkUname()"></div>
+      <div class="ferr" id="suUnErr" role="alert"></div><div class="fok" id="suUnOk">✓ Username available</div><div class="fhint">4–20 chars: letters, numbers, underscore</div></div>
+    <div class="fld"><label class="flbl" for="suEmail">Email</label><input type="email" class="inp" id="suEmail" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+    <div class="fld"><label class="flbl" for="suDd">Date of Birth</label><div class="dobrow"><select class="selc" id="suDd" aria-label="Day"><option value="">DD</option></select><select class="selc" id="suMm" aria-label="Month"><option value="">MM</option></select><select class="selc" id="suYy" aria-label="Year"><option value="">YYYY</option></select></div></div>
+    <div class="fld"><label class="flbl" for="suPw">Password</label><input type="password" class="inp" id="suPw" placeholder="Min 8 characters" autocomplete="new-password" enterkeyhint="next"><div class="fhint">8+ chars with letters & numbers</div></div>
+    <div class="fld"><label class="flbl" for="suPw2">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••" autocomplete="new-password" enterkeyhint="done"></div>
     <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the Terms & Conditions and Privacy Policy</span></label>
     <button type="button" class="btn bp bbk blg" id="suBtn" onclick="Auth.signup()">CREATE ACCOUNT</button>
-    <div class="aalt">Already have an account? <a onclick="V.showAuth('sLogin')">Sign in</a></div>
+    <div class="aalt">Already have an account? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a></div>
   </div>
   <div class="acard hidden" id="sCodes">
     <div class="vlogo">VEXA</div>
@@ -133,52 +137,52 @@
       <div class="fst" id="rs2"><div class="fdot">2</div><span class="sm mut">UID+Code</span></div><div class="fline" id="rl2"></div>
       <div class="fst" id="rs3"><div class="fdot">3</div><span class="sm mut">Main+DOB+UID</span></div>
     </div>
-    <div class="ebox" id="recErr"></div>
+    <div class="ebox" id="recErr" role="alert" aria-live="polite"></div>
     <div id="recS1">
-      <div class="fld"><label class="flbl">Username</label><input class="inp" id="rUname" placeholder="your_username" autocomplete="off"></div>
-      <div class="fld"><label class="flbl">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
+      <div class="fld"><label class="flbl" for="rUname">Username</label><input class="inp" id="rUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+      <div class="fld"><label class="flbl" for="rDd1">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
       <button type="button" class="btn bp bbk blg" onclick="Rec.step1()">Verify Step 1 →</button>
     </div>
     <div id="recS2" class="hidden">
       <div class="snote mb8">💡 UID Profile se copy kiya tha</div>
-      <div class="fld"><label class="flbl">Account UID</label><input class="inp mono" id="rUid" placeholder="e.g. xK9mP2vQ..." autocomplete="off"></div>
-      <div class="fld"><label class="flbl">Secondary Remember Code</label><input class="inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off"></div>
+      <div class="fld"><label class="flbl" for="rUid">Account UID</label><input class="inp mono" id="rUid" placeholder="e.g. xK9mP2vQ..." autocomplete="off" spellcheck="false"></div>
+      <div class="fld"><label class="flbl" for="rSec">Secondary Remember Code</label><input class="inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
       <button type="button" class="btn bp bbk blg" onclick="Rec.step2()">Verify Step 2 →</button>
     </div>
     <div id="recS3" class="hidden">
-      <div class="fld"><label class="flbl">Main Remember Code</label><input class="inp mono" id="rMain" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off"></div>
-      <div class="fld"><label class="flbl">Date of Birth (re-verify)</label><div class="dobrow"><select class="selc" id="rDd3" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm3" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy3" aria-label="Year"><option value="">YYYY</option></select></div></div>
-      <div class="fld"><label class="flbl">Account UID (re-verify)</label><input class="inp mono" id="rUid3" placeholder="Same UID again" autocomplete="off"></div>
+      <div class="fld"><label class="flbl" for="rMain">Main Remember Code</label><input class="inp mono" id="rMain" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+      <div class="fld"><label class="flbl" for="rDd3">Date of Birth (re-verify)</label><div class="dobrow"><select class="selc" id="rDd3" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm3" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy3" aria-label="Year"><option value="">YYYY</option></select></div></div>
+      <div class="fld"><label class="flbl" for="rUid3">Account UID (re-verify)</label><input class="inp mono" id="rUid3" placeholder="Same UID again" autocomplete="off" spellcheck="false"></div>
       <button type="button" class="btn bp bbk blg" onclick="Rec.step3()">Verify & Request Entry →</button>
     </div>
-    <div class="aalt">Remembered? <a onclick="V.showAuth('sLogin')">Sign in</a> · <a onclick="V.showAuth('sHelp')">🆘 Help</a></div>
+    <div class="aalt">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
   </div>
   <div class="acard hidden" id="sHelp">
     <div class="vlogo">VEXA</div>
     <div class="atit tc">🆘 Help Center</div>
     <div class="asub tc">Direct Admin/Moderator se contact</div>
-    <div class="ebox" id="hcErr"></div>
+    <div class="ebox" id="hcErr" role="alert" aria-live="polite"></div>
     <div id="hcStep1">
       <div class="snote mb8">📋 Pre-programmed messages:</div>
-      <div class="rrow" onclick="Help.report('lost_account')">📱 My account is lost</div>
-      <div class="rrow" onclick="Help.report('lost_device')">🔒 My device is lost (6-hour rule)</div>
-      <div class="rrow" onclick="Help.report('hacked')">🚨 My account is hacked!</div>
-      <div class="rrow" onclick="Help.report('other')">💬 Other issue</div>
+      <div class="rrow" role="button" tabindex="0" onclick="Help.report('lost_account')">📱 My account is lost</div>
+      <div class="rrow" role="button" tabindex="0" onclick="Help.report('lost_device')">🔒 My device is lost (6-hour rule)</div>
+      <div class="rrow" role="button" tabindex="0" onclick="Help.report('hacked')">🚨 My account is hacked!</div>
+      <div class="rrow" role="button" tabindex="0" onclick="Help.report('other')">💬 Other issue</div>
     </div>
     <div id="hcStep2" class="hidden">
       <div class="snote mb8">✅ Selected. Apna username daalo:</div>
-      <div class="fld"><label class="flbl">Your Username</label><input class="inp" id="hcUname" placeholder="your_username" autocomplete="off"></div>
-      <div class="fld"><label class="flbl">Extra details (optional)</label><textarea class="txta" id="hcDetail" maxlength="300"></textarea></div>
+      <div class="fld"><label class="flbl" for="hcUname">Your Username</label><input class="inp" id="hcUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+      <div class="fld"><label class="flbl" for="hcDetail">Extra details (optional)</label><textarea class="txta" id="hcDetail" maxlength="300"></textarea></div>
       <button type="button" class="btn bp bbk blg" onclick="Help.send()">Send Report →</button>
     </div>
-    <div class="aalt"><a onclick="V.showAuth('sLogin')">← Back</a></div>
+    <div class="aalt"><a role="button" tabindex="0" onclick="V.showAuth('sLogin')">← Back</a></div>
   </div>
 </div></div>
 
 <div id="app">
   <div class="shell">
     <header class="topb">
-      <div class="ava sm" id="topAva" style="cursor:pointer" onclick="V.openProfile(V.uid)" role="button" aria-label="My profile"></div>
+      <div class="ava sm" id="topAva" style="cursor:pointer" onclick="V.openProfile(V.uid)" role="button" tabindex="0" aria-label="My profile"></div>
       <div class="topt" id="topTitle">ATP × VEXA</div>
       <div class="music-wrap">
         <button type="button" class="bico" id="musicBtn" title="Music Player" aria-label="Music player">🎵</button>
@@ -186,8 +190,8 @@
           <div class="mp-title">🎵 Music Player</div>
           <div class="mp-now" id="mpNow">⏳ Songs check ho rahe hain…</div>
           <div class="mp-tabs">
-            <div class="mp-tab sel" data-mt="folder" onclick="Music.tab('folder')">🌐 Folder</div>
-            <div class="mp-tab" data-mt="local" onclick="Music.tab('local')">📁 Local</div>
+            <div class="mp-tab sel" data-mt="folder" role="button" tabindex="0" onclick="Music.tab('folder')">🌐 Folder</div>
+            <div class="mp-tab" data-mt="local" role="button" tabindex="0" onclick="Music.tab('local')">📁 Local</div>
           </div>
           <div class="mp-sec" id="secFolder">
             <div class="mp-btns">
@@ -219,10 +223,10 @@
       <section class="scr act" id="sc-home">
         <div class="pgc">
           <div class="qgrid">
-            <div class="qt" onclick="V.go('local')"><span class="qi">📍</span><span class="ql">Local</span></div>
-            <div class="qt" onclick="V.go('calls')"><span class="qi">📞</span><span class="ql">Calls</span></div>
-            <div class="qt" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
-            <div class="qt" onclick="Settings.open()"><span class="qi">⚙️</span><span class="ql">Settings</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="V.go('local')"><span class="qi">📡</span><span class="ql">Local</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="V.go('calls')"><span class="qi">📞</span><span class="ql">Calls</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="Settings.open()"><span class="qi">⚙️</span><span class="ql">Settings</span></div>
           </div>
           <div class="lnkcard" id="lnkCard"></div>
           <div id="feedW"></div>
@@ -230,18 +234,46 @@
         <button type="button" class="pfab" onclick="Posts.compose()" aria-label="Create post">✏️</button>
       </section>
       <section class="scr" id="sc-search"><div class="pgc">
-        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Users or #hashtags..." oninput="Search.run()" autocomplete="off"></div>
+        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Users or #hashtags..." oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"></div>
         <div id="sRes"></div></div></section>
       <section class="scr" id="sc-local"><div class="pgc">
         <div class="radar"><div class="rdc">📡</div></div>
-        <div class="lcard"><div class="lti"><div class="ltt">📍 Local Share</div><div class="ltd">Approximate ~2km — never exact GPS</div></div>
+        <div class="lcard"><div class="lti"><div class="ltt">📡 Local Share</div><div class="ltd">Approximate ~2km — never exact GPS</div></div>
           <label class="sw"><input type="checkbox" id="lsTgl" onchange="Local.toggle(this.checked)" aria-label="Local share"><span class="trk"></span></label></div>
-        <div class="stit">Nearby Users</div><div id="localL"></div></div></section>
+        <div class="dlegend" aria-hidden="true">
+          <span class="dl-i d4"><span class="ldots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> Bilkul paas</span>
+          <span class="dl-i d3"><span class="ldots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> ~500m</span>
+          <span class="dl-i d2"><span class="ldots"><i class="on"></i><i class="on"></i><i></i><i></i></span> ~1km</span>
+          <span class="dl-i d0"><span class="ldots"><i class="on"></i><i></i><i></i><i></i></span> ~2km</span>
+        </div>
+        <div class="stit lr-row">Nearby Users <button type="button" class="lrbtn" id="lrBtn" onclick="Local.reload()" aria-label="Refresh nearby">🔄</button></div>
+        <div id="localL">
+          <div class="urow">
+            <div class="ava md">A</div>
+            <div class="uinf"><div class="unm">Demo User</div><div class="uun">🟢 nearby</div></div>
+            <span class="ldist d4"><span class="ldots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><b>Bilkul paas</b><em>↗️</em></span>
+          </div>
+          <div class="urow">
+            <div class="ava md">B</div>
+            <div class="uinf"><div class="unm">Demo User 2</div><div class="uun">🟢 nearby</div></div>
+            <span class="ldist d3"><span class="ldots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><b>~500m</b><em>➡️</em></span>
+          </div>
+          <div class="urow">
+            <div class="ava md">C</div>
+            <div class="uinf"><div class="unm">Demo User 3</div><div class="uun">🟢 nearby</div></div>
+            <span class="ldist d2"><span class="ldots"><i class="on"></i><i class="on"></i><i></i><i></i></span><b>~1km</b><em>⬇️</em></span>
+          </div>
+          <div class="urow">
+            <div class="ava md">D</div>
+            <div class="uinf"><div class="unm">Demo User 4</div><div class="uun">🟢 nearby</div></div>
+            <span class="ldist d0"><span class="ldots"><i class="on"></i><i></i><i></i><i></i></span><b>~2km</b><em>⬅️</em></span>
+          </div>
+        </div></div></section>
       <section class="scr" id="sc-chat">
-        <div class="ctabs"><div class="sgi sel" data-t="all" onclick="ChatUI.tab('all')">All</div><div class="sgi" data-t="unread" onclick="ChatUI.tab('unread')">Unread</div><div class="sgi" data-t="locked" onclick="ChatUI.tab('locked')">🔒 Locked</div><div class="sgi" data-t="arch" onclick="ChatUI.tab('arch')">📁 Archived</div></div>
+        <div class="ctabs"><div class="sgi sel" data-t="all" role="button" tabindex="0" onclick="ChatUI.tab('all')">All</div><div class="sgi" data-t="unread" role="button" tabindex="0" onclick="ChatUI.tab('unread')">Unread</div><div class="sgi" data-t="locked" role="button" tabindex="0" onclick="ChatUI.tab('locked')">🔒 Locked</div><div class="sgi" data-t="arch" role="button" tabindex="0" onclick="ChatUI.tab('arch')">📁 Archived</div></div>
         <div class="clwrap" id="chatL"></div></section>
       <section class="scr" id="sc-calls">
-        <div class="ctabs"><div class="sgi sel" data-f="all" onclick="CallsUI.filter('all')">All</div><div class="sgi" data-f="missed" onclick="CallsUI.filter('missed')">Missed</div><div class="sgi" data-f="in" onclick="CallsUI.filter('in')">Incoming</div><div class="sgi" data-f="out" onclick="CallsUI.filter('out')">Outgoing</div></div>
+        <div class="ctabs"><div class="sgi sel" data-f="all" role="button" tabindex="0" onclick="CallsUI.filter('all')">All</div><div class="sgi" data-f="missed" role="button" tabindex="0" onclick="CallsUI.filter('missed')">Missed</div><div class="sgi" data-f="in" role="button" tabindex="0" onclick="CallsUI.filter('in')">Incoming</div><div class="sgi" data-f="out" role="button" tabindex="0" onclick="CallsUI.filter('out')">Outgoing</div></div>
         <div class="clwrap" id="callsL"></div></section>
       <section class="scr" id="sc-games"><div class="pgc">
         <div class="stit">Games</div><div class="glist" id="gamesL"></div></div></section>
@@ -249,28 +281,28 @@
       <section class="scr" id="sc-profile"><div id="profC"></div></section>
     </main>
     <nav class="bnav">
-      <a class="bni act" data-sc="home" onclick="V.go('home')"><span class="bico2">🏠</span>Home</a>
-      <a class="bni" data-sc="search" onclick="V.go('search')"><span class="bico2">🔍</span>Search</a>
-      <a class="bni" data-sc="chat" onclick="V.go('chat')"><span class="bico2">💬</span>Chat<span class="nbdg hidden" id="bChatM">0</span></a>
-      <a class="bni" data-sc="games" onclick="V.go('games')"><span class="bico2">🎮</span>Games</a>
-      <a class="bni" data-sc="profile" onclick="V.openProfile(V.uid)"><span class="bico2">👤</span>Profile</a>
+      <a class="bni act" data-sc="home" role="button" tabindex="0" onclick="V.go('home')"><span class="bico2">🏠</span>Home</a>
+      <a class="bni" data-sc="search" role="button" tabindex="0" onclick="V.go('search')"><span class="bico2">🔍</span>Search</a>
+      <a class="bni" data-sc="chat" role="button" tabindex="0" onclick="V.go('chat')"><span class="bico2">💬</span>Chat<span class="nbdg hidden" id="bChatM">0</span></a>
+      <a class="bni" data-sc="games" role="button" tabindex="0" onclick="V.go('games')"><span class="bico2">🎮</span>Games</a>
+      <a class="bni" data-sc="profile" role="button" tabindex="0" onclick="V.openProfile(V.uid)"><span class="bico2">👤</span>Profile</a>
     </nav>
     <button type="button" class="qfab" id="qfab" onclick="QFab.toggle()" title="Quick Actions" aria-label="Quick actions">⚡</button>
     <div class="qmenu" id="qmenu">
-      <div class="qmi" onclick="QFab.go('home')"><span>🏠</span>Home</div>
-      <div class="qmi" onclick="QFab.go('search')"><span>🔍</span>Search</div>
-      <div class="qmi" onclick="QFab.go('chat')"><span>💬</span>Chat</div>
-      <div class="qmi" onclick="QFab.go('calls')"><span>📞</span>Calls</div>
-      <div class="qmi" onclick="QFab.go('games')"><span>🎮</span>Games</div>
-      <div class="qmi" onclick="QFab.go('local')"><span>📍</span>Local</div>
-      <div class="qmi" onclick="QFab.go('notif')"><span>🔔</span>Notifications</div>
-      <div class="qmi" onclick="QFab.go('profile')"><span>👤</span>Profile</div>
-      <div class="qmi" onclick="QFab.go('settings')"><span>⚙️</span>Settings</div>
-      <div class="qmi" onclick="QFab.themes()"><span>🖼️</span>Image Themes</div>
-      <div class="qmi" onclick="QFab.music()"><span>🎵</span>Music Player</div>
-      <div class="qmi" onclick="QFab.calm()"><span>🌙</span>Calm Mode</div>
-      <div class="qmi" onclick="QFab.links()"><span>🔗</span>ATP Links</div>
-      <div class="qmi" onclick="QFab.reload()"><span>🔄</span>Reload App</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('home')"><span>🏠</span>Home</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('search')"><span>🔍</span>Search</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('chat')"><span>💬</span>Chat</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('calls')"><span>📞</span>Calls</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('games')"><span>🎮</span>Games</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('local')"><span>📡</span>Local</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('notif')"><span>🔔</span>Notifications</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('profile')"><span>👤</span>Profile</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('settings')"><span>⚙️</span>Settings</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.themes()"><span>🖼️</span>Image Themes</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.music()"><span>🎵</span>Music Player</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.calm()"><span>🌙</span>Calm Mode</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.links()"><span>🔗</span>ATP Links</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.reload()"><span>🔄</span>Reload App</div>
     </div>
   </div>
 </div>
@@ -278,8 +310,8 @@
 <div id="chatV"><div class="shell">
   <header class="chd">
     <button type="button" class="bico" onclick="ChatUI.close()" aria-label="Back">←</button>
-    <div class="ava sm" id="cvAva" style="cursor:pointer" onclick="ChatUI.viewProfile()" role="button" aria-label="Open profile"></div>
-    <div class="chi" onclick="ChatUI.viewProfile()" style="cursor:pointer"><div class="chn" id="cvName">—</div><div class="chs" id="cvSt"></div></div>
+    <div class="ava sm" id="cvAva" style="cursor:pointer" onclick="ChatUI.viewProfile()" role="button" tabindex="0" aria-label="Open profile"></div>
+    <div class="chi" onclick="ChatUI.viewProfile()" role="button" tabindex="0" style="cursor:pointer"><div class="chn" id="cvName">—</div><div class="chs" id="cvSt"></div></div>
     <button type="button" class="bico" onclick="Calls.startWith(ChatUI.peerUid,'voice')" aria-label="Voice call">📞</button>
     <button type="button" class="bico" onclick="Calls.startWith(ChatUI.peerUid,'video')" aria-label="Video call">🎥</button>
     <button type="button" class="bico" onclick="ChatUI.opts()" aria-label="Chat options">⋮</button>
@@ -289,7 +321,7 @@
   <div class="cinp">
     <button type="button" class="bico" onclick="ChatUI.emoji()" aria-label="Emoji">😊</button>
     <button type="button" class="bico" onclick="ChatUI.gif()" aria-label="Stickers">GIF</button>
-    <textarea class="inp" id="cInput" rows="1" placeholder="Message..." oninput="ChatUI.grow(this);ChatUI.typing()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ChatUI.send()}"></textarea>
+    <textarea class="inp" id="cInput" rows="1" placeholder="Message..." enterkeyhint="send" oninput="ChatUI.grow(this);ChatUI.typing()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();ChatUI.send()}"></textarea>
     <button type="button" class="csend" onclick="ChatUI.send()" aria-label="Send">➤</button>
   </div>
   <button type="button" class="feye" id="feye" onclick="Games.toggle()" aria-label="Game panel">👁️</button>
@@ -302,14 +334,25 @@
 
 <div id="callO"><div class="shell">
   <video id="vrem" autoplay playsinline></video><video id="vslf" autoplay playsinline muted></video>
-  <div class="ssPrev" id="ssPrev"><video id="ssVid" autoplay playsinline muted></video><div class="ssx" onclick="Calls.stopScreen()" role="button" aria-label="Stop screen share">✕</div></div>
+  <div class="ssPrev" id="ssPrev"><video id="ssVid" autoplay playsinline muted></video><div class="ssx" onclick="Calls.stopScreen()" role="button" tabindex="0" aria-label="Stop screen share">✕</div></div>
   <div class="ctop"><div class="clbl" id="cLbl"></div><div class="cavw"><div class="ava xl" id="cAva"></div><div class="cnm" id="cName">—</div><div class="cst" id="cSt">Connecting…</div><div class="ctmr hidden" id="cTmr">00:00</div></div></div>
   <div class="cctrl" id="cCtrl"></div>
   <button type="button" class="ccb" id="ssBtn" onclick="Calls.shareScreen()" style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:7;display:none" title="Share Screen" aria-label="Share screen">🖥️</button>
 </div></div>
 
-<div class="mov" id="modal"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
-<div class="tcont" id="tcont"></div>
+<div class="mov" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
+<div class="tcont" id="tcont" aria-live="polite"></div>
+
+<script>
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  var el = e.target;
+  if (!el || !el.matches || !el.matches('[role="button"]')) return;
+  if (el.closest('button, a[href], input, select, textarea')) return;
+  e.preventDefault();
+  el.click();
+});
+</script>
 
 </body>
 </html>
