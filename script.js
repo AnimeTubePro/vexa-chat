@@ -26,13 +26,7 @@ const ATP_LINKS=[
  {name:'📱 Download APK',url:'https://www.mediafire.com/file/wa0l16rgnyd0y5v/app-release.apk/file'}
 ];
 
-/* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════
-   Ver.CURRENT = APK ke andar HARDCODED (naya APK = naya number badlo)
-   Firebase: versionApp/{latest, note, apkUrl, updatedAt, updatedBy, apkUrlAt, apkUrlBy}
-   Login/session pe: users/{uid}/appVer save (admin dekh sake)
-   APK link SIRF Firebase se — admin/owner/mod set karta hai
-   Web user → lock screen pe Reload button (re-login = naya version)
-   ═════════════════════════════════════════════════════════════════════════ */
+/* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
  CURRENT:'2.0.1',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
  get:function(){return this.CURRENT},
@@ -47,7 +41,6 @@ const Ver={
  },
  _locked:false,_apkUrl:null,
  _isStaff:function(){return !!(me&&['owner','admin','moderator'].indexOf(me.role||'user')>-1)},
- /* 🔗 APK link — sirf Firebase se, sab jagah yahi jayega */
  setApkUrl:function(url){
   try{
    if(!this._isStaff()){V.toast('error','Sirf Owner/Admin/Moderator');return}
@@ -62,7 +55,6 @@ const Ver={
    V.toast('success','🔗 APK link Firebase me update — sabko YAHIN link milega');
   }catch(e){V.toast('error',V.friendErr(e))}
  },
- /* 📢 Version + note + APK link ek saath */
  adminSet:function(v,note,url){
   try{
    if(!this._isStaff()){V.toast('error','Sirf Owner/Admin/Moderator');return}
@@ -105,7 +97,6 @@ const Ver={
   var sp=document.getElementById('splash');
   if(!sp)return;
   this._locked=true;
-  /* 🔗 Firebase APK link > fallback */
   var apk=(apkUrl&&/^https?:\/\//i.test(apkUrl))?apkUrl:ATP_LINKS[1].url;
   this._apkUrl=apk;
   ATP_LINKS[1].url=apk;
@@ -173,7 +164,6 @@ const Ver={
    db.ref('versionApp').get().then(function(s){
     var d=s.val()||{};
     var latest=d.latest||'';
-    /* 🔗 APK link Firebase se sync — Home + Links modal + Settings sab me yahi jayega */
     if(d.apkUrl&&/^https?:\/\//i.test(d.apkUrl)){
      ATP_LINKS[1].url=d.apkUrl;
      try{ATP.renderLinks()}catch(e){}
@@ -202,7 +192,7 @@ const Ver={
      }
     });
    }).catch(function(){
-    V._authStart(); /* DB fail/offline — app chalne do */
+    V._authStart();
    });
   }catch(e){V._authStart()}
  }
@@ -210,7 +200,8 @@ const Ver={
 
 /* ═══ 🎬 ATP CORE ═══ */
 const ATP={
- cfg:{loadingSeconds:4.5,particles:{stars:70,fire:14,bubbles:10,petals:10}},
+ /* ⚡PERF: 4.5s→2s, particles 104→60 (boot fast, low-end smooth) */
+ cfg:{loadingSeconds:2,particles:{stars:40,fire:8,bubbles:6,petals:6}},
  exts:['png','jpg','jpeg','webp'],
  loaderDone:false,_fadeQ:false,
  ready:function(fn){
@@ -233,7 +224,7 @@ const ATP={
  loader:function(){
   var bar=document.getElementById('loadBar'),pct=document.getElementById('loadPct'),sp=document.getElementById('splash');
   if(!sp)return;
-  var self=this,t0=performance.now(),DUR=(this.cfg.loadingSeconds||4.5)*1000;
+  var self=this,t0=performance.now(),DUR=(this.cfg.loadingSeconds||2)*1000;
   (function tick(){
    var s2=document.getElementById('splash');
    if(!s2)return;
@@ -349,11 +340,11 @@ const ATP={
 };
 ATP.init();
 
-/* ═══ 🎵 MUSIC v3 ═══ */
+/* ═══ 🎵 MUSIC v4 — ⚡Lazy detect (boot pe 36 probes NAHI) ═══ */
 const Music={
  lists:{hindi:[],english:[]},
  local:[],
- kind:'hindi',idx:0,playing:false,audio:null,_url:null,_err:0,_ready:false,_started:false,
+ kind:'hindi',idx:0,playing:false,audio:null,_url:null,_err:0,_ready:false,_started:false,_folderDone:false,
  KEY:'vexaMusic2',
  idb:function(){
   var self=this;
@@ -426,6 +417,7 @@ const Music={
   mb.addEventListener('click',function(e){
    e.stopPropagation();
    var p=document.getElementById('musicPanel');if(p)p.classList.toggle('open');
+   M.detectAll(); /* ⚡ first open pe folder detect */
    M.refresh();
   });
   document.addEventListener('click',function(e){
@@ -439,13 +431,24 @@ const Music={
   if(vol)vol.addEventListener('input',function(){M.audio.volume=vol.value/100;M.save()});
   var fi=document.getElementById('mpFile');
   if(fi)fi.addEventListener('change',function(){M.addLocal(fi);fi.value=''});
-  Promise.all([M.detect('hindi'),M.detect('english'),M.idbAll()]).then(function(r){
-   M.lists.hindi=r[0]||[];M.lists.english=r[1]||[];M.local=r[2]||[];
-   var pl=M.playlist();
-   if(M.idx>=pl.length)M.idx=0;
+  /* ⚡BOOT: sirf IndexedDB (instant) — folder probes panel kholne pe */
+  M.idbAll().then(function(list){
+   M.local=list||[];
    M._ready=true;
    M.paint();M.refresh();
-   if(pl.length){
+  });
+ },
+ /* ⚡Lazy folder detect — ek hi baar */
+ detectAll:function(){
+  var M=this;
+  if(M._folderDone)return Promise.resolve();
+  M._folderDone=true;
+  return Promise.all([M.detect('hindi'),M.detect('english')]).then(function(r){
+   M.lists.hindi=r[0]||[];M.lists.english=r[1]||[];
+   var pl=M.playlist();
+   if(M.idx>=pl.length)M.idx=0;
+   M.paint();M.refresh();
+   if(pl.length&&!M._started){
     document.addEventListener('pointerdown',function(){
      if(!M._started){M._started=true;M.playCurrent()}
     },{once:true});
@@ -508,7 +511,7 @@ const Music={
     if(i>=exts.length)return res(null);
     var a=document.createElement('audio');
     var done=false;
-    var t=setTimeout(function(){if(done)return;done=true;a.src='';res(null)},1500);
+    var t=setTimeout(function(){if(done)return;done=true;a.src='';res(null)},900); /* ⚡1.5s→0.9s */
     a.preload='metadata';
     a.addEventListener('loadedmetadata',function(){if(done)return;done=true;clearTimeout(t);res(base+'.'+exts[i])},{once:true});
     a.addEventListener('error',function(){if(done)return;done=true;clearTimeout(t);i++;next()},{once:true});
@@ -853,7 +856,7 @@ const QFab={
   if(f)f.classList.remove('open');
  },
  go:function(sc){this.close();if(sc==='settings'){Settings.open()}else V.go(sc)},
- music:function(){this.close();var p=document.getElementById('musicPanel');if(p)p.classList.toggle('open')},
+ music:function(){this.close();var p=document.getElementById('musicPanel');if(p){p.classList.toggle('open');Music.detectAll()}},
  calm:function(){this.close();var b=document.getElementById('moonBtn');if(b)b.click()},
  themes:function(){this.close();ImgThemes.open()},
  links:function(){this.close();ATP.linksModal()},
@@ -1101,7 +1104,6 @@ const V={
  vaultSet:function(uid,data){
    try{db.ref('recoveryPrivate/'+uid).update(data).catch(function(){})}catch(e){}
  },
- /* 🔄 VERSION CHECK FIRST — logged-in user bhi block hoga */
  requireAuth:function(cb){
    this._authCB=cb;
    try{Ver.check();return}catch(e){}
@@ -1137,12 +1139,23 @@ const V={
            return;
          }
        }catch(e){}
+       /* ⚡FIX: autoAvatar AB BACKGROUND me — login pe 6s block NAHI */
        if(!me.profilePhoto){
-         var auto=await Promise.race([
-           V.autoAvatar(u.uid),
+         Promise.race([
+           V.autoAvatar(u.uid).catch(function(){return null}),
            new Promise(function(res){setTimeout(function(){res(null)},6000)})
-         ]);
-         if(auto)me.profilePhoto=auto;
+         ]).then(function(auto){
+           if(auto&&me){
+             me.profilePhoto=auto;
+             V.refreshMe();
+             if(V.uid===u.uid&&document.getElementById('pAvaRing')){
+               var ring=document.getElementById('pAvaRing');
+               if(ring)ring.innerHTML=(auto.indexOf('data:')===0)
+                 ?'<img class="ava xl" src="'+auto+'">'
+                 :'<div class="ava xl" style="background-image:url(\''+V.esc(auto)+'\')"></div>';
+             }
+           }
+         });
        }
        V.uid=u.uid;
        V.g('authBox').classList.add('hidden');
@@ -1158,7 +1171,6 @@ const V={
        var sid='s_'+Math.random().toString(36).slice(2,9);
        try{sessionStorage.setItem('vexaSid',sid)}catch(e){}
        try{db.ref('users/'+V.uid+'/sessions/'+sid).set({device:V.dev(),lastActive:Date.now()})}catch(e){}
-       /* 📱 app version Firebase me save — HAR login/session pe auto-update (admin dekh sake) */
        try{db.ref('users/'+V.uid).update({appVer:Ver.get(),appVerAt:Date.now()})}catch(ave){}
        if(cb){
          try{cb(u)}catch(e){console.error('cb error:',e)}
@@ -1302,7 +1314,10 @@ const Presence={
  }
 };
 const Badges={
+ _on:false, /* ⚡FIX: re-login pe listener stack NAHI */
  start:function(){
+   if(this._on)return;
+   this._on=true;
    db.ref('chats').orderByChild('participants/'+V.uid).equalTo(true).on('value',function(s){
      var u=0;
      s.forEach(function(c){var un=c.val()&&c.val().unread&&c.val().unread[V.uid];if(typeof un==='number')u+=un});
@@ -1381,31 +1396,30 @@ const Privacy={
    });
    V.mClose();V.toast('success','Privacy saved');
  },
+ /* ⚡PERF: parallel user fetch */
  restrictedOpen:async function(){
-   var h='';
    try{
      var s=await db.ref('users/'+V.uid+'/restrictions').get();
-     if(!s.exists())h='<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>';
-     else{
-       for(var uid in s.val()){
-         var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
-         var u=(uu&&uu.val())||{displayName:uid};
-         h+='<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bg bsm" onclick="Privacy.editRestr(\''+uid+'\')">Edit</button></div>';
-       }
-     }
-   }catch(e){}
-   if(!h)h='<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>';
-   V.mOpen('🚧 Restricted Users',h);
+     if(!s.exists()){V.mOpen('🚧 Restricted Users','<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>');return}
+     var keys=Object.keys(s.val());
+     var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+     var h=keys.map(function(k,i){
+       var u=(us[i]&&us[i].val())||{displayName:k};
+       return '<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bg bsm" onclick="Privacy.editRestr(\''+k+'\')">Edit</button></div>';
+     }).join('');
+     V.mOpen('🚧 Restricted Users',h);
+   }catch(e){V.mOpen('🚧 Restricted Users','<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>')}
  },
  editRestr:async function(uid){
    var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
    var u=(uu&&uu.val())||{displayName:uid};
    var perms=['messages','voiceCall','videoCall','follow','localScan','postInteraction','comments','mentions','notifications'];
+   /* ⚡PERF: parallel */
+   var rs=await Promise.all(perms.map(function(p){
+     return db.ref('users/'+V.uid+'/restrictions/'+uid+'/'+p).get().catch(function(){return null});
+   }));
    var cur={};
-   for(var i=0;i<perms.length;i++){
-     try{var r=await db.ref('users/'+V.uid+'/restrictions/'+uid+'/'+perms[i]).get();cur[perms[i]]=r.exists()?r.val():true}
-     catch(e){cur[perms[i]]=true}
-   }
+   for(var i=0;i<perms.length;i++){cur[perms[i]]=(rs[i]&&rs[i].exists())?rs[i].val():true}
    var h='<div class="tc" style="margin-bottom:12px">'+V.ava(u,'md')+'<div style="font-weight:700">'+V.esc(u.displayName)+'</div></div><div class="pgrid3">';
    for(var j=0;j<perms.length;j++){
      var p=perms[j];
@@ -1415,26 +1429,24 @@ const Privacy={
    V.mOpen('Per-User Permissions',h);
  },
  setRestr:function(uid,p,v){try{db.ref('users/'+V.uid+'/restrictions/'+uid+'/'+p).set(v)}catch(e){}},
+ /* ⚡PERF: parallel user fetch */
  blockedOpen:async function(){
-   var h='';
    try{
      var s=await db.ref('users/'+V.uid+'/blocks').get();
-     if(!s.exists())h='<div class="empo"><div class="ei">✅</div><div class="et">No blocked users</div></div>';
-     else{
-       for(var uid in s.val()){
-         var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
-         var u=(uu&&uu.val())||{displayName:uid};
-         h+='<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bds2 bsm" onclick="Privacy.unblock(\''+uid+'\')">Unblock</button></div>';
-       }
-     }
-   }catch(e){}
-   if(!h)h='<div class="empo"><div class="ei">✅</div><div class="et">No blocked users</div></div>';
-   V.mOpen('🚷 Blocked Users',h);
+     if(!s.exists()){V.mOpen('🚷 Blocked Users','<div class="empo"><div class="ei">✅</div><div class="et">No blocked users</div></div>');return}
+     var keys=Object.keys(s.val());
+     var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+     var h=keys.map(function(k,i){
+       var u=(us[i]&&us[i].val())||{displayName:k};
+       return '<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bds2 bsm" onclick="Privacy.unblock(\''+k+'\')">Unblock</button></div>';
+     }).join('');
+     V.mOpen('🚷 Blocked Users',h);
+   }catch(e){V.mOpen('🚷 Blocked Users','<div class="empo"><div class="ei">✅</div><div class="et">No blocked users</div></div>')}
  },
  unblock:async function(uid){try{await db.ref('users/'+V.uid+'/blocks/'+uid).remove()}catch(e){}V.toast('success','Unblocked');this.blockedOpen()}
 };
 
-/* ================= AUTH ================= */
+/* ================= AUTH (🔒 password/recovery code UNTOUCHED) ================= */
 const Auth={
  to:null,suPhotoData:null,
  initDobs:function(){
@@ -1545,7 +1557,7 @@ const Auth={
          recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},
          privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
          settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
-         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,
+         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,chats:{},
          usernameChangedAt:0
        });
      }catch(pe2){
@@ -1634,7 +1646,6 @@ const Auth={
          await db.ref('users/'+curUid+'/devices/'+devIdL).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
        }
      }catch(de){}
-     /* 📱 app version Firebase me save — re-login pe auto */
      try{await db.ref('users/'+curUid).update({appVer:Ver.get(),appVerAt:Date.now()})}catch(ave){}
      if(!auth.currentUser.emailVerified)V.toast('warning','Email not verified',4000);
      V.g('authBox').classList.add('hidden');
@@ -1662,7 +1673,7 @@ const Auth={
  }
 };
 
-/* ================= CODE LOGIN ================= */
+/* ================= CODE LOGIN (🔒 UNTOUCHED) ================= */
 const CodeLogin={
  verifiedEmail:null,verifiedUid:null,
  verify:async function(){
@@ -1725,7 +1736,7 @@ const CodeLogin={
  }
 };
 
-/* ================= RECOVERY ================= */
+/* ================= RECOVERY (🔒 UNTOUCHED) ================= */
 const Rec={
  uid:null,dob:null,deviceTrusted:false,
  err:function(m){var eb=V.g('recErr');eb.textContent=m;eb.classList.add('show')},
@@ -1858,35 +1869,7 @@ const Rec={
  }
 };
 
-/* ================= HELP CENTER ================= */
-const Help={
- type:null,
- report:function(t){this.type=t;V.g('hcStep1').classList.add('hidden');V.g('hcStep2').classList.remove('hidden');V.toast('info','Selected ✓')},
- send:async function(){
-   var u=V.g('hcUname').value.trim().toLowerCase();
-   var det=V.g('hcDetail').value.trim();
-   var eb=V.g('hcErr');eb.classList.remove('show');
-   if(!u){eb.textContent='Username daalo';eb.classList.add('show');return}
-   try{
-     var s=await db.ref('usernames/'+u).get();
-     var uid=s.exists()?s.val():null;
-     var staffSnap=await db.ref('users').get();
-     if(staffSnap.exists()){
-       staffSnap.forEach(function(uc){
-         var r=uc.val()&&uc.val().role;
-         if(r==='admin'||r==='moderator'||r==='owner'){
-           db.ref('users/'+uc.key+'/notifications').push({type:'help_request',title:'🆘 Help Report',body:'Type: '+Help.type+' · @'+u+(det?' · '+det:''),read:false,at:Date.now()});
-         }
-       });
-     }
-     await db.ref('helpRequests').push({type:this.type,username:u,uid:uid,detail:det,device:V.dev(),status:'open',at:Date.now()});
-     V.mClose();
-     V.mOpen('✅ Sent','<div class="tc"><p>📧 Staff ko report mil gayi!</p></div>','<button class="btn bp" onclick="V.mClose();V.showAuth(\'sLogin\')">OK</button>');
-   }catch(e){eb.textContent='Send failed';eb.classList.add('show')}
- }
-};
-
-/* ================= REMEMBER CODES ================= */
+/* ================= REMEMBER CODES (🔒 UNTOUCHED) ================= */
 Rec.openCodes=function(){
   db.ref('users/'+V.uid+'/recovery').get().then(function(snap){
     var d=snap.val()||{};
@@ -2026,11 +2009,12 @@ const Follow={
      var h='';
      if(!s||!s.exists())h='<div class="empo"><div class="ei">📭</div><div class="et">Empty</div></div>';
      else{
-       for(var k in s.val()){
-         var uu=(await db.ref('users/'+k).get().catch(function(){return null}));
-         var u=(uu&&uu.val())||{displayName:'User',username:k};
-         h+='<div class="urow" onclick="V.openProfile(\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+(u.username||'')+'</div></div></div>';
-       }
+       var keys=Object.keys(s.val());
+       var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+       h=keys.map(function(k,i){
+         var u=(us[i]&&us[i].val())||{displayName:'User',username:k};
+         return '<div class="urow" onclick="V.openProfile(\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+(u.username||'')+'</div></div></div>';
+       }).join('');
      }
      V.mOpen(title,h);
    }catch(e){V.toast('error','Load failed')}
@@ -2058,9 +2042,10 @@ const Follow={
  }
 };
 
-/* ================= PROFILE — race guard ================= */
+/* ================= PROFILE — ⚡INSTANT paint, bg photo ================= */
 const Profile={
  _rr:0,
+ _avaCache:{}, /* ⚡autoAvatar cache — repeat views instant */
  render:async function(uid){
    var rid=++Profile._rr;
    var c=V.g('profC');
@@ -2079,31 +2064,20 @@ const Profile={
        if(!s.exists()){c.innerHTML='<div class="empo"><div class="ei">❓</div><div class="et">User not found</div></div>';return}
      }
      var u=s.val(),own=(uid===V.uid);
-     if(!u.profilePhoto){
-       var auto=await Promise.race([V.autoAvatar(uid),new Promise(function(res){setTimeout(function(){res(null)},6000)})]);
-       if(auto){u.profilePhoto=auto;if(own){me.profilePhoto=auto;V.refreshMe()}}
-     }
+     /* ⚡3 chhote reads parallel — buttons sahi dikhne ke liye */
+     var pre=await Promise.all([
+       own?Promise.resolve(null):db.ref('users/'+V.uid+'/following/'+uid).get().catch(function(){return null}),
+       own?Promise.resolve(null):db.ref('users/'+V.uid+'/blocks/'+uid).get().catch(function(){return null}),
+       own?Promise.resolve(null):db.ref('users/'+uid+'/blocks/'+V.uid).get().catch(function(){return null})
+     ]);
      if(rid!==Profile._rr)return;
+     var fol=!!(pre[0]&&pre[0].exists());
+     var blk=!!(pre[1]&&pre[1].exists());
+     var blockedMe=!!(pre[2]&&pre[2].exists());
      var cntF=0,cntG=0,postN=0;
      try{cntF=u.followers?Object.keys(u.followers).length:0}catch(e){}
      try{cntG=u.following?Object.keys(u.following).length:0}catch(e){}
-     try{
-       var cn=await db.ref('users/'+uid+'/postCount').get();
-       if(cn.exists()&&cn.val()>0)postN=cn.val();
-       else{
-         var ps=await db.ref('users/'+uid+'/posts').get();
-         postN=ps.exists()?ps.numChildren():0;
-       }
-     }catch(e){postN=0}
-     if(rid!==Profile._rr)return;
-     var fol=false,blk=false,blockedMe=false;
-     try{fol=(await db.ref('users/'+V.uid+'/following/'+uid).get()).exists()}catch(e){}
-     try{blk=(await db.ref('users/'+V.uid+'/blocks/'+uid).get()).exists()}catch(e){}
-     try{blockedMe=(await db.ref('users/'+uid+'/blocks/'+V.uid).get()).exists()}catch(e){}
-     if(rid!==Profile._rr)return;
-     var last=0;try{last=(await db.ref('presence/'+uid+'/lastSeen').get()).val()||0}catch(e){}
-     var showOn=own||await Presence.canSee(uid);
-     if(rid!==Profile._rr)return;
+     try{postN=(u.postCount&&u.postCount>0)?u.postCount:(u.posts?Object.keys(u.posts).length:0)}catch(e){}
      var links=await this.links(uid,u);
      if(rid!==Profile._rr)return;
      var mainBtns='',row2='';
@@ -2129,14 +2103,14 @@ const Profile={
      var devCount=0;
      try{devCount=u.devices?Object.keys(u.devices).length:0}catch(e){}
      var pfd=own?((u.settings&&u.settings.profileDesign)||'modern'):'modern';
-     if(rid!==Profile._rr)return;
+     /* ⚡INSTANT PAINT — koi blocking await nahi */
      c.innerHTML='<div class="pgc pfd-'+pfd+'">'
       +'<div class="pfh">'
-      +'<div class="pava-ring">'+avaImg+'</div>'
+      +'<div class="pava-ring" id="pAvaRing">'+avaImg+'</div>'
       +'<div class="pnm-big">'+V.nameB(u)+'</div>'
       +'<div class="puname">@'+V.esc(u.username||'')+'</div>'
       +'<div class="pbio">'+V.esc(u.bio||'')+'</div>'
-      +'<div class="sm mut mt8">'+(showOn?(last?'🟢 Active '+V.timeAgo(last):'🟢 Online'):'⚪ Hidden')+(own&&devCount?' · 📱 '+devCount+' device(s)':'')+'</div>'
+      +'<div class="sm mut mt8" id="pOnLine">…</div>'
       +'<div class="pstats">'
       +'<div class="pst" onclick="Posts.tabGrid(\''+uid+'\')"><div class="psn">'+postN+'</div><div class="psl">Posts</div></div>'
       +'<div class="pst" onclick="Follow.list(\''+uid+'\',\'followers\',\'Followers\')"><div class="psn">'+cntF+'</div><div class="psl">Followers</div></div>'
@@ -2151,10 +2125,44 @@ const Profile={
       +'<div id="pGrid"></div></div>';
      if(rid!==Profile._rr)return;
      Posts.grid(uid);
+     /* ⚡BACKGROUND: presence + photo — paint ko block nahi karte */
+     this._bg(uid,own,u,rid);
    }catch(e){
      console.error('profile render error:',e);
-     if(rid===Profile._rr)c.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Couldn\u2019t load</div><div class="ex"><button class="btn bg bsm" onclick="Profile.render(V.uid)">🔄 Retry</button></div></div>';
+     if(rid===Profile._rr)c.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div><div class="ex"><button class="btn bg bsm" onclick="Profile.render(V.uid)">🔄 Retry</button></div></div>';
    }
+ },
+ _bg:async function(uid,own,u,rid){
+   try{
+     var ps=await Promise.all([
+       db.ref('presence/'+uid+'/lastSeen').get().catch(function(){return null}),
+       own?Promise.resolve(true):Presence.canSee(uid).catch(function(){return true})
+     ]);
+     if(rid!==Profile._rr)return;
+     var last=(ps[0]&&ps[0].val())||0;
+     var showOn=!!ps[1];
+     var el=document.getElementById('pOnLine');
+     if(el)el.textContent=(showOn?(last?'🟢 Active '+V.timeAgo(last):'🟢 Online'):'⚪ Hidden')
+       +(own&&u.devices?' · 📱 '+Object.keys(u.devices).length+' device(s)':'');
+     if(!u.profilePhoto){
+       var cached=Profile._avaCache[uid];
+       if(cached===undefined){
+         cached=await Promise.race([
+           V.autoAvatar(uid).catch(function(){return null}),
+           new Promise(function(res){setTimeout(function(){res(null)},2000)})
+         ]);
+         Profile._avaCache[uid]=cached;
+       }
+       if(cached&&rid===Profile._rr){
+         u.profilePhoto=cached;
+         if(own){me.profilePhoto=cached;V.refreshMe()}
+         var ring=document.getElementById('pAvaRing');
+         if(ring)ring.innerHTML=(cached.indexOf('data:')===0)
+           ?'<img class="ava xl" src="'+cached+'">'
+           :'<div class="ava xl" style="background-image:url(\''+V.esc(cached)+'\')"></div>';
+       }
+     }
+   }catch(e){}
  },
  designPicker:function(){
    var cur=(me.settings&&me.settings.profileDesign)||'modern';
@@ -2297,29 +2305,27 @@ Auth.checkEditUname=function(){
   },450);
 };
 
-/* ================= POSTS ================= */
+/* ================= POSTS — ⚡parallel ================= */
 const Posts={
  photos:[],limit:12,
  load:async function(){
-   var w=V.g('feedW');
-   if(!w)return;
+   var w=V.g('feedW');if(!w)return;
    w.innerHTML='<div class="skel" style="height:220px;margin-bottom:15px"></div><div class="skel" style="height:220px;margin-bottom:15px"></div>';
    try{
      var s=await db.ref('posts').limitToLast(60).get();
-     w.innerHTML='';
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">📝</div><div class="et">No posts yet</div><div class="ex">Tap ✏️ to create!</div></div>';return}
      var arr=[];
      s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
      arr.sort(function(a,b){return (b.val.createdAt||0)-(a.val.createdAt||0)});
      arr=arr.slice(0,this.limit);
-     var n=0;
-     for(var i=0;i<arr.length;i++){
-       var p=arr[i].val;
-       if(await Privacy.canViewPost(p)){w.insertAdjacentHTML('beforeend',await this.card(arr[i].id,p));n++}
-     }
-     if(!n)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts to show</div></div>';
+     var vis=await Promise.all(arr.map(function(a){return Privacy.canViewPost(a.val)}));
+     var shown=arr.filter(function(a,i){return vis[i]});
+     var cards=await Promise.all(shown.map(function(a){return Posts.card(a.id,a.val)}));
+     w.innerHTML='';
+     cards.forEach(function(html){w.insertAdjacentHTML('beforeend',html)});
+     if(!cards.length)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts to show</div></div>';
    }catch(e){
-     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex">'+V.esc(e.message||'')+'</div></div>';
+     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
    }
  },
  imgFallback:function(img){
@@ -2468,17 +2474,19 @@ const Posts={
      var tot=document.getElementById('cmTotal');
      if(tot)tot.textContent='💬 Total: '+s.numChildren()+' comments';
      if(!s.exists()){list.innerHTML='<div class="empo" style="padding:22px"><div class="ei">💬</div><div class="et">No comments yet</div></div>';return}
-     list.innerHTML='';
      var arr=[];
      s.forEach(function(c){arr.push({cid:c.key,val:c.val()})});
      arr.sort(function(a,b){return (a.val.at||0)-(b.val.at||0)});
+     /* ⚡PERF: users parallel — pehle loop me sequential await tha */
+     var us=await Promise.all(arr.map(function(x){return db.ref('users/'+x.val.uid).get().catch(function(){return null})}));
+     var h='';
      for(var i=0;i<arr.length;i++){
        var c=arr[i].val,cid=arr[i].cid;
-       var uu=(await db.ref('users/'+c.uid).get().catch(function(){return null}));
-       var u=(uu&&uu.val())||{displayName:c.name||'User'};
+       var u=(us[i]&&us[i].val())||{displayName:c.name||'User'};
        var clk=c.likes&&c.likes[V.uid];
-       list.insertAdjacentHTML('beforeend','<div class="cmt">'+V.ava(u,'sm')+'<div style="flex:1;min-width:0"><div class="cmtb"><div class="cmtn" onclick="V.openProfile(\''+c.uid+'\')">'+V.nameB(u)+'</div><div>'+V.esc(c.text)+'</div></div><div class="cmta"><span class="clk'+(clk?' lk':'')+'" onclick="Posts.cLike(\''+id+'\',\''+cid+'\',this)">'+(clk?'❤️':'🤍')+' '+(c.likes?Object.keys(c.likes).length:'')+'</span>'+(c.uid===V.uid?'<span style="color:var(--dn)" onclick="Posts.cDel(\''+id+'\',\''+cid+'\')">Delete</span>':'<span onclick="Posts.sendRepC(\''+c.uid+'\',\'Reported\')">Report</span>')+'</div></div></div>');
+       h+='<div class="cmt">'+V.ava(u,'sm')+'<div style="flex:1;min-width:0"><div class="cmtb"><div class="cmtn" onclick="V.openProfile(\''+c.uid+'\')">'+V.nameB(u)+'</div><div>'+V.esc(c.text)+'</div></div><div class="cmta"><span class="clk'+(clk?' lk':'')+'" onclick="Posts.cLike(\''+id+'\',\''+cid+'\',this)">'+(clk?'❤️':'🤍')+' '+(c.likes?Object.keys(c.likes).length:'')+'</span>'+(c.uid===V.uid?'<span style="color:var(--dn)" onclick="Posts.cDel(\''+id+'\',\''+cid+'\')">Delete</span>':'<span onclick="Posts.sendRepC(\''+c.uid+'\',\'Reported\')">Report</span>')+'</div></div></div>';
      }
+     list.innerHTML=h;
    });
    V._cmUnsub=function(){db.ref('comments/'+id).off('value',cbn)};
    V.g('cmS').onclick=async function(){
@@ -2605,7 +2613,7 @@ const Posts={
  }
 };
 
-/* ================= CHAT — View Profile FIX + Improved ================= */
+/* ================= CHAT — ⚡index-based FAST load + rules-safe fallback ================= */
 const ChatUI={
  peerUid:null,chatId:null,_unlocked:{},replyTo:null,tabC:'all',unsubs:[],_tt:null,
 
@@ -2617,10 +2625,20 @@ const ChatUI={
    this.chatId=[V.uid,uid].sort().join('_');
    this.replyTo=null;
    this._unlocked=this._unlocked||{};
+   /* ⚡self-heal: index missing ho to bana do */
+   try{
+     var has=await db.ref('users/'+V.uid+'/chats/'+this.chatId).get();
+     if(!has.exists())db.ref('users/'+V.uid+'/chats/'+this.chatId).set({peer:uid,updatedAt:Date.now()});
+   }catch(e){}
    var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
    var u=(uu&&uu.val())||{};
-   if(!u.profilePhoto){var auto=await V.autoAvatar(uid);if(auto){u.profilePhoto=auto}}
-   var lock=(await db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).get().catch(function(){return null}));
+   /* ⚡avatar + lock PARALLEL — koi serial block nahi */
+   var both=await Promise.all([
+     db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).get().catch(function(){return null}),
+     u.profilePhoto?Promise.resolve(u.profilePhoto):Promise.race([V.autoAvatar(uid).catch(function(){return null}),new Promise(function(res){setTimeout(function(){res(null)},2500)})])
+   ]);
+   if(both[1])u.profilePhoto=both[1];
+   var lock=both[0];
    if(lock&&lock.exists()&&!this._unlocked[this.chatId]){
      var self=this;
      this.pinPrompt(function(){self._unlocked[self.chatId]=true;self.doOpen(u)});
@@ -2663,13 +2681,13 @@ const ChatUI={
    this.emojiInit();
  },
 
- /* 🆕 VIEW PROFILE — chat band + profile khulega (main fix) */
+ /* 🆕 chat header → profile (listeners clean + game panel band) */
  viewProfile:function(){
    var uid=this.peerUid;
    if(!uid){V.toast('warning','Profile load nahi hua');return}
-   try{Games.close()}catch(e){}   /* game panel khula ho toh wo bhi band */
-   this.close();                   /* chat overlay + listeners clean */
-   V.openProfile(uid);             /* profile screen */
+   try{Games.close()}catch(e){}
+   this.close();
+   V.openProfile(uid);
  },
 
  listenMsgs:function(){
@@ -2771,7 +2789,11 @@ const ChatUI={
    if(reply){o.replyTo=reply.id;o.replyToName=reply.name;o.replyToText=reply.text}
    await db.ref('messages/'+cid+'/'+mid).set(o);
    var part={};part[V.uid]=true;part[otherUid]=true;
-   await db.ref('chats/'+cid).update({participants:part,lastMessage:text.slice(0,80),lastSender:V.uid,updatedAt:firebase.database.ServerValue.TIMESTAMP});
+   var now=firebase.database.ServerValue.TIMESTAMP;
+   await db.ref('chats/'+cid).update({participants:part,lastMessage:text.slice(0,80),lastSender:V.uid,updatedAt:now});
+   /* ⚡NAYA: dono users ka index — chat list ab 1 read me load hoti hai */
+   try{db.ref('users/'+V.uid+'/chats/'+cid).set({peer:otherUid,updatedAt:Date.now()})}catch(e){}
+   try{db.ref('users/'+otherUid+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
    db.ref('chats/'+cid+'/unread/'+otherUid).transaction(function(n){return (n||0)+1});
    var muted=false;
    try{muted=(await db.ref('users/'+otherUid+'/muted/'+cid).get()).exists()}catch(e){}
@@ -2834,6 +2856,7 @@ const ChatUI={
    if(both){try{await db.ref('messages/'+this.chatId).remove()}catch(e){}}
    try{await db.ref('chats/'+this.chatId+'/participants/'+V.uid).remove()}catch(e){}
    try{await db.ref('chats/'+this.chatId+'/unread/'+V.uid).remove()}catch(e){}
+   try{await db.ref('users/'+V.uid+'/chats/'+this.chatId).remove()}catch(e){}
    this.close();
    ChatUI.load();
    V.toast('success','🗑️ Chat deleted');
@@ -2895,44 +2918,99 @@ const ChatUI={
 
  tab:function(t){this.tabC=t;document.querySelectorAll('#sc-chat .ctabs .sgi').forEach(function(x){x.classList.toggle('sel',x.dataset.t===t)});this.load()},
 
+ /* ⚡FAST: apna index (1 read) → metas parallel. Rules deny = fallback query + self-heal */
  load:async function(){
    var w=V.g('chatL');
+   if(!w)return;
+   var tab=this.tabC;
    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
    try{
-     var s=await db.ref('chats').orderByChild('participants/'+V.uid).equalTo(true).get();
-     var arch={},locks={},muted={};
-     try{arch=(await db.ref('users/'+V.uid+'/archived').get()).val()||{}}catch(e){}
-     try{locks=(await db.ref('users/'+V.uid+'/chatLocks').get()).val()||{}}catch(e){}
-     try{muted=(await db.ref('users/'+V.uid+'/muted').get()).val()||{}}catch(e){}
-     w.innerHTML='';
      var arr=[];
-     s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
-     arr.sort(function(a,b){return (b.val.updatedAt||0)-(a.val.updatedAt||0)});
-     var n=0,h='';
-     for(var i=0;i<arr.length;i++){
-       var c=arr[i].val,cid=arr[i].id;
-       var isArch=!!arch[cid];
-       if(this.tabC==='arch'&&!isArch)continue;
-       if(this.tabC!=='arch'&&isArch)continue;
-       var other=null;
-       for(var k in (c.participants||{})){if(k!==V.uid)other=k}
-       if(!other)continue;
-       var uu=(await db.ref('users/'+other).get().catch(function(){return null}));
-       var u=(uu&&uu.val())||{displayName:'User'};
-       if(!u.profilePhoto){var auto=await V.autoAvatar(other);if(auto){u.profilePhoto=auto}}
-       var un=(c.unread&&c.unread[V.uid])||0;
-       if(this.tabC==='unread'&&!un)continue;
-       var lock=!!locks[cid];
-       if(this.tabC==='locked'&&!lock)continue;
-       h+='<div class="crow" onclick="ChatUI.openWith(\''+other+'\')">'+V.ava(u,'md')
-        +'<div class="cri"><div class="crt"><div class="crn">'+V.nameB(u)+(lock?' 🔒':'')+(muted[cid]?' 🔕':'')+'</div><div class="crtm">'+V.timeAgo(c.updatedAt)+'</div></div>'
-        +'<div class="crb"><div class="crp">'+(c.lastSender===V.uid?'You: ':'')+V.esc(c.lastMessage||'Say hi 👋')+'</div>'+(un?'<span class="cru">'+un+'</span>':'')+'</div></div></div>';
-       n++;
+     var idxS=await db.ref('users/'+V.uid+'/chats').get().catch(function(){return null});
+     if(idxS&&idxS.exists()&&idxS.numChildren()>0){
+       var entries=[];
+       idxS.forEach(function(x){entries.push({cid:x.key,peer:(x.val()&&x.val().peer)||null,at:(x.val()&&x.val().updatedAt)||0})});
+       var metas=await Promise.all(entries.map(function(e){
+         return db.ref('chats/'+e.cid).get().catch(function(){return null});
+       }));
+       for(var i=0;i<entries.length;i++){
+         var m=(metas[i]&&metas[i].val())||{};
+         var part={};part[V.uid]=true;
+         if(entries[i].peer)part[entries[i].peer]=true;
+         arr.push({id:entries[i].cid,peer:entries[i].peer,val:{
+           participants:part,
+           lastMessage:m.lastMessage||'',lastSender:m.lastSender||'',
+           unread:(m.unread&&m.unread[V.uid])||0,
+           updatedAt:(m.updatedAt||entries[i].at||0)
+         }});
+       }
+     }else{
+       /* 🔄 FALLBACK: purana ordered query + SELF-HEAL index */
+       var s=await db.ref('chats').orderByChild('participants/'+V.uid).equalTo(true).get().catch(function(){return null});
+       if(!s||!s.exists()){
+         w.innerHTML='<div class="empo"><div class="ei">💬</div><div class="et">'+(tab==='unread'?'No unread':tab==='locked'?'No locked':tab==='arch'?'No archived':'No chats')+'</div><div class="ex">Search → Message</div></div>';
+         return;
+       }
+       s.forEach(function(c){
+         var v=c.val(),other=null;
+         for(var k in (v.participants||{})){if(k!==V.uid)other=k}
+         if(other){
+           arr.push({id:c.key,peer:other,val:v});
+           try{db.ref('users/'+V.uid+'/chats/'+c.key).set({peer:other,updatedAt:v.updatedAt||Date.now()})}catch(e){}
+         }
+       });
      }
-     w.innerHTML=h||('<div class="empo"><div class="ei">💬</div><div class="et">No chats</div><div class="ex">Search → Message</div></div>');
-   }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
+     arr.sort(function(a,b){return (b.val.updatedAt||0)-(a.val.updatedAt||0)});
+     var pAll=await Promise.all([
+       db.ref('users/'+V.uid+'/archived').get().catch(function(){return null}),
+       db.ref('users/'+V.uid+'/chatLocks').get().catch(function(){return null}),
+       db.ref('users/'+V.uid+'/muted').get().catch(function(){return null})
+     ]);
+     var arch=(pAll[0]&&pAll[0].exists())?(pAll[0].val()||{}):{};
+     var locks=(pAll[1]&&pAll[1].exists())?(pAll[1].val()||{}):{};
+     var muted=(pAll[2]&&pAll[2].exists())?(pAll[2].val()||{}):{};
+     /* local filter — koi await nahi */
+     var rows0=[];
+     for(var j=0;j<arr.length;j++){
+       try{
+         var c0=arr[j],cid0=c0.id,other0=c0.peer;
+         if(!other0){
+           for(var k2 in (c0.val.participants||{})){if(k2!==V.uid)other0=k2}
+         }
+         if(!other0)continue;
+         var isArch=!!arch[cid0];
+         if(tab==='arch'&&!isArch)continue;
+         if(tab!=='arch'&&isArch)continue;
+         var un0=(c0.val.unread&&c0.val.unread[V.uid])||0;
+         if(tab==='unread'&&!un0)continue;
+         if(tab==='locked'&&!locks[cid0])continue;
+         rows0.push({cid:cid0,other:other0,c:c0.val});
+       }catch(e){console.warn('chat row skip:',e)}
+     }
+     if(!rows0.length){
+       w.innerHTML='<div class="empo"><div class="ei">💬</div><div class="et">'+(tab==='unread'?'No unread chats':tab==='locked'?'No locked chats':tab==='arch'?'No archived chats':'No chats')+'</div><div class="ex">Search → Message</div></div>';
+       return;
+     }
+     var us=await Promise.all(rows0.map(function(o){
+       return db.ref('users/'+o.other).get().catch(function(){return null});
+     }));
+     var h='';
+     for(var q=0;q<rows0.length;q++){
+       var o2=rows0[q],u2=(us[q]&&us[q].val())||{displayName:'User'};
+       var cid2=o2.cid,c2=o2.c;
+       var un2=(c2.unread&&c2.unread[V.uid])||0;
+       h+='<div class="crow" onclick="ChatUI.openWith(\''+o2.other+'\')">'+V.ava(u2,'md')
+        +'<div class="cri"><div class="crt"><div class="crn">'+V.nameB(u2)+(locks[cid2]?' 🔒':'')+(muted[cid2]?' 🔕':'')+'</div><div class="crtm">'+V.timeAgo(c2.updatedAt)+'</div></div>'
+        +'<div class="crb"><div class="crp">'+(c2.lastSender===V.uid?'You: ':'')+V.esc(c2.lastMessage||'Say hi 👋')+'</div>'+(un2?'<span class="cru">'+un2+'</span>':'')+'</div></div></div>';
+     }
+     w.innerHTML=h;
+   }catch(e){
+     console.error('chat load error:',e);
+     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+   }
  }
 };
+
 /* ================= CALLS — null guards ================= */
 const Calls={
  pc:null,callId:null,type:null,timer:null,secs:0,stream:null,role:null,peer:null,unsubs:[],screenStream:null,speakerOn:true,_endedByMe:false,_candQ:[],
@@ -3191,39 +3269,41 @@ function watchIncoming(){
   },function(){});
 }
 
-/* ================= CALLS UI ================= */
+/* ================= CALLS UI — ⚡parallel ================= */
 const CallsUI={
  f:'all',
  filter:function(f){this.f=f;document.querySelectorAll('#sc-calls .ctabs .sgi').forEach(function(x){x.classList.toggle('sel',x.dataset.f===f)});this.load()},
  load:async function(){
-   var w=V.g('callsL');
-   if(!w)return;
+   var w=V.g('callsL');if(!w)return;
+   var f=this.f;
    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
    try{
      var s=await db.ref('users/'+V.uid+'/callHistory').limitToLast(60).get();
-     w.innerHTML='';
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">📞</div><div class="et">No calls</div></div>';return}
-     var arr=[];
-     s.forEach(function(c){arr.push(c.val())});
-     arr.reverse();
-     var h='';
-     for(var i=0;i<arr.length;i++){
-       var c=arr[i];
-       if(this.f==='missed'&&c.status!=='missed')continue;
-       if(this.f==='in'&&c.direction!=='in')continue;
-       if(this.f==='out'&&c.direction!=='out')continue;
-       var uu=(await db.ref('users/'+c.peer).get().catch(function(){return null}));
-       var u=(uu&&uu.val())||{displayName:'Unknown'};
-       var ic=(c.type==='video')?'🎥':'📞';
-       h+='<div class="clrow'+(c.status==='missed'?' miss':'')+'" onclick="Calls.startWith(\''+c.peer+'\',\''+c.type+'\')">'+V.ava(u,'md')
-        +'<div class="cli"><div class="cln">'+V.esc(u.displayName)+'</div><div class="cls">'+ic+' '+(c.direction==='out'?'↗':'↙')+' '+(c.status||'')+' · '+V.timeAgo(c.at)+'</div></div><button class="bico">'+ic+'</button></div>';
-     }
-     w.innerHTML=h||'<div class="empo"><div class="ei">📞</div><div class="et">No calls</div></div>';
-   }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
+     var arr=[];s.forEach(function(c){arr.push(c.val())});arr.reverse();
+     var filtered=arr.filter(function(c){
+       if(f==='missed')return c.status==='missed';
+       if(f==='in')return c.direction==='in';
+       if(f==='out')return c.direction==='out';
+       return true;
+     });
+     var rows=await Promise.all(filtered.map(function(c){
+       return db.ref('users/'+c.peer).get().catch(function(){return null}).then(function(uu){
+         var u=(uu&&uu.val())||{displayName:'Unknown'};
+         var ic=(c.type==='video')?'🎥':'📞';
+         return '<div class="clrow'+(c.status==='missed'?' miss':'')+'" onclick="Calls.startWith(\''+c.peer+'\',\''+c.type+'\')">'+V.ava(u,'md')
+          +'<div class="cli"><div class="cln">'+V.esc(u.displayName)+'</div><div class="cls">'+ic+' '+(c.direction==='out'?'↗':'↙')+' '+(c.status||'')+' · '+V.timeAgo(c.at)+'</div></div><button class="bico">'+ic+'</button></div>';
+       });
+     }));
+     w.innerHTML=rows.join('')||'<div class="empo"><div class="ei">📞</div><div class="et">No calls</div></div>';
+   }catch(e){
+     console.error('calls load:',e);
+     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+   }
  }
 };
 
-/* ================= GAMES — guards ================= */
+/* ================= GAMES — ⚡parallel pick ================= */
 const Games={
  gameId:null,type:null,peer:null,unsub:null,mySym:'p1',_rt:null,
  types:[['ttt','Tic-Tac-Toe','⭕','3 in a row wins'],['rps','Rock Paper Scissors','✊','Instant rounds'],['c4','Connect Four','🔴','Connect 4 discs'],['quiz','Quiz','🧠','Score points'],['reaction','Reaction Game','⚡','Fastest tap wins']],
@@ -3260,11 +3340,13 @@ const Games={
      var h='<div class="fhint mb8">Choose a friend:</div>';
      if(!f.exists())h+='<div class="empo"><div class="ei">👥</div><div class="et">Follow someone first</div></div>';
      else{
-       for(var k in f.val()){
-         var uu=(await db.ref('users/'+k).get().catch(function(){return null}));
-         var u=(uu&&uu.val())||{};
-         h+='<div class="urow" onclick="Games.invite(\''+t+'\',\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName||'')+'</div></div><button class="btn bp bsm">Invite</button></div>';
-       }
+       /* ⚡PERF: parallel — pehle sequential loop tha */
+       var keys=Object.keys(f.val());
+       var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+       h+=keys.map(function(k,i){
+         var u=(us[i]&&us[i].val())||{};
+         return '<div class="urow" onclick="Games.invite(\''+t+'\',\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName||'')+'</div></div><button class="btn bp bsm">Invite</button></div>';
+       }).join('');
      }
      V.mOpen('Game — Invite',h);
    });
@@ -3513,79 +3595,199 @@ const Games={
  }
 };
 
-/* ================= LOCAL SCAN v2 ================= */
-const Local={
- grid:function(lat,lng){return Math.round(lat*50)+'_'+Math.round(lng*50)},
- _curKey:null,
- toggle:function(on){
-  var self=this;
-  if(on){
-   if(!navigator.geolocation){V.toast('error','Geolocation not supported');var t0=V.g('lsTgl');if(t0)t0.checked=false;return}
-   navigator.geolocation.getCurrentPosition(async function(pos){
-    var key=self.grid(pos.coords.latitude,pos.coords.longitude);
-    try{
-     var oldKey=null;
-     try{oldKey=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
-     if(oldKey&&oldKey!==key){try{await db.ref('localPresence/'+oldKey+'/'+V.uid).remove()}catch(e){}}
-     self._curKey=key;
-     var lpRef=db.ref('localPresence/'+key+'/'+V.uid);
-     try{lpRef.onDisconnect().remove()}catch(e){}
-     await lpRef.set({
-      displayName:me.displayName,username:me.username,
-      photo:me.profilePhoto||'',uid:V.uid,at:Date.now()
-     });
-     await db.ref('users/'+V.uid+'/localGrid').set(key);
-     V.toast('success','📍 Local Share ON ✅');
-     self.load();
-    }catch(e){V.toast('error','DB error — rules check karo',5000);var t1=V.g('lsTgl');if(t1)t1.checked=false}
-   },function(err){
-    V.toast('error',err.code===1?'Location permission denied':'Location failed',4000);
-    var t2=V.g('lsTgl');if(t2)t2.checked=false;
-   },{enableHighAccuracy:false,timeout:10000});
-  }else{
-   this.off();
+/* ═══ 📍 LOCAL DIST (🔒 buckets only — exact distance/bearing KABHI nahi) ═══ */
+const LocalDist={
+  distM:function(la1,lo1,la2,lo2){
+    var dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+    var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  },
+  arrow:function(la1,lo1,la2,lo2){
+    var dLo=(lo2-lo1)*Math.PI/180,p1=la1*Math.PI/180,p2=la2*Math.PI/180;
+    var y=Math.sin(dLo)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dLo);
+    var br=((Math.atan2(y,x)*180/Math.PI)+360)%360;
+    return ['⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️'][Math.round(br/45)%8];
+  },
+  bucket:function(m){
+    if(m<250)  return{dots:4,cls:'d4',label:'Bilkul paas'};
+    if(m<600)  return{dots:3,cls:'d3',label:'~500m'};
+    if(m<1100) return{dots:2,cls:'d2',label:'~1km'};
+    if(m<1600) return{dots:1,cls:'d1',label:'~1.5km'};
+    return     {dots:1,cls:'d0',label:'~2km'};
+  },
+  chip:function(m,mp,v){
+    var b=this.bucket(m),dots='';
+    for(var i=1;i<=4;i++)dots+='<i class="'+(i<=b.dots?'on':'')+'"></i>';
+    return '<span class="ldist '+b.cls+'"><span class="ldots">'+dots+'</span><b>'+b.label+'</b><em>'+this.arrow(mp.lat,mp.lng,v.lat,v.lng)+'</em></span>';
   }
- },
- off:async function(){
-  try{
-   var s=await db.ref('users/'+V.uid+'/localGrid').get();
-   var key=s.val()||Local._curKey;
-   Local._curKey=null;
-   if(key){try{await db.ref('localPresence/'+key+'/'+V.uid).remove()}catch(e){}}
-   try{await db.ref('users/'+V.uid+'/localGrid').remove()}catch(e){}
-   V.toast('info','📍 Local Share OFF');
-  }catch(e){}
-  var t=V.g('lsTgl');if(t)t.checked=false;
-  this.load();
- },
- load:async function(){
-  var key=null;
-  try{key=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
-  var tg=V.g('lsTgl');if(tg)tg.checked=!!key;
-  var w=V.g('localL');if(!w)return;
-  w.innerHTML='';
-  if(!key){w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">Toggle ON karo — ~2km ke users dikhenge</div></div>';return}
-  try{
-   var near=await db.ref('localPresence/'+key).get();
-   if(!near.exists()){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">Koi nearby user nahi</div><div class="ex">Dusre users bhi Local Share ON karein</div></div>';return}
-   var list=[];
-   near.forEach(function(c){var v=c.val();if(v&&v.uid&&v.uid!==V.uid&&v.at&&(Date.now()-v.at)<7200000)list.push(v)});
-   var users=await Promise.all(list.map(function(c){
-    return db.ref('users/'+c.uid).get().then(function(us){var u=(us&&us.val())||c;u._at=c.at;return u}).catch(function(){c._at=c.at;return c});
-   }));
-   var h='';
-   for(var i=0;i<users.length;i++){
-    var u=users[i],uid=u.uid||list[i].uid;
-    try{if((await db.ref('users/'+V.uid+'/blocks/'+uid).get()).exists())continue}catch(e){}
-    var fol=false;try{fol=!!(await db.ref('users/'+V.uid+'/following/'+uid).get()).exists()}catch(e){}
-    var act=u._at?' · 🟢 '+V.timeAgo(u._at):'';
-    h+='<div class="urow" onclick="V.openProfile(\''+uid+'\')">'+V.ava(u,'md')
-     +'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+V.esc(u.username||'')+act+'</div></div>'
-     +'<button class="btn '+(fol?'bo':'bp')+' bsm" onclick="event.stopPropagation();Follow.toggle(\''+uid+'\',this)">'+(fol?'Following':'Follow')+'</button></div>';
-   }
-   w.innerHTML=h||'<div class="empo"><div class="ei">🛰️</div><div class="et">Koi user nahi</div></div>';
-  }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
- }
+};
+
+/* ═══ 📍 LOCAL SCAN v4 — rules-safe + 🔄 reload ═══ */
+const Local={
+  grid:function(lat,lng){return Math.round(lat*50)+'_'+Math.round(lng*50)},
+  /* 🔒 3-decimal (~111m) — DB me exact GPS KABHI nahi jata */
+  roundPos:function(lat,lng){return{lat:Math.round(lat*1000)/1000,lng:Math.round(lng*1000)/1000}},
+  neighbors:function(key){
+    var p=String(key).split('_'),a=parseInt(p[0],10),b=parseInt(p[1],10),out=[];
+    for(var dx=-1;dx<=1;dx++)for(var dy=-1;dy<=1;dy++)out.push((a+dx)+'_'+(b+dy));
+    return out;
+  },
+  toggle:function(on){
+    var self=this;
+    if(on){
+      if(!navigator.geolocation){V.toast('error','Geolocation not supported');var t0=V.g('lsTgl');if(t0)t0.checked=false;return}
+      navigator.geolocation.getCurrentPosition(async function(pos){
+        var rp=self.roundPos(pos.coords.latitude,pos.coords.longitude);
+        var key=self.grid(pos.coords.latitude,pos.coords.longitude);
+        try{
+          var oldKey=null;
+          try{oldKey=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
+          if(oldKey&&oldKey!==key){try{await db.ref('localPresence/'+oldKey+'/'+V.uid).remove()}catch(e){}}
+          self._curKey=key;
+          var lpRef=db.ref('localPresence/'+key+'/'+V.uid);
+          try{lpRef.onDisconnect().remove()}catch(e){}
+          /* ✨strict rules me coords reject ho toh bina coords retry */
+          try{
+            await lpRef.set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now(),lat:rp.lat,lng:rp.lng});
+          }catch(e1){
+            try{await lpRef.set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()})}catch(e2){}
+          }
+          await db.ref('users/'+V.uid+'/localGrid').set(key);
+          V.toast('success','📍 Local Share ON ✅');
+          self.load();
+        }catch(e){console.error('local toggle:',e);V.toast('error','DB error — rules check karo',5000);var t1=V.g('lsTgl');if(t1)t1.checked=false}
+      },function(err){
+        V.toast('error',err.code===1?'Location permission denied':'Location failed',4000);
+        var t2=V.g('lsTgl');if(t2)t2.checked=false;
+      },{enableHighAccuracy:false,timeout:10000});
+    }else this.off();
+  },
+  off:async function(){
+    try{
+      var s=await db.ref('users/'+V.uid+'/localGrid').get();
+      var key=s.val()||Local._curKey;
+      Local._curKey=null;
+      if(key){try{await db.ref('localPresence/'+key+'/'+V.uid).remove()}catch(e){}}
+      try{await db.ref('users/'+V.uid+'/localGrid').remove()}catch(e){}
+      V.toast('info','📍 Local Share OFF');
+    }catch(e){}
+    var t=V.g('lsTgl');if(t)t.checked=false;
+    this.load();
+  },
+  load:async function(){
+    var key=null;
+    try{key=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
+    var tg=V.g('lsTgl');if(tg)tg.checked=!!key;
+    var w=V.g('localL');if(!w)return;
+    if(!key){
+      w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">Toggle ON karo — ~2km ke users dikhenge</div></div>';
+      return;
+    }
+    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
+    try{
+      var byUid={},now=Date.now();
+      /* ✨Step 1: OWN cell — hamesha allowed */
+      var own=null;
+      try{own=await db.ref('localPresence/'+key).get()}catch(e){console.warn('own cell read:',e.message)}
+      if(own&&own.exists()){
+        own.forEach(function(c){
+          var v=c.val();
+          if(v&&v.uid&&v.uid!==V.uid&&v.at&&(now-v.at)<7200000)byUid[v.uid]=v;
+        });
+      }
+      /* ✨Step 2: neighbors BEST-EFFORT — deny ho toh silently skip */
+      var nbs=this.neighbors(key).filter(function(k){return k!==key});
+      var nsnaps=await Promise.all(nbs.map(function(k){
+        return db.ref('localPresence/'+k).get().then(function(sn){return sn}).catch(function(){return null});
+      }));
+      nsnaps.forEach(function(sn){
+        if(!sn||!sn.exists())return;
+        sn.forEach(function(c){
+          var v=c.val();
+          if(v&&v.uid&&v.uid!==V.uid&&v.at&&(now-v.at)<7200000){
+            if(!byUid[v.uid]||v.at>byUid[v.uid].at)byUid[v.uid]=v; /* dedupe */
+          }
+        });
+      });
+      var list=Object.keys(byUid).map(function(k){return byUid[k]});
+      if(!list.length){
+        w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">Koi nearby user nahi</div><div class="ex">Dusre users bhi Local Share ON karein</div></div>';
+        return;
+      }
+      /* 🔒 mera rounded position */
+      var mp=null;
+      try{
+        var ms=await db.ref('localPresence/'+key+'/'+V.uid).get();
+        if(ms.exists()){var mv=ms.val();if(mv&&mv.lat!=null)mp={lat:mv.lat,lng:mv.lng}}
+      }catch(e){}
+      /* ✨Step 3: per-user — block/follow/profile SAB parallel */
+      var items=(await Promise.all(list.map(async function(v){
+        try{
+          var m=null;
+          if(mp&&v.lat!=null&&v.lng!=null){
+            m=LocalDist.distM(mp.lat,mp.lng,v.lat,v.lng);
+            if(m>2000)return null; /* 🔒 ~2km honest radius */
+          }
+          var trio=await Promise.all([
+            db.ref('users/'+V.uid+'/blocks/'+v.uid).get().catch(function(){return null}),
+            db.ref('users/'+V.uid+'/following/'+v.uid).get().catch(function(){return null}),
+            db.ref('users/'+v.uid).get().catch(function(){return null})
+          ]);
+          if(trio[0]&&trio[0].exists())return null;
+          var u=(trio[2]&&trio[2].val())||{displayName:v.displayName,username:v.username,profilePhoto:v.photo};
+          return{u:u,uid:v.uid,at:v.at,m:m,lat:v.lat,lng:v.lng,fol:!!(trio[1]&&trio[1].exists())};
+        }catch(e){return null}
+      }))).filter(Boolean);
+      items.sort(function(a,b){return (a.m==null?1e9:a.m)-(b.m==null?1e9:b.m)}); /* 🔽 closest pehle */
+      if(!items.length){w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">Koi user nahi</div></div>';return}
+      var h='';
+      for(var i=0;i<items.length;i++){
+        var it=items[i];
+        var chip=(it.m!=null&&mp)?LocalDist.chip(it.m,mp,it):'<span class="ldist na">📍 approx nahi</span>';
+        h+='<div class="urow" onclick="V.openProfile(\''+it.uid+'\')">'+V.ava(it.u,'md')
+          +'<div class="uinf"><div class="unm">'+V.nameB(it.u)+'</div><div class="uun">@'+V.esc(it.u.username||'')+' · 🟢 '+V.timeAgo(it.at)+'</div>'+chip+'</div>'
+          +'<button class="btn '+(it.fol?'bo':'bp')+' bsm" onclick="event.stopPropagation();Follow.toggle(\''+it.uid+'\',this)">'+(it.fol?'Following':'Follow')+'</button></div>';
+      }
+      w.innerHTML=h;
+    }catch(e){
+      console.error('local load:',e);
+      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+    }
+  },
+  /* 🔄 NAYA: Reload — GPS refresh + list reload + spin animation */
+  reload:function(){
+    var b=V.g('lrBtn');
+    if(b)b.classList.add('spinning');
+    var done=function(){if(b)b.classList.remove('spinning')};
+    var self=this;
+    if(!this._curKey){this.load().then(done,done);return}
+    if(!navigator.geolocation){this.load().then(done,done);return}
+    navigator.geolocation.getCurrentPosition(async function(pos){
+      try{
+        var rp=self.roundPos(pos.coords.latitude,pos.coords.longitude);
+        var nk=self.grid(pos.coords.latitude,pos.coords.longitude);
+        if(nk!==self._curKey){
+          /* cell change — purana hatao, naya likho */
+          try{await db.ref('localPresence/'+self._curKey+'/'+V.uid).remove()}catch(e){}
+          self._curKey=nk;
+          try{
+            await db.ref('localPresence/'+nk+'/'+V.uid).set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now(),lat:rp.lat,lng:rp.lng});
+          }catch(e1){
+            try{await db.ref('localPresence/'+nk+'/'+V.uid).set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()})}catch(e2){}
+          }
+          try{await db.ref('users/'+V.uid+'/localGrid').set(nk)}catch(e){}
+        }else{
+          /* same cell — sirf at + coords refresh */
+          try{await db.ref('localPresence/'+nk+'/'+V.uid).update({at:Date.now(),lat:rp.lat,lng:rp.lng})}catch(e){}
+        }
+      }catch(e){}
+      try{await self.load()}catch(e){}
+      done();
+    },function(){
+      /* GPS fail — sirf list reload */
+      self.load().then(done,done);
+    },{enableHighAccuracy:false,timeout:6000,maximumAge:30000});
+  }
 };
 
 /* ================= NOTIFICATIONS ================= */
@@ -3635,7 +3837,7 @@ const Notif={
  }
 };
 
-/* ================= SEARCH ================= */
+/* ================= SEARCH — ⚡parallel ================= */
 const Search={
  to:null,
  run:function(){clearTimeout(this.to);var self=this;this.to=setTimeout(function(){self.exec()},350)},
@@ -3674,13 +3876,14 @@ const Search={
        h+='<div class="stit">Users</div>';
        var n2=0;
        if(s2.exists()){
-         for(var un in s2.val()){
-           var uid=s2.val()[un];
-           var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
-           var u=(uu&&uu.val())||{};
+         var entries=[];
+         s2.forEach(function(c){entries.push({un:c.key,uid:c.val()})});
+         var us=await Promise.all(entries.map(function(e){return db.ref('users/'+e.uid).get().catch(function(){return null})}));
+         h+=entries.map(function(e,i){
            n2++;
-           h+='<div class="urow" onclick="V.openProfile(\''+uid+'\')">'+V.ava(u,'md')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+un+'</div></div></div>';
-         }
+           var u=(us[i]&&us[i].val())||{};
+           return '<div class="urow" onclick="V.openProfile(\''+e.uid+'\')">'+V.ava(u,'md')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+e.un+'</div></div></div>';
+         }).join('');
        }
        if(!n2)h+='<div class="sm mut">No users</div>';
      }
@@ -3700,7 +3903,7 @@ function atpLinksGrp(){
   return h+'</div>';
 }
 
-/* ================= SETTINGS — verify + version + STAFF CONTROL + FULL DELETE ================= */
+/* ================= SETTINGS — 🔒 password/recovery UNTOUCHED ================= */
 const Settings={
  verifRows:function(){
    try{
@@ -3718,7 +3921,6 @@ const Settings={
    var pc=V.g('profC');if(!pc)return;
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
-   /* 🛠️ STAFF — version + APK link control */
    var staffBlock='';
    try{
      var _rl=me.role||'user';
@@ -4046,7 +4248,6 @@ ATP.ready(function(){
    Fonts.init();
    Auth.initDobs();
    if(!navigator.onLine){var ob=V.g('offBan');if(ob)ob.classList.remove('hidden')}
-   /* 🔄 version check pehle (yahi se APK link bhi Firebase se sync hota hai), auth baad me */
    V.requireAuth(function(){try{Posts.load()}catch(e){}});
    setTimeout(function(){
      if(typeof Ver!=='undefined'&&Ver._locked)return;
