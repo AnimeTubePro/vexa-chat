@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#07020f">
+<title>VEXA Staff Panel — AnimeTubePro Studio</title>
+<link rel="icon" href="../logo%202.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="staff.css">
+<script defer src="staff.js"></script>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="spLogin" class="login-wrap">
+  <div class="login-card">
+    <div class="lg-logo">VEXA</div>
+    <div class="lg-tag">🛡️ Staff Control Panel</div>
+    <div class="lg-sub">Owner · Admin · Moderator only</div>
+    <div class="lg-err" id="lgErr" role="alert"></div>
+    <div class="lg-fld"><label for="lgEmail">Staff Email</label>
+      <input type="email" id="lgEmail" class="lg-inp" placeholder="staff@vexa.com" autocomplete="email" inputmode="email" enterkeyhint="next"></div>
+    <div class="lg-fld"><label for="lgPw">Password</label>
+      <input type="password" id="lgPw" class="lg-inp" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"></div>
+    <button type="button" class="lg-btn" id="lgBtn" onclick="SP.login()">🔐 Sign In</button>
+    <div class="lg-note">Non-staff accounts block ho jaate hain. Saare actions log hote hain.</div>
+  </div>
+</div>
+
+<!-- ═══════════ PANEL ═══════════ -->
+<div id="spApp" class="hidden">
+  <header class="sp-top">
+    <div class="sp-brand"><span class="sp-brand-v">VEXA</span> Staff Panel</div>
+    <div class="sp-me" id="spMe">…</div>
+    <button type="button" class="sp-ico" onclick="SP.logout()" title="Logout" aria-label="Logout">⏻</button>
+  </header>
+
+  <nav class="sp-tabs" id="spTabs">
+    <div class="sp-tab sel" data-t="dash" role="button" tabindex="0" onclick="SP.tab('dash')">📊 Dashboard</div>
+    <div class="sp-tab" data-t="users" role="button" tabindex="0" onclick="SP.tab('users')">👤 Users</div>
+    <div class="sp-tab" data-t="reports" role="button" tabindex="0" onclick="SP.tab('reports')">🚨 Reports<span class="sp-bdg hidden" id="bdgReports">0</span></div>
+    <div class="sp-tab" data-t="tickets" role="button" tabindex="0" onclick="SP.tab('tickets')">🎫 Tickets<span class="sp-bdg hidden" id="bdgTickets">0</span></div>
+    <div class="sp-tab" data-t="recovery" role="button" tabindex="0" onclick="SP.tab('recovery')">🔐 Recovery<span class="sp-bdg hidden" id="bdgRecovery">0</span></div>
+    <div class="sp-tab" data-t="tools" role="button" tabindex="0" onclick="SP.tab('tools')">🛠️ Tools</div>
+  </nav>
+
+  <main class="sp-main" id="spMain"></main>
+</div>
+
+<div id="spToast" aria-live="polite"></div>
+
+</body>
+</html>

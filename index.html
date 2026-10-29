@@ -116,7 +116,7 @@
     <div class="fld"><label class="flbl" for="suDd">Date of Birth</label><div class="dobrow"><select class="selc" id="suDd" aria-label="Day"><option value="">DD</option></select><select class="selc" id="suMm" aria-label="Month"><option value="">MM</option></select><select class="selc" id="suYy" aria-label="Year"><option value="">YYYY</option></select></div></div>
     <div class="fld"><label class="flbl" for="suPw">Password</label><input type="password" class="inp" id="suPw" placeholder="Min 8 characters" autocomplete="new-password" enterkeyhint="next"><div class="fhint">8+ chars with letters & numbers</div></div>
     <div class="fld"><label class="flbl" for="suPw2">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••" autocomplete="new-password" enterkeyhint="done"></div>
-    <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the Terms & Conditions and Privacy Policy</span></label>
+    <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the <a class="pol-link" role="button" tabindex="0" onclick="event.preventDefault();event.stopPropagation();Policies.show('terms')">Terms & Conditions</a> and <a class="pol-link" role="button" tabindex="0" onclick="event.preventDefault();event.stopPropagation();Policies.show('privacy')">Privacy Policy</a></span></label>
     <button type="button" class="btn bp bbk blg" id="suBtn" onclick="Auth.signup()">CREATE ACCOUNT</button>
     <div class="aalt">Already have an account? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a></div>
   </div>
@@ -131,33 +131,58 @@
     <div class="snote">⚠️ <span><b>Recovery = AUTO-LOGIN</b> + password/email wapas! Yaad rakho: <b>Main Code + UID + DOB</b>.</span></div>
     <button type="button" class="btn bp bbk blg mt16" onclick="Auth.finishSignup()">Continue to VEXA →</button>
   </div>
-  <div class="acard hidden" id="sRec">
-    <div class="vlogo">VEXA</div>
-    <div class="atit tc">🔐 Account Recovery</div><div class="asub tc">Verify → Approval → AUTO-LOGIN</div>
-    <div class="fsteps">
-      <div class="fst" id="rs1"><div class="fdot">1</div><span class="sm mut">Username+DOB</span></div><div class="fline" id="rl1"></div>
-      <div class="fst" id="rs2"><div class="fdot">2</div><span class="sm mut">UID+Code</span></div><div class="fline" id="rl2"></div>
-      <div class="fst" id="rs3"><div class="fdot">3</div><span class="sm mut">Main+DOB+UID</span></div>
+  <div class="acard rcv hidden" id="sRec">
+    <div class="rcv-head">
+      <div class="rcv-shield">🔐</div>
+      <div style="min-width:0">
+        <div class="rcv-title">RECOVERY CONSOLE</div>
+        <div class="rcv-sub">Secure account recovery · 3 verified steps</div>
+      </div>
     </div>
-    <div class="ebox" id="recErr" role="alert" aria-live="polite"></div>
+    <div class="rcv-legend">
+      <span class="rcv-lg"><i class="dot b"></i>Blue = Identity</span>
+      <span class="rcv-lg"><i class="dot y"></i>Yellow = Verify</span>
+      <span class="rcv-lg"><i class="dot g"></i>Green = Success</span>
+      <span class="rcv-lg"><i class="dot r"></i>Red = Problem</span>
+    </div>
+    <div class="rcv-status sb" id="rcvStatus"><span class="rcv-tdot"></span><span id="rcvStatusTxt">STEP 1 OF 3 — IDENTITY CHECK</span></div>
+    <div class="rcv-rail">
+      <div class="rcv-dot b now" id="rd1">1</div><div class="rcv-line" id="rl1"></div>
+      <div class="rcv-dot y" id="rd2">2</div><div class="rcv-line" id="rl2"></div>
+      <div class="rcv-dot g" id="rd3">3</div>
+    </div>
+    <div class="rcv-rlabels"><span>Identity</span><span>Codes</span><span>Entry</span></div>
+    <div class="rcv-msg r hidden" id="recErr" role="alert" aria-live="polite"></div>
+    <div class="rcv-msg y hidden" id="rcvWarn" role="status"></div>
     <div id="recS1">
-      <div class="fld"><label class="flbl" for="rUname">Username</label><input class="inp" id="rUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-      <div class="fld"><label class="flbl" for="rDd1">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
-      <button type="button" class="btn bp bbk blg" onclick="Rec.step1()">Verify Step 1 →</button>
+      <div class="rcv-panel pb" style="margin-bottom:0">
+        <div class="rcv-ph"><span class="rcv-pn b">1</span>Aapki identity batao</div>
+        <div class="rcv-phint">Wahi username aur Date of Birth daalo jo account banate waqt di thi.</div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rUname">Username</label><input class="inp rcv-inp" id="rUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step1()"></div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rDd1">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
+        <button type="button" class="rcv-btn b" id="rb1" onclick="Rec.step1()">🔵 IDENTITY VERIFY KARO →</button>
+      </div>
     </div>
     <div id="recS2" class="hidden">
-      <div class="snote mb8">💡 UID Profile se copy kiya tha</div>
-      <div class="fld"><label class="flbl" for="rUid">Account UID</label><input class="inp mono" id="rUid" placeholder="e.g. xK9mP2vQ..." autocomplete="off" spellcheck="false"></div>
-      <div class="fld"><label class="flbl" for="rSec">Secondary Remember Code</label><input class="inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
-      <button type="button" class="btn bp bbk blg" onclick="Rec.step2()">Verify Step 2 →</button>
+      <div class="rcv-panel py" style="margin-bottom:0">
+        <div class="rcv-ph"><span class="rcv-pn y">2</span>Secret codes verify karo</div>
+        <div class="rcv-phint">🆔 UID aapki <b>Recovery TXT file</b> me saved hai (Profile → 🔑 se download kiya tha). Codes copy-paste karo — type karne me galti ho sakti hai.</div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rUid">Account UID</label><input class="inp rcv-inp mono" id="rUid" placeholder="Recovery TXT file me likha hai" autocomplete="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step2()"></div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rSec">Secondary Remember Code</label><input class="inp rcv-inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step2()"></div>
+        <button type="button" class="rcv-btn y" id="rb2" onclick="Rec.step2()">🟡 CODES VERIFY KARO →</button>
+      </div>
     </div>
     <div id="recS3" class="hidden">
-      <div class="fld"><label class="flbl" for="rMain">Main Remember Code</label><input class="inp mono" id="rMain" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
-      <div class="fld"><label class="flbl" for="rDd3">Date of Birth (re-verify)</label><div class="dobrow"><select class="selc" id="rDd3" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm3" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy3" aria-label="Year"><option value="">YYYY</option></select></div></div>
-      <div class="fld"><label class="flbl" for="rUid3">Account UID (re-verify)</label><input class="inp mono" id="rUid3" placeholder="Same UID again" autocomplete="off" spellcheck="false"></div>
-      <button type="button" class="btn bp bbk blg" onclick="Rec.step3()">Verify & Request Entry →</button>
+      <div class="rcv-panel pg" style="margin-bottom:0">
+        <div class="rcv-ph"><span class="rcv-pn g">3</span>Main Code + Entry Request</div>
+        <div class="rcv-phint">Last step! Main Code (sabse bada 4-block code) daalo — staff approval ke baad AUTO-LOGIN hoga.</div>
+        <div class="rcv-carry">🆔 UID <b id="rcvCarryUid">—</b><span class="sm">✓ Step 2 me verified</span></div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rMain">Main Remember Code</label><input class="inp rcv-inp mono" id="rMain" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step3()"></div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rDd3">Date of Birth (final check)</label><div class="dobrow"><select class="selc" id="rDd3" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm3" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy3" aria-label="Year"><option value="">YYYY</option></select></div></div>
+        <button type="button" class="rcv-btn g" id="rb3" onclick="Rec.step3()">🟢 ENTRY REQUEST BHEJO →</button>
+      </div>
     </div>
-    <div class="aalt">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
+    <div class="rcv-foot">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a> · <a role="button" tabindex="0" onclick="VexaSec.recoveryLoginOpen()">🔑 Code Login</a></div>
   </div>
   <div class="acard hidden" id="sHelp">
     <div class="vlogo">VEXA</div>
@@ -229,6 +254,8 @@
             <div class="qt" role="button" tabindex="0" onclick="V.go('calls')"><span class="qi">📞</span><span class="ql">Calls</span></div>
             <div class="qt" role="button" tabindex="0" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
             <div class="qt" role="button" tabindex="0" onclick="Settings.open()"><span class="qi">⚙️</span><span class="ql">Settings</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="V.go('police')"><span class="qi">👮</span><span class="ql">Police</span></div>
+            <div class="qt" role="button" tabindex="0" onclick="V.go('support')"><span class="qi">🆘</span><span class="ql">Support</span></div>
           </div>
           <div class="lnkcard" id="lnkCard"></div>
           <div id="feedW"></div>
@@ -280,6 +307,10 @@
       <section class="scr" id="sc-games"><div class="pgc">
         <div class="stit">Games</div><div class="glist" id="gamesL"></div></div></section>
       <section class="scr" id="sc-notif"><div class="pgc" id="notifL"></div></section>
+      <section class="scr" id="sc-police"><div class="pgc" id="policeC"></div></section>
+      <section class="scr" id="sc-support"><div class="pgc" id="supportC"></div></section>
+      <section class="scr" id="sc-privacy"><div class="pgc pol-doc" id="privacyC"></div></section>
+      <section class="scr" id="sc-terms"><div class="pgc pol-doc" id="termsC"></div></section>
       <section class="scr" id="sc-profile"><div id="profC"></div></section>
     </main>
     <nav class="bnav">
@@ -298,6 +329,8 @@
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('games')"><span>🎮</span>Games</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('local')"><span>📡</span>Local</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('notif')"><span>🔔</span>Notifications</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('police')"><span>👮</span>Police</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('support')"><span>🆘</span>Support</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('profile')"><span>👤</span>Profile</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('settings')"><span>⚙️</span>Settings</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.themes()"><span>🖼️</span>Image Themes</div>
@@ -343,7 +376,7 @@
   <button type="button" class="ccb" id="ssBtn" onclick="Calls.shareScreen()" style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:7;display:none" title="Share Screen" aria-label="Share screen">🖥️</button>
 </div></div>
 
-<div class="mov" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
+<div class="mov" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" id="mCloseX" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
 <div class="tcont" id="tcont" aria-live="polite"></div>
 
 <script>

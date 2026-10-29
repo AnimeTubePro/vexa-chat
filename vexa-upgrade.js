@@ -629,8 +629,7 @@ const VexaSec={
     +'<div class="snote">Har code <b>EK BAAR</b> use hota hai. DB me sirf <b>hash</b> store hota hai — plaintext kahin nahi.</div>';
    h+='<div class="srow" onclick="VexaSec.recoveryGenerate()"><div class="sri">🎲</div><div class="srf"><div class="srt">'+(total?'Regenerate 10 codes':'Generate 10 recovery codes')+'</div><div class="srs">Purane codes cancel ho jayenge</div></div><div class="sra">›</div></div>';
    if(total)h+='<div class="srow"><div class="sri">📊</div><div class="srf"><div class="srt">Codes status</div><div class="srs">'+(total-used)+' unused / '+total+' total</div></div></div>';
-   h+='<div class="stit mt16">🧹 Security Cleanup (Legacy)</div>'
-    +'<div class="srow" onclick="VexaSec.purgeLegacy()"><div class="sri">🧨</div><div class="srf"><div class="srt">Purge legacy plaintext secrets</div><div class="srs">recoveryPrivate (password/codes/email/dob) DB se DELETE</div></div><div class="sra">›</div></div>'
+   h+='<div class="snote">🔒 <b>Aapke secrets safe hain:</b> recoveryPrivate (dob/email/codes/password) <b>tab tak delete nahi hota jab tak aap khud account delete nahi karte</b> — koi auto-purge ya cleanup nahi hota.</div>'
     +'<div class="stit mt16">🔑 Login with Recovery Code</div>'
     +'<div class="snote">Login screen → <b>Recovery Code Login</b> → email + ek unused code → auto-login + password reset.</div>'
     +'<div class="srow" onclick="VexaSec.recoveryDownload()"><div class="sri">💾</div><div class="srf"><div class="srt">Download codes TXT</div><div class="srs">Ek baar dikhte hain — file safe rakho</div></div><div class="sra">⬇️</div></div>';
@@ -685,21 +684,10 @@ const VexaSec={
    setTimeout(function(){try{document.body.removeChild(a);URL.revokeObjectURL(url)}catch(e){}},200);
  },
  /* legacy purge — recoveryPrivate plaintext DELETE (spec security rule) */
- purgeLegacy:async function(){
-   if(!confirm('PERMANENT: recoveryPrivate/{password, codes, email, dob} aur users/{recovery/mainCode,secondaryCode} DELETE?\n\nOld staff-approval recovery (hash-based) kaam karti rahegi.'))return;
-   try{
-     var up={};
-     up['recoveryPrivate/'+V.uid+'/password']=null;
-     up['recoveryPrivate/'+V.uid+'/mainCode']=null;
-     up['recoveryPrivate/'+V.uid+'/secondaryCode']=null;
-     up['recoveryPrivate/'+V.uid+'/email']=null;
-     up['recoveryPrivate/'+V.uid+'/dob']=null;
-     up['users/'+V.uid+'/recovery/mainCode']=null;
-     up['users/'+V.uid+'/recovery/secondaryCode']=null;
-     await db.ref().update(up);
-     await db.ref('users/'+V.uid+'/securityEvents').push({type:'legacy_secret_purge',device:V.dev(),at:Date.now()});
-     V.toast('success','🧹 Legacy plaintext secrets purged — DB ab clean hai');
-   }catch(e){V.toast('error',V.friendErr(e))}
+ /* v2.3: DISABLED — user rule: recoveryPrivate secrets tab tak rakhe jayenge
+    jab tak account khud delete na ho. Ye function ab kuch delete NAHI karta. */
+ purgeLegacy:function(){
+   V.toast('info','🔒 Secrets kabhi manually delete nahi hote — sirf account deletion pe clean hote hain');
  },
  /* login-screen flow — email + code → backend verify → custom token */
  recoveryLoginOpen:function(){
@@ -1288,7 +1276,6 @@ window.VexaUI=VexaUI;
         +'<div class="srow" onclick="VexaSec.devicesOpen()"><div class="sri">📱</div><div class="srf"><div class="srt">Devices & Sessions</div><div class="srs">Remote logout — dusre devices uda do</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="VexaSec.twoFaOpen()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Two-Step Verification</div><div class="srs">SMS second factor (real Firebase 2FA)</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="VexaSec.recoveryOpen()"><div class="sri">🔐</div><div class="srf"><div class="srt">Recovery Center</div><div class="srs">Single-use hashed codes — purane se safe</div></div><div class="sra">›</div></div>'
-        +'<div class="srow" onclick="VexaUI.vexaIdCopy()"><div class="sri">🔢</div><div class="srf"><div class="srt">My VEXA ID</div><div class="srs mono">'+V.esc(String((me&&me.publicUserId)||'…'))+'</div></div><div class="sra">📋</div></div>'
         +'<div class="srow" onclick="VexaGroup.invitesOpen()"><div class="sri">📨</div><div class="srf"><div class="srt">Group Invites</div><div class="srs">Pending group invites dekho</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="VexaGroup.createOpen()"><div class="sri">👥</div><div class="srf"><div class="srt">Create Group</div><div class="srs">Naya group banao</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="VexaDrive.'+(driveOn?'':'connect')+'GoogleDrive()"><div class="sri">🎬</div><div class="srf"><div class="srt">'+(driveOn?'Google Drive — Connected ✅':'Connect Google Drive')+'</div><div class="srs">Video messages ke liye</div></div><div class="sra">›</div></div>'
@@ -1312,7 +1299,7 @@ window.VexaUI=VexaUI;
    };
  });
 
- /* 9) V.requireAuth → post-login upgrades (Id ensure, watchdog, device reg) */
+ /* 9) V.requireAuth → post-login upgrades (Id ensure, watchdog, device reg, staff sync) */
  tryHook(function(){
    if(typeof V==='undefined')return;
    var _ar=V._authReal;
@@ -1320,6 +1307,21 @@ window.VexaUI=VexaUI;
      return _ar.call(this,async function(u){
        try{if(window.VexaSec){VexaSec.registerDevice(u.uid);VexaSec.startWatchdog()}}catch(e){}
        try{if(window.VexaId)VexaId.ensure(u.uid)}catch(e){}
+       /* staffIndex sync — staff login pe apna entry auto-update karta hai.
+          Rules enforce: sirf role owner/admin/moderator wala hi likh sakta hai. */
+       try{
+         var _rl=(me&&me.role)||'';
+         if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
+           db.ref('staffIndex/'+u.uid).update({
+             role:_rl,name:(me.username||'Staff'),photo:(me.profilePhoto||''),syncedAt:Date.now()
+           }).catch(function(){});
+         }else{
+           /* non-staff: stale entry sirf tab hatayo jab exist karti ho (warna denied-write noise) */
+           db.ref('staffIndex/'+u.uid).get().then(function(snap){
+             if(snap.exists())return db.ref('staffIndex/'+u.uid).remove();
+           }).catch(function(){});
+         }
+       }catch(e){}
        if(cb){try{cb(u)}catch(e){}}
      });
    };
@@ -1359,7 +1361,6 @@ window.VexaUI=VexaUI;
 })();
 
 /* VexaUI helpers used above */
-VexaUI.vexaIdCopy=function(){V.copy(String((me&&me.publicUserId)||''),'VEXA ID copied!')};
 VexaUI.storageCheck=function(){
   V.mOpen('🧪 Storage Check','<div class="spn" style="margin:18px auto"></div>');
   VexaStorage.verifyBuckets().then(function(res){

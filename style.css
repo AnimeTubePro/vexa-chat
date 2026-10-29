@@ -668,3 +668,158 @@ body.vip .qfab{box-shadow:0 6px 20px rgba(255,200,61,.45)}
 .vexa-video-btn{font-size:15px}
 
 /* ── Security group rows (Settings) reuse .sgrp/.srow — no extra css needed ── */
+
+/* ═══════════════════════════════════════════════════════════
+   ⚡UPGRADE v2.2 — POLICE / SUPPORT / POLICIES PAGES
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Policy doc pages (privacy/terms) + modal reuse ── */
+.pol-doc{padding-bottom:24px}
+.pol-head{text-align:center;padding:6px 0 14px;border-bottom:1px solid var(--bd);margin-bottom:14px}
+.pol-big{font-size:22px;font-weight:800;background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pol-sec{margin-bottom:16px}
+.pol-t{font-size:14.5px;font-weight:700;color:var(--cy);margin-bottom:6px}
+.pol-p{font-size:13.5px;line-height:1.75;color:var(--tx2)}
+.pol-p b{color:var(--tx)}
+.pol-foot{text-align:center;padding:10px 0 4px}
+.pol-link{color:var(--cy);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.pol-link:hover{color:var(--ac2)}
+
+/* ── Police / Support hero ── */
+.pol-hero{text-align:center;padding:18px 14px 16px;background:linear-gradient(160deg,rgba(108,92,231,.16),rgba(0,217,255,.07));border:1px solid var(--cyl);border-radius:18px;margin-bottom:14px}
+.pol-hero-ic{font-size:44px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 4px 14px rgba(0,217,255,.35))}
+.pol-hero-t{font-size:20px;font-weight:800;letter-spacing:.5px}
+.pol-tabs{margin-bottom:14px;justify-content:center}
+.pol-item{display:flex;gap:12px;align-items:flex-start;background:var(--bg3);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin-bottom:8px;transition:var(--tr)}
+.pol-item:hover{border-color:var(--bds)}
+.pol-item-ic{font-size:20px;line-height:1.3;flex-shrink:0}
+.pol-item-b{min-width:0;flex:1}
+.pol-item-t{font-size:13.5px;font-weight:700;margin-bottom:3px}
+.pol-item-d{font-size:12.5px;color:var(--tx2);line-height:1.6}
+
+/* ── Support cards ── */
+.sup-hero{background:linear-gradient(160deg,rgba(46,204,113,.14),rgba(0,217,255,.07))}
+.sup-card{background:var(--bg3);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.sup-card-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sup-ic{font-size:22px}
+.sup-t{font-size:15px;font-weight:800}
+.sup-d{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:10px}
+.sup-d b{color:var(--tx)}
+.sup-btns{display:flex;flex-wrap:wrap;gap:8px}
+.sup-online{border-color:rgba(46,204,113,.35)!important;background:rgba(46,204,113,.05)!important}
+
+/* ── Support tickets ── */
+.tkrow{background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.tkh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.tkh b{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tkst{font-size:10px;font-weight:800;letter-spacing:.5px;flex-shrink:0}
+.tkb{font-size:12.5px;color:var(--tx2);line-height:1.6;word-break:break-word}
+.tkr{margin-top:7px;padding:8px 10px;background:var(--oks);border-radius:9px;font-size:12.5px;line-height:1.6;color:var(--tx)}
+.tkr b{color:var(--ok)}
+.tkm{margin-top:5px;font-size:10.5px;color:var(--tx3)}
+
+/* ── ⚡LAYOUT FIXES — chhote screens (320–400px) ── */
+@media(max-width:400px){
+  /* topbar buttons squeeze — gap kam, title chhota */
+  .topb{gap:5px;padding-left:8px;padding-right:8px}
+  .topb .bico{width:33px;height:33px;font-size:14px}
+  .topt{font-size:14.5px}
+  /* home tiles: 6 tiles → 3 columns (4-col me 6 tiles ajeeb lagte hain) */
+  .qgrid{grid-template-columns:repeat(3,1fr);gap:8px}
+  /* chat input: GIF button chhupao — textarea ko jagah do */
+  .cinp .bico{width:34px;height:34px;font-size:14px}
+  .cinp{gap:5px;padding-left:6px;padding-right:6px}
+}
+@media(max-width:340px){
+  /* bohot chhota screen — sirf zaroori cheezein */
+  .cinp .bico:not(.vexa-video-btn){display:none}
+  .csend{width:40px;height:40px}
+  .qgrid{grid-template-columns:repeat(2,1fr)}
+  .dobrow{gap:6px}
+  .dobrow select{padding:11px 8px;font-size:14px}
+  .mp-btn{font-size:12px}
+}
+/* music panel — right side overflow fix (chhoti screens pe left bhi khul sake) */
+@media(max-width:360px){
+  .music-panel{right:auto;left:50%;transform:translateX(-50%);width:min(300px,calc(100vw - 24px))}
+  .music-panel.open{display:flex}
+}
+/* modal me policy doc — thoda bada area */
+.mbox .pol-doc{max-height:62vh;overflow-y:auto;padding-right:4px}
+
+/* ═══════════════════════════════════════════════════════════
+   🔐 RECOVERY CONSOLE — hamesha DARK + color-coded (v2.3)
+   Blue=Identity · Yellow=Verify · Green=Success · Red=Problem
+   Ye apna alag dark theme hai — app theme change ho tab bhi
+   console dark hi rahega taaki steps samajhna aasan ho.
+   ═══════════════════════════════════════════════════════════ */
+.rcv{background:linear-gradient(165deg,#070b16 0%,#0c1322 55%,#0a101e 100%);border:1px solid #1d2a47;border-radius:22px;padding:22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.55);color:#e7edf7}
+.rcv-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.rcv-shield{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#1e3a8a,#172554);display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid #2b4a8a;flex:0 0 auto}
+.rcv-title{font-weight:900;font-size:16.5px;letter-spacing:1.6px;color:#fff}
+.rcv-sub{font-size:11.5px;color:#8fa3c8;margin-top:2px}
+.rcv-legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.rcv-lg{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#93a7cd;background:#101a30;border:1px solid #22335a;border-radius:999px;padding:4px 9px}
+.rcv-lg .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.dot.b{background:#3b82f6}.dot.y{background:#fbbf24}.dot.g{background:#22c55e}.dot.r{background:#ef4444}
+.rcv-status{display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;font-size:11.5px;font-weight:800;letter-spacing:.4px;margin-bottom:12px;border:1px solid}
+.rcv-status .rcv-tdot{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;flex:0 0 auto;animation:rcvPulse 1.6s infinite}
+.rcv-status.sb{background:rgba(59,130,246,.12);border-color:#2b5cc4;color:#7fb0ff}
+.rcv-status.sy{background:rgba(251,191,36,.1);border-color:#a97e15;color:#ffd66b}
+.rcv-status.sg{background:rgba(34,197,94,.1);border-color:#1d8a44;color:#5fe08d}
+.rcv-status.sr{background:rgba(239,68,68,.12);border-color:#a12626;color:#ff8a8a}
+@keyframes rcvPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.rcv-rail{display:flex;align-items:center;margin:2px 0 4px}
+.rcv-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:900;background:#0f1830;border:2px solid #25365e;color:#5d739f;flex:0 0 auto;transition:all .25s}
+.rcv-dot.b{border-color:#3b82f6;color:#7fb0ff}
+.rcv-dot.y{border-color:#f59e0b;color:#ffd66b}
+.rcv-dot.g{border-color:#22c55e;color:#5fe08d}
+.rcv-dot.now{background:#12203c;transform:scale(1.14);box-shadow:0 0 14px rgba(59,130,246,.35)}
+.rcv-dot.done{background:#0d2b1b;border-color:#22c55e;color:#5fe08d;box-shadow:0 0 10px rgba(34,197,94,.25)}
+.rcv-line{height:3px;flex:1;background:#22335a;border-radius:2px;margin:0 4px;transition:background .3s}
+.rcv-line.lb{background:linear-gradient(90deg,#3b82f6,#3b82f6)}
+.rcv-line.lg{background:linear-gradient(90deg,#3b82f6,#22c55e)}
+.rcv-rlabels{display:flex;margin:0 0 14px}
+.rcv-rlabels span{flex:1;text-align:center;color:#5d739f;font-size:10.5px;font-weight:700;letter-spacing:.5px}
+.rcv-msg{border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:600;margin-bottom:12px;line-height:1.6;border:1px solid;word-break:break-word}
+.rcv-msg.r{background:rgba(239,68,68,.1);border-color:#7f2020;color:#ffb4b4}
+.rcv-msg.y{background:rgba(251,191,36,.08);border-color:#8a6a12;color:#ffd66b}
+.rcv-msg.g{background:rgba(34,197,94,.08);border-color:#17703a;color:#7fe3a3}
+.rcv-panel{background:#0d1526;border:1px solid #1d2a47;border-left:3px solid #3b82f6;border-radius:14px;padding:16px 14px;margin-bottom:14px;animation:fu-a .3s}
+.rcv-panel.py{border-left-color:#f59e0b}
+.rcv-panel.pg{border-left-color:#22c55e}
+.rcv-ph{font-weight:800;font-size:14px;color:#fff;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.rcv-pn{width:22px;height:22px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;flex:0 0 auto}
+.rcv-pn.b{background:#1d3a7a;color:#9cc3ff}
+.rcv-pn.y{background:#3d2f08;color:#ffd66b}
+.rcv-pn.g{background:#0d3320;color:#7fe3a3}
+.rcv-phint{font-size:11.5px;color:#8fa3c8;margin-bottom:12px;line-height:1.6}
+.rcv-lbl{color:#9db1d6!important}
+.rcv-inp,.rcv .selc{background:#0a1120!important;border-color:#25365e!important;color:#e7edf7!important}
+.rcv-inp::placeholder{color:#4a5c80}
+.rcv-inp:focus,.rcv .selc:focus{border-color:#3b82f6!important;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+.rcv .selc option{background:#0a1120;color:#e7edf7}
+.rcv-carry{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:rgba(34,197,94,.07);border:1px dashed #1d8a44;color:#7fe3a3;font-size:11.5px;border-radius:9px;padding:8px 10px;margin-bottom:12px}
+.rcv-carry b{word-break:break-all}
+.rcv-btn{width:100%;border:none;border-radius:12px;padding:13px 14px;font-weight:900;font-size:13.5px;letter-spacing:.5px;cursor:pointer;color:#fff;transition:transform .15s,box-shadow .2s,opacity .2s;font-family:inherit;margin-top:4px}
+.rcv-btn.b{background:linear-gradient(135deg,#2563eb,#3b82f6);box-shadow:0 8px 22px rgba(37,99,235,.35)}
+.rcv-btn.y{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 8px 22px rgba(180,83,9,.3)}
+.rcv-btn.g{background:linear-gradient(135deg,#15803d,#22c55e);box-shadow:0 8px 22px rgba(21,128,61,.32)}
+.rcv-btn:active{transform:scale(.98)}
+.rcv-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.rcv-foot{text-align:center;font-size:12px;color:#8fa3c8;margin-top:6px}
+.rcv-foot a{color:#7fb0ff;cursor:pointer;text-decoration:none}
+@media(max-width:400px){.rcv{padding:18px 14px}.rcv-dot{width:26px;height:26px;font-size:11px}.rcv-title{font-size:15px}}
+
+/* ═══ 🎮 GAME UID CHIPS — profile pe sabko dikhte hain (v2.3) ═══ */
+.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
+.gchip{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:7px 11px;font-size:12px;font-weight:700}
+.gchip .gic{font-size:14px}
+.gchip .gl{color:var(--tx2);font-weight:600}
+.gchip .gv{font-family:monospace;color:var(--ac);letter-spacing:.5px}
+.gchip .gcopy{cursor:pointer;margin-left:2px}
+.gchip.gadd{cursor:pointer;border-style:dashed;color:var(--tx2);opacity:.85}
+
+/* ── Edit profile: 2-col form grid (social/game inputs) ── */
+.sgrid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+@media(max-width:420px){.sgrid2{grid-template-columns:1fr}}

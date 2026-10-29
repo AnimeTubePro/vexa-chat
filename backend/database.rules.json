@@ -78,11 +78,29 @@
       }
     },
 
-    /* ── Recovery requests — owner create/read, staff status update ── */
+    /* ── Recovery requests — root list sirf OWNER (staff panel); per-uid: self + owner ── */
     "recoveryRequests": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').child().val() === 'owner')",
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'owner')",
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    /* ── Help requests — login se PEHLE wali reports (v2.3)
+          write: koi bhi (logged-out user bhi Help Center se report bhej sakta hai)
+          read:  sirf staff (owner/admin/moderator)
+          NOTE: ye recoveryPrivate ko TOUCH nahi karta — alag node hai ── */
+    "helpRequests": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'moderator')",
+      "$rid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['type','username','at'])",
+        "type": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "username": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "detail": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "status": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "at": { ".validate": "newData.isNumber()" }
       }
     },
 
@@ -187,7 +205,38 @@
       ".read": "auth != null",
       "$pid": { ".write": "auth != null" }
     },
-    "reports": { ".read": false, ".write": "auth != null" },
+    "reports": {
+      ".read": "auth != null && ['owner','admin','moderator'].hasChild(root.child('users').child(auth.uid).child('role').val())",
+      ".write": "auth != null"
+    },
+
+    /* ── ⚡UPGRADE v2.2: STAFF INDEX — Support page ka staff list ──
+       staff khud apni entry likhta hai (login pe auto-sync);
+       rules guarantee: sirf owner/admin/moderator hi likh sakta hai ── */
+    "staffIndex": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && (root.child('users').child($uid).child('role').val() === 'owner' || root.child('users').child($uid).child('role').val() === 'admin' || root.child('users').child($uid).child('role').val() === 'moderator')"
+      }
+    },
+
+    /* ── ⚡UPGRADE v2.2: SUPPORT TICKETS — user banata hai, staff jawab deta hai ── */
+    "supportTickets": {
+      ".read": "auth != null && ['owner','admin','moderator'].hasChild(root.child('users').child(auth.uid).child('role').val())",
+      ".indexOn": "uid",
+      "$tid": {
+        ".read": "auth != null && (data.child('uid').val() === auth.uid || ['owner','admin','moderator'].hasChild(root.child('users').child(auth.uid).child('role').val()))",
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || data.child('uid').val() === auth.uid || ['owner','admin','moderator'].hasChild(root.child('users').child(auth.uid).child('role').val()))"
+      }
+    },
+
+    /* ── ⚡UPGRADE v2.2: APP CONFIG — support email (staff panel se set hota hai) ── */
+    "config": {
+      "support": {
+        ".read": "auth != null",
+        ".write": "auth != null && ['owner','admin','moderator'].hasChild(root.child('users').child(auth.uid).child('role').val())"
+      }
+    },
 
     /* ── Version (staff write) ── */
     "versionApp": {
