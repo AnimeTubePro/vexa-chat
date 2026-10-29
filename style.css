@@ -633,3 +633,38 @@ body.vip .qfab{box-shadow:0 6px 20px rgba(255,200,61,.45)}
 .lrbtn:active{transform:scale(.93)}
 .lrbtn.spinning{animation:lrspin .8s linear infinite;pointer-events:none;opacity:.6}
 @keyframes lrspin{to{transform:rotate(360deg)}}
+
+/* ═══════════════ VEXA UPGRADE v2.1 — NEW COMPONENT STYLES ═══════════════ */
+
+/* ── Video messages (Drive) ── */
+.vmsg{min-width:200px;max-width:280px}
+.vmsg-v{width:100%;max-height:220px;border-radius:10px;background:#000;display:block}
+.vmsg-i{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.vmsg-n{font-size:12.5px;font-weight:700;word-break:break-all}
+.vmsg-s{font-size:11px;opacity:.65}
+.vmsg-w{font-size:10.5px;color:#ffb46b;font-weight:600}
+.vmsg-a{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* ── Group tags / sender / system ── */
+.gtag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.5px;padding:1.5px 6px;border-radius:20px;background:rgba(168,85,247,.25);color:#c084fc;vertical-align:middle;text-transform:uppercase}
+.gtag-o{background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111}
+.gtag-a{background:rgba(0,217,255,.22);color:#00d9ff}
+.gwho{font-size:11px;font-weight:800;margin-bottom:3px;cursor:pointer;opacity:.9}
+.msys{margin:8px auto;max-width:82%;text-align:center;font-size:11.5px;color:var(--tx2,#9aa);background:rgba(255,255,255,.05);padding:6px 12px;border-radius:14px}
+.mimg{max-width:230px;border-radius:10px;cursor:pointer;display:block}
+
+/* ── Recovery codes grid ── */
+.rcgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.rccode{background:var(--bg3,#151522);border:1.5px dashed var(--bds,#333);border-radius:10px;padding:10px 6px;text-align:center;font-weight:800;letter-spacing:1px}
+
+/* ── Devices / sessions rows ── */
+.sesc{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg3,#151522);border:1px solid var(--bds,#2a2a3a);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.sesc.off{opacity:.45}
+.si2{flex:1;min-width:0}
+.sesd{font-size:13.5px;font-weight:700}
+.sesm{font-size:11.5px;opacity:.6;margin-top:2px;word-break:break-all}
+
+/* ── Chat video button highlight ── */
+.vexa-video-btn{font-size:15px}
+
+/* ── Security group rows (Settings) reuse .sgrp/.srow — no extra css needed ── */

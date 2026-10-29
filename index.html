@@ -17,6 +17,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="style.css">
 <script defer src="script.js"></script>
+<script defer src="vexa-upgrade.js"></script>
 </head>
 <body>
 
@@ -81,6 +82,7 @@
     <div class="fld"><label class="flbl" for="lgPw">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)" aria-label="Show password">👁️</button></div></div>
     <div style="text-align:right;margin:-5px 0 14px"><a class="sm" role="button" tabindex="0" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
     <button type="button" class="btn bp bbk blg" id="lgBtn" onclick="Auth.login()">Sign In</button>
+    <div class="aalt">Recovery code hai? <a role="button" tabindex="0" onclick="VexaSec.recoveryLoginOpen()">Recovery Code Login</a></div>
     <div class="aalt">Have a login code? <a role="button" tabindex="0" onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
     <div class="aalt">New to VEXA? <a role="button" tabindex="0" onclick="V.showAuth('sSignup')">Create account</a></div>
   </div>
@@ -321,6 +323,7 @@
   <div class="cinp">
     <button type="button" class="bico" onclick="ChatUI.emoji()" aria-label="Emoji">😊</button>
     <button type="button" class="bico" onclick="ChatUI.gif()" aria-label="Stickers">GIF</button>
+    <button type="button" class="bico vexa-video-btn" onclick="VexaUI.videoTap()" aria-label="Video message" title="Drive video bhejo">🎬</button>
     <textarea class="inp" id="cInput" rows="1" placeholder="Message..." enterkeyhint="send" oninput="ChatUI.grow(this);ChatUI.typing()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();ChatUI.send()}"></textarea>
     <button type="button" class="csend" onclick="ChatUI.send()" aria-label="Send">➤</button>
   </div>

@@ -28,7 +28,7 @@ const ATP_LINKS=[
 
 /* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
- CURRENT:'2.0.1',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
+ CURRENT:'2.1.0',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ · ⚡UPGRADE v2.1: Supabase×3 + Drive videos + publicUserId + 2FA + RemoteLogout + Groups + RecoveryCenter */
  get:function(){return this.CURRENT},
  cmp:function(a,b){
   var pa=String(a||'').split('.').map(function(x){return parseInt(x,10)||0});
@@ -871,9 +871,32 @@ const CFG={
  firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"},
  supabase:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media"}
 };
+/* ═══ ⚡UPGRADE v2.1: CENTRAL STORAGE + GOOGLE CONFIG (values spec se — invent nahi) ═══ */
+const VEXA_STORAGE={
+ avatars:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media",folder:"profile"},
+ posts:{url:"https://qrrcyvtvwjzhsdklxluh.supabase.co",anonKey:"sb_publishable_xv8P8Lo3wwLCjO1GexlJtQ_oQBvT6m4",bucket:"vexa-posts",folder:"posts"},
+ guilds:{url:"https://kjsfenhmlhgdlhqipqts.supabase.co",anonKey:"sb_publishable_t5BhzEaXtTCq5fkJfvzD0g_9v7As_Sd",bucket:"vexa-chat-guild",folder:"guilds"}
+};
+const VEXA_GOOGLE={
+ projectId:"vexa-d",
+ clientId:"504252409437-219ln0ti9fttnqfoiroc8gc4jmp152ud.apps.googleusercontent.com",
+ apiKey:"", /* 🔒 secret backend env var (GOOGLE_OAUTH_API_KEY) se aata hai — static site pe NAHI */
+ driveApiBaseUrl:"https://www.googleapis.com/drive/v3",
+ driveUploadUrl:"https://www.googleapis.com/upload/drive/v3/files",
+ pickerEnabled:true,
+ scopes:["https://www.googleapis.com/auth/drive.file"]
+};
+const VEXA_MEDIA_LIMITS={
+ allowedMime:["image/jpeg","image/png","image/webp"],
+ maxBytes:200*1024,
+ maxPostImages:5,
+ maxChatImages:5
+};
 const CF_URL='https://us-central1-vexa-b3a1d.cloudfunctions.net/recoveryLogin';
 const CF_STORE_URL=CF_URL.replace('recoveryLogin','vexaSecureStore');
 const CF_CREDCHAT_URL=CF_URL.replace('recoveryLogin','recoveryCredChat');
+/* ⚡UPGRADE: naya secure backend endpoint (vexaBackend function deploy ke baad active) */
+const CF_BACKEND_URL=CF_URL.replace('recoveryLogin','vexaBackend');
 let auth=null,db=null,sb=null,me=null;
 
 /* ================= CORE ================= */
@@ -1651,6 +1674,8 @@ const Auth={
      V.g('authBox').classList.add('hidden');
    }catch(e){
      var code=(e&&e.code)||'';
+     /* ⚡UPGRADE v2.1: 2FA challenge hook (real Firebase multi-factor) */
+     if(window.vexa2faHook&&window.vexa2faHook(e)){btn.disabled=false;btn.textContent='Sign In';return}
      var msgMap={
        'auth/invalid-credential':'Incorrect email or password.',
        'auth/user-not-found':'Account not found.',
@@ -2530,8 +2555,13 @@ const Posts={
    i.type='file';i.accept='image/*';i.multiple=true;
    i.onchange=async function(){
      for(var k=0;k<i.files.length;k++){
-       if(self.photos.length>=4){V.toast('warning','Max 4 photos');break}
-       try{self.photos.push(await V.compress(i.files[k],300))}
+       if(self.photos.length>=VEXA_MEDIA_LIMITS.maxPostImages){V.toast('warning','Max '+VEXA_MEDIA_LIMITS.maxPostImages+' photos');break}
+       try{
+         /* ⚡UPGRADE: spec types (JPEG/PNG/WebP) enforce + 200KB target compress */
+         var f=i.files[k];
+         if(VEXA_MEDIA_LIMITS.allowedMime.indexOf(f.type)===-1){V.toast('error','Sirf JPEG/PNG/WebP allowed');continue}
+         self.photos.push(await V.compress(f,190))
+       }
        catch(e){V.toast('error',e.message)}
      }
      self.cmpGrid();
@@ -2542,7 +2572,7 @@ const Posts={
    var g=V.g('cmpG');if(!g)return;
    var h='';
    for(var i=0;i<this.photos.length;i++)h+='<div class="pgi"><img src="'+this.photos[i]+'"><div class="pgrm" onclick="Posts.rmPh('+i+')">✕</div></div>';
-   if(this.photos.length<4)h+='<div class="pgadd" onclick="Posts.pick()"><span style="font-size:23px">＋</span>Add</div>';
+   if(this.photos.length<VEXA_MEDIA_LIMITS.maxPostImages)h+='<div class="pgadd" onclick="Posts.pick()"><span style="font-size:23px">＋</span>Add</div>';
    g.innerHTML=h;
  },
  rmPh:function(i){this.photos.splice(i,1);this.cmpGrid()},
@@ -2559,7 +2589,13 @@ const Posts={
      var urls=[];
      for(var i=0;i<this.photos.length;i++){
        V.g('cmpB').style.width=Math.round((i+1)/this.photos.length*100)+'%';
-       urls.push(await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg'));
+       /* ⚡UPGRADE: spec ke अनुसार post images ab Supabase-2 (vexa-posts) me — uploadVexaImage available होने पर; fallback old path (Supabase-1) */
+       var upUrl=null;
+       if(window.VexaStorage&&VexaStorage.ready()){
+         try{upUrl=await VexaStorage.uploadPostImage(this.photos[i],V.uid,pid,i)}catch(se){console.warn('sb2 upload fail, fallback:',se.message)}
+       }
+       if(!upUrl)upUrl=await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg');
+       urls.push(upUrl);
      }
      var postData={userId:V.uid,title:cap.slice(0,60),caption:cap,photoRefs:urls,postUrl:urls[0]||'',privacy:pr,hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),createdAt:firebase.database.ServerValue.TIMESTAMP,commentCount:0,likeCount:0};
      await db.ref('posts/'+pid).set(postData);
