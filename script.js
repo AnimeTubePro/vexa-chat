@@ -28,7 +28,7 @@ const ATP_LINKS=[
 
 /* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
- CURRENT:'2.8.3',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ (v2.8.3: Firebase latest 2.5.1 se aage — version-lock screen fix) */
+ CURRENT:'2.0.1',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
  get:function(){return this.CURRENT},
  cmp:function(a,b){
   var pa=String(a||'').split('.').map(function(x){return parseInt(x,10)||0});
@@ -957,8 +957,8 @@ const V={
    if(sc==='games')Games.home();
    if(sc==='notif')Notif.load();
    if(sc==='local')Local.load();
-   /* 💰 VEXA ADS hook — feed/sidebar ads screen change pe (v2.8.3) */
-   try{if(window.VexaAds&&VexaAds.onScreen)VexaAds.onScreen(sc)}catch(e){}
+   /* ⚡ADS: sidebar + feed ad zones (sirf home/posts — ads.js khud check karta hai) */
+   try{if(window.VexaAds)VexaAds.onScreen(sc)}catch(e){}
  },
  openProfile:function(uid){if(!uid){V.toast('warning','Profile load nahi ho payi');return}V.go('profile');Profile.render(uid)},
  ava:function(u,sz){
@@ -1886,7 +1886,7 @@ Rec.openCodes=function(){
     html+='<div id="scD" style="font-family:monospace;font-size:18px;font-weight:800;text-align:center;background:var(--bg3);border:1.5px dashed var(--bds);border-radius:12px;padding:14px;word-break:break-all">'+V.esc(d.secondaryCode||'—')+'</div>';
     html+='<div style="display:flex;gap:8px;margin-top:10px">';
     html+='<button class="btn bg bsm" style="flex:1" onclick="V.copy(document.getElementById(\'scD\').textContent,\'Secondary copied\')">📋 Copy</button>';
-    html+='<button class="btn bp bbk" style="margin-top:12px" onclick="Rec.downloadTxt()">💾 Download Recovery TXT (UID + Codes)</button>';
+    html+='<button class="btn bp bbk" style="margin-top:12px" onclick="Rec.downloadTxt()">💾 Download Recovery File (.vexa) — UID + Codes</button>';
     html+='<div style="margin-top:16px"><div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-bottom:6px">Secondary Mode</div><div style="display:flex;gap:8px">';
     html+='<div class="sgi'+(mode!=='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="fixed">● Fixed</div>';
     html+='<div class="sgi'+(mode==='auto'?' sel':'')+'" onclick="Rec.setMode(this)" data-v="auto">○ Auto Change</div></div></div>';
@@ -2352,9 +2352,9 @@ const Posts={
      var cards=await Promise.all(shown.map(function(a){return Posts.card(a.id,a.val)}));
      w.innerHTML='';
      cards.forEach(function(html){w.insertAdjacentHTML('beforeend',html)});
+     /* ⚡ADS: mid-post inline ads (har 6 posts) + top-of-feed unit */
+     try{if(window.VexaAds)VexaAds.onFeedRendered(w)}catch(e){}
      if(!cards.length)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts to show</div></div>';
-     /* 💰 VEXA ADS hook — feed ke beech me inline ads har 6 posts (v2.8.3) */
-     try{if(window.VexaAds&&VexaAds.onFeedRendered)VexaAds.onFeedRendered(w)}catch(e){}
    }catch(e){
      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
    }
@@ -4039,175 +4039,58 @@ const Settings={
    try{Profile._rr++}catch(e){}
    V.go('profile');
    var pc=V.g('profC');if(!pc)return;
-   /* ═══ ⚡v2.8.3 ADVANCED SETTINGS UI — 2.6.2 priority chips + color cards,
-        upgraded: search · counts · animated chips · icon tiles · danger zone ═══ */
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
-   /* priority meta — chips + colors (2.6.2 spec: Sabse Zaroori→General) */
-   var PM={
-     sz:{l:'Sabse Zaroori',c:'#ff5b5b',i:'🚨'},
-     bz:{l:'Bahut Zaroori',c:'#ff9b45',i:'🟠'},
-     z:{l:'Zaroori',c:'#f6b93b',i:'🟡'},
-     n:{l:'Normal',c:'#00d9ff',i:'🔵'},
-     g:{l:'General',c:'#8a93b2',i:'⚪'}
-   };
-   /* ── sections data (har row: i=icon t=title s=sub a=onclick p=priority d=danger) ── */
-   var secs=[];
-   /* 1) ACCOUNT */
-   secs.push({id:'acct',i:'👤',t:'Account & Profile',p:'z',rows:[
-     {i:'✏️',t:'Edit Profile',s:'Name, username, bio, photo',a:'Profile.edit()',p:'z'},
-     {i:'🎨',t:'Profile Design',s:'Modern, Classic, Italic, Insta',a:'Profile.designPicker()',p:'z'},
-     {i:'📧',t:'Email',s:V.esc(me.email||''),a:'Settings.email()',p:'n'},
-     {i:'🆔',t:'My UID',s:'<span class="mono">'+V.esc(V.uid||'')+'</span>',a:'V.copy(\''+V.uid+'\',\'UID copied!\')',p:'n'}
-   ]});
-   /* 2) SECURITY — verification rows dynamic (Sabse Zaroori) */
-   var secRows=[];
-   try{
-     var vr=(this.verifRows()||'');
-     if(vr.indexOf('NOT Verified')>-1){
-       secRows.push({i:'⚠️',t:'Email NOT Verified — Send karo',s:'Tap → verification email milega',a:'Auth.sendVerification()',p:'sz'});
-       secRows.push({i:'🔄',t:'Verify ho gaya? Check karo',s:'Email link click ke BAAD yahan tap karo',a:'Auth.checkVerification()',p:'sz'});
-     }else{
-       secRows.push({i:'✅',t:'Email Verified',s:V.esc((me.email||''))+' — verified ✔',p:'n'});
-     }
-   }catch(e){}
-   secRows.push({i:'🔑',t:'Change Password',s:'.vexa + Drive + Firebase — teeno sync',a:'Settings.password()',p:'sz'});
-   secRows.push({i:'📱',t:'Registered Devices',s:'Recovery inhi se',a:'Settings.devices()',p:'bz'});
-   secRows.push({i:'🔑',t:'Web Login Code',s:'6-digit — dusre device se login',a:'CodeLogin.generate()',p:'bz'});
-   secRows.push({i:'🛡️',t:'Security Events',s:'Login aur device history',a:'Settings.secEvents()',p:'n'});
-   secs.push({id:'sec',i:'🛡️',t:'Security & Login',p:'sz',rows:secRows});
-   /* 3) VAULT */
-   var vRows=[{i:'💾',t:'Download Recovery TXT',s:'UID + codes ek file me — safe rakhna',a:'Rec.downloadTxt()',p:'sz'}];
-   try{if(window.VexaVault&&VexaVault.pick)vRows.push({i:'🔐',t:'.vexa Vault Backup',s:'Restore / backup encrypted vault',a:'VexaVault.pick()',p:'bz'})}catch(e){}
-   try{if(window.VaultUI&&VaultUI.open)vRows.push({i:'🏦',t:'Recovery Vault Center',s:'Vault status, backup & restore',a:'VaultUI.open()',p:'bz'})}catch(e){}
-   secs.push({id:'vault',i:'🔐',t:'Recovery Vault',p:'sz',rows:vRows});
-   /* 4) PRIVACY */
-   secs.push({id:'priv',i:'🔒',t:'Privacy & Safety',p:'bz',rows:[
-     {i:'🔒',t:'Privacy Center',s:'Online status, last seen, calls',a:'Privacy.open()',p:'bz'},
-     {i:'🚧',t:'Restricted Users',s:'Kisse kya chhupana hai',a:'Privacy.restrictedOpen()',p:'z'},
-     {i:'🚷',t:'Blocked Users',s:'Blocked accounts manage karo',a:'Privacy.blockedOpen()',p:'z'},
-     {i:'🆘',t:'Help Center Chat',s:'Staff messages & credentials',a:'Settings.helpChat()',p:'n'}
-   ]});
-   /* 5) APPEARANCE */
-   secs.push({id:'look',i:'🎨',t:'Appearance & Themes',p:'g',rows:[
-     {i:'🖼️',t:'Image Themes',s:'NTH / VTH — bg + colour',a:'ImgThemes.open()',p:'g'},
-     {i:'🎨',t:'Themes',s:'204 themes — poora app range me',a:'Themes.open()',p:'g'},
-     {i:'🔤',t:'App Fonts',s:'Global — sab pe lagega',a:'Fonts.open()',p:'g'}
-   ]});
-   /* 6) APP INFO */
-   secs.push({id:'app',i:'ℹ️',t:'App & Info',p:'n',rows:[
-     {i:'📱',t:'App Version',s:'v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)',p:'n'},
-     {i:'🔗',t:'ATP Links — Web & App',s:'APK link Firebase se aata hai',a:'ATP.linksModal()',p:'n'},
-     {i:'💰',t:'Ads & Support',s:'Ads sirf Home/Posts feed me — chat me kabhi nahi',a:'V.toast(\'info\',\'Ads sirf Home/Posts feed me hain — private chat/calls me kabhi nahi. Support: Help Center!\',4200)',p:'g'},
-     {i:'🔄',t:'Reload App',s:'Pura app starting se khulega',a:'V.reloadApp()',p:'g'}
-   ]});
-   /* 7) STAFF (conditional) */
+   var staffBlock='';
    try{
      var _rl=me.role||'user';
      if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
-       secs.push({id:'staff',i:'🛠️',t:'STAFF — Version Control',p:'n',rows:[
-         {i:'📢',t:'Set Latest Version',s:'Version + note + APK link — Firebase me',a:'Ver.adminPrompt()',p:'n'},
-         {i:'🔗',t:'APK Download Link Update',s:'Firebase se — SABKO yahi link milega',a:'Ver.apkPrompt()',p:'n'},
-         {i:'🔄',t:'Check Update Now',s:'Abhi ka version check karo',a:'Ver.recheck()',p:'n'}
-       ]});
+       staffBlock='<div class="sgrp">'
+        +'<div class="sgrp-title" style="color:var(--wn)">🛠️ STAFF — VERSION CONTROL</div>'
+        +'<div class="srow" onclick="Ver.adminPrompt()"><div class="sri">📢</div><div class="srf"><div class="srt">Set Latest Version</div><div class="srs">Version + note + APK link — Firebase me</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Ver.apkPrompt()"><div class="sri">🔗</div><div class="srf"><div class="srt">APK Download Link Update</div><div class="srs">Firebase se — SABKO yahi link milega</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Ver.recheck()"><div class="sri">🔄</div><div class="srf"><div class="srt">Check Update Now</div><div class="srs">Abhi ka version check karo</div></div><div class="sra">›</div></div>'
+        +'</div>';
      }
    }catch(e){}
-   /* 8) DANGER */
-   secs.push({id:'danger',i:'⚠️',t:'Danger Zone',p:'sz',rows:[
-     {i:'🗑️',t:'Delete Account',s:'Saara data Firebase + Supabase se remove',a:'Settings.deleteAcct()',p:'sz',d:1}
-   ]});
-   /* ── render ── */
-   this._secs=secs;this._PM=PM;
-   var h='<div class="pgc stx-wrap">'
-    +'<div class="stx-hero">'
-    +'<div class="stx-hero-glow"></div>'
-    +'<div class="stx-htop"><div class="stx-hico">⚙️</div><div><div class="stx-ht">Settings</div><div class="stx-hs">Sab kuch ek jagah — search karo ya priority se filter karo</div></div></div>'
-    +'<div class="stx-uinfo"><div class="stx-uav">'+(me.profilePhoto?'<img src="'+V.esc(me.profilePhoto)+'" alt="">':V.esc((me.displayName||'U').charAt(0).toUpperCase()))+'</div>'
-    +'<div class="stx-umeta"><div class="stx-un">'+V.esc(me.displayName||'User')+(me.vip?' 💎':'')+(me.verified?' <span style="color:var(--ok)">✔</span>':'')+'</div>'
-    +'<div class="stx-uus">@'+V.esc(me.username||'?')+' · v'+V.esc(Ver.get())+'</div></div></div>'
+   var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote
+    +'<div class="sgrp">'
+    +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
+    +this.verifRows()
+    +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.copy(\''+V.uid+'\',\'UID copied!\')"><div class="sri">🆔</div><div class="srf"><div class="srt">My UID</div><div class="srs mono">'+V.esc(V.uid||'')+'</div></div><div class="sra">📋</div></div>'
     +'</div>'
-    +lockNote
-    +'<div class="stx-search"><span class="stx-mag">🔍</span><input id="stxSearch" class="stx-sinp" type="text" placeholder="Settings search karo… (jaise: password, theme, block)" autocomplete="off" oninput="Settings._apply()"><button type="button" class="stx-sclr hidden" id="stxSClr" onclick="Settings._clearSearch()">✕</button></div>'
-    +'<div class="stx-chips" id="stxChips"></div>'
-    +'<div id="stxSections"></div>'
-    +'<div class="stx-foot">AnimeTubePro Studio × VEXA · v'+V.esc(Ver.get())+' · 💰 ads Home/Posts feed me hi</div>'
-    +'</div>';
+    +'<div class="sgrp">'
+    +'<div class="srow" onclick="Privacy.open()"><div class="sri">🔒</div><div class="srf"><div class="srt">Privacy Center</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Privacy.restrictedOpen()"><div class="sri">🚧</div><div class="srf"><div class="srt">Restricted Users</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Privacy.blockedOpen()"><div class="sri">🚷</div><div class="srf"><div class="srt">Blocked Users</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Rec.downloadTxt()"><div class="sri">💾</div><div class="srf"><div class="srt">Download Recovery File (.vexa)</div><div class="srs">UID + codes ek .vexa file me — safe rakhna</div></div><div class="sra">⬇️</div></div>'
+    +'<div class="srow" onclick="Settings.devices()"><div class="sri">📱</div><div class="srf"><div class="srt">Registered Devices</div><div class="srs">Recovery inhi se</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Settings.helpChat()"><div class="sri">🆘</div><div class="srf"><div class="srt">Help Center Chat</div><div class="srs">Staff messages & credentials</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>'
+    +'</div>'
+    +'<div class="sgrp">'
+    +'<div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
+    +this.driveRows()
+    +'</div>'
+    +'<div class="sgrp">'
+    +'<div class="srow" onclick="ImgThemes.open()"><div class="sri">🖼️</div><div class="srf"><div class="srt">Image Themes</div><div class="srs">NTH / VTH — bg + colour</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Themes.open()"><div class="sri">🎨</div><div class="srf"><div class="srt">Themes</div><div class="srs">204 themes</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="Fonts.open()"><div class="sri">🔤</div><div class="srf"><div class="srt">App Fonts</div><div class="srs">Global — sab pe lagega</div></div><div class="sra">›</div></div>'
+    +'</div>'
+    +'<div class="sgrp">'
+    +'<div class="srow"><div class="sri">📱</div><div class="srf"><div class="srt">App Version</div><div class="srs">v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)</div></div></div>'
+    +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>'
+    +'</div>'
+    +staffBlock
+    +'<div class="sgrp">'
+    +'<div class="srow dng2" onclick="Settings.deleteAcct()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Account</div><div class="srs">Saara data Firebase + Supabase se remove</div></div><div class="sra">›</div></div>'
+    +'</div></div>';
    pc.innerHTML=h;
-   this._paint();
- },
- /* ── chips + section cards painter ── */
- _paint:function(){
-   var PM=this._PM,secs=this._secs;
-   var self=this;
-   /* chips — Sab + 5 priorities with counts */
-   var cnt={sz:0,bz:0,z:0,n:0,g:0};
-   secs.forEach(function(s){s.rows.forEach(function(r){if(cnt[r.p]!=null)cnt[r.p]++})});
-   var ch='<button type="button" class="stx-chip act" data-p="all" onclick="Settings._chip(\'all\')">✨ Sab <b class="stx-cc">'+secs.reduce(function(a,s){return a+s.rows.length},0)+'</b></button>';
-   ['sz','bz','z','n','g'].forEach(function(k){
-     if(!cnt[k])return;
-     ch+='<button type="button" class="stx-chip" data-p="'+k+'" style="--pc:'+PM[k].c+'" onclick="Settings._chip(\''+k+'\')">'+PM[k].i+' '+PM[k].l+' <b class="stx-cc">'+cnt[k]+'</b></button>';
-   });
-   var cw=V.g('stxChips');if(cw)cw.innerHTML=ch;
-   /* section cards */
-   var h='';
-   secs.forEach(function(s){
-     var pc=s.p,pm=PM[pc]||PM.n;
-     h+='<div class="stx-sec" data-pc="'+pc+'" id="stxSec-'+s.id+'" style="--pc:'+pm.c+'">'
-      +'<div class="stx-shead"><div class="stx-sico" style="--pc:'+pm.c+'">'+s.i+'</div>'
-      +'<div class="stx-st">'+V.esc(s.t)+'</div>'
-      +'<span class="stx-badge" style="background:'+pm.c+'1a;color:'+pm.c+';border-color:'+pm.c+'55">'+pm.l+'</span></div>'
-      +'<div class="stx-sbody">';
-     s.rows.forEach(function(r,i){
-       var rpm=PM[r.p]||PM.n;
-       h+='<div class="stx-row'+(r.d?' stx-dng':'')+'" data-p="'+r.p+'" data-txt="'+V.esc((r.t+' '+(r.s||'')).replace(/<[^>]*>/g,'').toLowerCase())+'"'+(r.a?' role="button" tabindex="0" onclick="'+r.a+'"':'')+(r.a?' onkeydown="if(event.key===\'Enter\')this.click()"':'')+'>'
-        +'<div class="stx-rilt'+(r.d?' dng':'')+'" style="--pc:'+rpm.c+'">'+r.i+'</div>'
-        +'<div class="stx-rf"><div class="stx-rt">'+V.esc(r.t)+'</div>'+(r.s?'<div class="stx-rs">'+r.s+'</div>':'')+'</div>'
-        +'<span class="stx-rdot" style="background:'+rpm.c+'"></span>'
-        +(r.a?'<span class="stx-ra">›</span>':'')
-        +'</div>';
-     });
-     h+='</div></div>';
-   });
-   var sw=V.g('stxSections');if(sw)sw.innerHTML=h;
- },
- /* ── chip click → filter ── */
- _chip:function(p){
-   this._p=p;
-   document.querySelectorAll('.stx-chip').forEach(function(c){c.classList.toggle('act',c.getAttribute('data-p')===p)});
-   this._apply();
-   try{var cw=V.g('stxChips');if(cw&&cw.scrollIntoView&&window.innerWidth<720)cw.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){}
- },
- _clearSearch:function(){
-   var si=V.g('stxSearch');if(si)si.value='';
-   var sc=V.g('stxSClr');if(sc)sc.classList.add('hidden');
-   this._apply();
- },
- /* ── live filter: search text + active chip dono combine ── */
- _apply:function(){
-   var si=V.g('stxSearch'),sc=V.g('stxSClr');
-   var q=si?(si.value||'').trim().toLowerCase():'';
-   if(sc)sc.classList.toggle('hidden',!q);
-   var p=this._p||'all';
-   var nVis=0;
-   document.querySelectorAll('.stx-sec').forEach(function(sec){
-     var nShow=0;
-     sec.querySelectorAll('.stx-row').forEach(function(row){
-       var okP=(p==='all')||(row.getAttribute('data-p')===p);
-       var okQ=!q||(row.getAttribute('data-txt')||'').indexOf(q)>-1;
-       var on=okP&&okQ;
-       row.style.display=on?'':'none';
-       if(on)nShow++;
-     });
-     sec.style.display=nShow?'':'none';
-     if(nShow)nVis+=nShow;
-   });
-   /* no-results state */
-   var sw=V.g('stxSections');
-   if(sw&&!nVis){
-     if(!V.g('stxEmpty'))sw.insertAdjacentHTML('beforeend','<div class="stx-empty" id="stxEmpty"><div class="stx-ei">🔍</div><div class="stx-et">Kuch nahi mila</div><div class="stx-es">Dusra keyword try karo ya "Sab" chip pe wapas aao</div></div>');
-   }else{
-     var em=V.g('stxEmpty');if(em)em.remove();
-   }
  },
  guardSensitive:async function(){
    var until=0;
@@ -4218,6 +4101,29 @@ const Settings={
      return false;
    }
    return true;
+ },
+ /* ── ☁️ Google Drive Backup (settings section — no backend needed:
+    OAuth implicit flow, token sirf browser sessionStorage me) ── */
+ driveRows:function(){
+   var drv=false; try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
+   var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup app-private folder me — aapki Drive files kabhi nahi chhooti':'Tap → Google consent (signup) → wapas aake connected')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
+    +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>';
+   if(drv)h+='<div class="srow" onclick="VaultUI.driveTest()"><div class="sri">🧪</div><div class="srf"><div class="srt">Test Backup Now</div><div class="srs">.vexa backup abhi Drive pe save karo</div></div><div class="sra">›</div></div>';
+   return h;
+ },
+ driveToggle:async function(){
+   try{
+     if(typeof VexaVaultDrive==='undefined')return V.toast('error','Drive module load nahi hua — page reload karo');
+     if(VexaVaultDrive.connected()){
+       if(!confirm('Google Drive disconnect karein? (Files Drive me rehti hain, app ka access chala jayega)'))return;
+       await VexaVaultDrive.disconnect();
+       try{ await db.ref('recoveryVaults/'+V.uid+'/driveBound').set(false) }catch(e){}
+       V.toast('info','⛔ Drive disconnected');
+       this.open();
+     }else{
+       VexaVaultDrive.connect();
+     }
+   }catch(e){ V.toast('error',(e&&e.message)||'Drive action fail') }
  },
  devices:async function(){
    var h='';
@@ -4473,6 +4379,16 @@ Auth.checkVerification=async function(){
   }catch(e){V.toast('error',V.friendErr(e))}
 };
 
+/* ═══ 🎬 VIDEO BUTTON (stub — v2.8.2 me Drive-video module include nahi tha,
+   purani build ka VexaDrive+Picker stack yahan nahi hai; bina iske button
+   silent crash karta tha. Full video-via-Drive next update me.) ═══ */
+window.VexaUI=window.VexaUI||{};
+VexaUI.videoTap=function(){
+  V.mOpen('🎬 Video Message',
+   '<div class="snote">Drive video bhejne ka module is version (v2.8.2) me include nahi hai — next update me aayega.<br><br>Apne account ka encrypted backup Google Drive pe rakhne ke liye: <b>Settings ▸ ☁️ Google Drive Backup</b>.</div>',
+   '<button class="btn bp" onclick="V.mClose()">Theek hai</button>');
+};
+
 /* ================= BOOT ================= */
 ATP.ready(function(){
  try{
@@ -4490,6 +4406,10 @@ ATP.ready(function(){
    Auth.initDobs();
    if(!navigator.onLine){var ob=V.g('offBan');if(ob)ob.classList.remove('hidden')}
    V.requireAuth(function(){try{Posts.load()}catch(e){}});
+   /* ⚡VAULT FIX: Google Drive OAuth return capture — pehle VaultUI.boot()
+      KAHIN call nahi ho raha tha, isliye Google consent ke baad token
+      capture hi nahi hota tha aur "link ke liye kuch nahi hota" lagta tha */
+   try{ if(window.VaultUI&&typeof VaultUI.boot==='function')VaultUI.boot() }catch(e){}
    setTimeout(function(){
      if(typeof Ver!=='undefined'&&Ver._locked)return;
      var s=V.g('splash');
@@ -4513,12 +4433,12 @@ ATP.ready(function(){
    if(tx1){tx1.textContent='⚠️ Init error: '+e.message;tx1.style.color='#ff6b6b'}
  }
 });
-/* ═══ 💾 RECOVERY TXT DOWNLOAD — UID + codes ek file me ═══ */
+/* ═══ 💾 RECOVERY FILE DOWNLOAD (.vexa — site-wide sirf .vexa, .txt BANNED) ═══ */
 Rec.downloadTxt=async function(){
   try{
     var snap=await db.ref('users/'+V.uid+'/recovery').get();
     var d=snap.val()||{};
-    if(!confirm('💾 Recovery details TXT me download karein?\n\n⚠️ File me UID + codes honge — sambhal ke rakhna, kisi ko na dena!'))return;
+    if(!confirm('💾 Recovery details .vexa file me download karein?\n\n⚠️ File me UID + codes honge — sambhal ke rakhna, kisi ko na dena!'))return;
     var L='================================================\n'
       +'   AnimeTubePro Studio × VEXA\n'
       +'   RECOVERY DETAILS — KEEP SAFE! 🔐\n'
@@ -4544,7 +4464,7 @@ Rec.downloadTxt=async function(){
       +'* Ye file kisi ke saath SHARE mat karo!\n'
       +'* File delete karne se pehle likh lo kahin safe\n\n'
       +'Generated by VEXA App · v'+Ver.get()+'\n';
-    var blob=new Blob([L],{type:'text/plain;charset=utf-8'});
+    var blob=new Blob([L],{type:'application/octet-stream'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');
     a.href=url;
@@ -4554,8 +4474,8 @@ Rec.downloadTxt=async function(){
     setTimeout(function(){
       try{document.body.removeChild(a);URL.revokeObjectURL(url)}catch(e){}
     },200);
-    try{await db.ref('users/'+V.uid+'/securityEvents').push({type:'recovery_txt_download',device:V.dev(),at:Date.now()})}catch(e){}
-    V.toast('success','💾 Recovery TXT downloaded!');
+    try{await db.ref('users/'+V.uid+'/securityEvents').push({type:'recovery_vexa_download',device:V.dev(),at:Date.now()})}catch(e){}
+    V.toast('success','💾 Recovery .vexa file downloaded!');
   }catch(e){
     V.toast('error','Download failed: '+(e.message||''));
   }

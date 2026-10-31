@@ -1,34 +1,58 @@
-# VEXA Chat — v2.8.2 Final (aapka original style + encrypted ads)
+# AnimeTubePro Studio × VEXA — Chat v2.8.2
 
-Ye **aapke v2.8.2 ka original style/UI** hai — koi redesign nahi. Sirf ye kaam hue:
+Pure-frontend static site (no build step). Koi GitHub use nahi hota — files
+directly edit hote hain aur hosting par upload ho jate hain.
 
-## 🔐 Ads Code ENCRYPTED
-- AdSense publisher (`ca-pub-…`) + slot — **source me kahin plaintext nahi**
-- `ads/ads.js` me encrypted hai, runtime par decode hota hai
-- Loader bhi `ads/ads.js` khud inject karta hai (index.html me plaintext tag nahi)
-- Ads same jagah: Home feed + post ke beech (har 6 posts) + desktop sidebar
-- Chat, calls, games, settings me KABHI nahi (same rule)
+## Folder structure
 
-## ✅ Fixes (jo pehle manga tha)
-- **Users load fix** — `database.rules.json` me galat `hasChild()` syntax thi,
-  isliye panels me users load nahi ho rahe the. Ab fixed rules hain.
-- **User detail dashboard** — userModal teeno panels me kaam karega
-- **panelSecurity rules** add — owner panel gate sahi se chalega
-- **Login** — recovery code + password login intact
-- **.txt 100% removed** — sirf `.vexa` recovery files (download bhi .vexa deta hai)
-- AI Assistant teeno panels me inline hai (Owner/Admin/Moderator)
-
-## 📁 Structure (database & backend alag)
 ```
-index.html, script.js, style.css, login/signup/forgot.html ...  ← frontend (root)
-ads/            ← ads.js (encrypted) + ads.css + ads.txt
-database/       ← database.rules.json + supabase-policies.sql
-backend/functions/  ← vexaBackend.js (Cloud Functions) + package.json
-game/           ← game.html
+/                  ← site root (HTML pages + styles + core script.js)
+├── index.html     ← main app
+├── login.html / signup.html / forgot.html / privacy.html / terms.html
+├── owner.html / admin.html / moderator.html   ← staff panels
+├── style.css / vault.css / auth-pages.css
+├── script.js      ← main app logic
+├── ads.txt        ← AdSense ownership file — ROOT me hi rehna chahiye
+│
+├── services/      ← frontend service modules
+│   ├── ads.js          (AdSense manager — IDs encrypted, self-inject loader)
+│   ├── vexa-vault.js   (crypto core — AES-256-GCM vault)
+│   ├── vexa-drive.js   (Google Drive appDataFolder backup — OAuth implicit)
+│   ├── vault-ui.js     (Vault UI — Settings/Support se open hota hai)
+│   ├── panel-vault.js  (staff panels vault module)
+│   ├── panel-ai.js     (staff panels inline AI assistant)
+│   └── auth-pages.js   (login/signup/forgot shared logic)
+│
+├── database/      ← database config & security
+│   ├── database.rules.json   (Firebase RTDB rules — deploy target: realtime db)
+│   └── supabase-policies.sql (Supabase storage RLS policies)
+│
+└── backend/       ← Cloud Functions (Node 18)
+    ├── vexaBackend.js        (recoveryLogin / vexaSecureStore / recoveryCredChat)
+    └── package.json          (firebase-admin + firebase-functions)
 ```
 
-## 📌 Note
-- `ads.txt` SIRF ads ke liye hai (Google AdSense ko chahiye) — site me koi aur .txt nahi
-- Deploy: frontend files root me, `index.html` entry point
-- Firebase Console me `database/database.rules.json` paste karo (users-load fix wale rules)
-- Settings UI alignment fix: section icons ab titles ke saath sahi align hain
+## Deploy checklist
+
+1. **ads.txt** site ROOT me hona chahiye (`https://<site>/ads.txt`) — AdSense
+   verification ke liye. Ye poori site ki EKMATRA `.txt` file hai; baaki sab
+   data files `.vexa` format me hain.
+2. **Firebase**: realtime database rules `database/database.rules.json` deploy karo
+   (`firebase deploy --only database` ya Console me paste).
+3. **Backend**: `backend/` folder me `npm install` → `firebase deploy --only functions`.
+4. **Google Drive connect (Vault)**: OAuth client `vexa-d` project ka hai.
+   Google Cloud Console → Credentials → OAuth Client me **Authorized redirect
+   URIs** me apni site ka exact URL add karo, e.g.:
+   - `https://animetubepro.github.io/vexa-chat/`
+   - `http://localhost:8080/` (local test)
+   Redirect URI mismatch → Google "Error 400: redirect_uri_mismatch" deta hai.
+   `drive.appdata` scope ke liye app **Testing mode** me ho to apna Google
+   account **Test users** me add karo, ya app **Publish** karo.
+
+## Ads (privacy)
+
+- Publisher/slot IDs source code me **encrypted** hain (`services/ads.js` —
+  XOR+base64 runtime decode; panels me charcode assembly). Plaintext sirf
+  `ads.txt` me hai — jo AdSense policy ke liye public hona hi chahiye.
+- Ads SIRF home/posts feed + desktop sidebar me. Chat, calls, games,
+  settings, auth pages pe ads kabhi nahi.

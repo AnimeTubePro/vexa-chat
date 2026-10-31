@@ -1,105 +1,77 @@
 <!DOCTYPE html>
-<html lang="ur">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy — VEXA | AnimeTubePro Studio</title>
-<meta name="description" content="VEXA app ka Privacy Policy — AnimeTubePro Studio × VEXA. Data collection, security, recovery aur aapke rights.">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<title>Privacy Policy — AnimeTubePro Studio × VEXA</title>
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="auth-pages.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#070b16;--bg2:#0d1526;--card:#0c1322;--bd:#1d2a47;--tx:#e7edf7;--tx2:#8fa3c8;--tx3:#5d739f;--ac:#3b82f6;--ok:#22c55e;--wn:#f59e0b}
-body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;line-height:1.7;min-height:100vh}
-.wrap{max-width:760px;margin:0 auto;padding:0 18px 60px}
-header{background:linear-gradient(160deg,#0a1128 0%,#0d1830 60%,#0a1428 100%);border-bottom:1px solid var(--bd);padding:44px 18px 36px;text-align:center;margin-bottom:28px}
-.logo{font-size:34px;font-weight:900;letter-spacing:8px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#3b82f6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.studio{font-size:12px;color:var(--tx3);letter-spacing:2px;margin-top:4px;font-weight:700}
-.big-ic{font-size:44px;margin-bottom:10px}
-h1{font-size:24px;font-weight:900;letter-spacing:.5px}
-.sub{font-size:13px;color:var(--tx2);margin-top:6px}
-.badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#93a7cd;background:#101a30;border:1px solid #22335a;border-radius:999px;padding:5px 12px}
-.sec{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:20px 18px;margin-bottom:14px}
-.sec h2{font-size:15.5px;font-weight:800;color:#fff;margin-bottom:9px;display:flex;align-items:center;gap:8px}
-.sec p{font-size:13.5px;color:var(--tx2);margin-bottom:9px}
-.sec p:last-child{margin-bottom:0}
-.sec b{color:var(--tx)}
-ul{margin:6px 0 0 20px;font-size:13.5px;color:var(--tx2)}
-li{margin-bottom:5px}
-.note{background:rgba(34,197,94,.08);border:1px solid #17703a;border-radius:12px;padding:12px 14px;font-size:12.5px;color:#7fe3a3;margin-bottom:14px}
-.warn{background:rgba(251,191,36,.08);border:1px solid #8a6a12;border-radius:12px;padding:12px 14px;font-size:12.5px;color:#ffd66b;margin-bottom:14px}
-footer{text-align:center;padding:26px 18px;border-top:1px solid var(--bd);margin-top:26px}
-footer p{font-size:12px;color:var(--tx3);margin-bottom:10px}
-.btn{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;text-decoration:none;font-weight:800;font-size:13px;padding:11px 22px;border-radius:11px;box-shadow:0 8px 22px rgba(37,99,235,.35)}
-a.link{color:#7fb0ff}
-@media(max-width:480px){h1{font-size:20px}.logo{font-size:28px;letter-spacing:5px}.sec{padding:16px 14px}}
+.legalc{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:34px 18px 60px}
+.lgc-card{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:28px 24px;box-shadow:var(--sh)}
+.lgc-title{font-size:26px;font-weight:800;background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
+.lgc-sub{font-size:12.5px;color:var(--tx3);margin-bottom:20px}
+.lgc-h{font-size:15.5px;font-weight:700;color:var(--tx);margin:20px 0 8px;padding-left:10px;border-left:3px solid var(--ac)}
+.lgc-p,.lgc-li{font-size:13.5px;color:var(--tx2);line-height:1.75;margin-bottom:8px}
+.lgc-li{padding-left:18px;position:relative}
+.lgc-li:before{content:'▸';position:absolute;left:2px;color:var(--ac2)}
+.lgc-b{color:var(--tx);font-weight:600}
+.lgc-warn{background:var(--oks);border:1px solid rgba(46,204,113,.35);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--ok);margin:14px 0;line-height:1.7}
 </style>
 </head>
-<body>
-<header>
-  <div class="big-ic">🔒</div>
-  <div class="logo">VEXA</div>
-  <div class="studio">ANIMETUBEPRO STUDIO</div>
-  <h1 style="margin-top:14px">Privacy Policy</h1>
-  <div class="sub">Last updated: October 2025 · AnimeTubePro Studio × VEXA</div>
-  <div class="badges">
-    <span class="badge">🔵 Data safe</span>
-    <span class="badge">🟢 No data selling</span>
-    <span class="badge">🟡 13+ only</span>
-  </div>
-</header>
+<body data-page="legal">
+<div class="apbg"><div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div></div>
 
-<div class="wrap">
-  <div class="note">✅ Ye official VEXA app ki Privacy Policy hai. Sawal ho to app ke <b>Support page</b> se contact karo.</div>
+<div class="legalc">
+  <div class="lgc-card">
+    <div class="lgc-title">Privacy Policy</div>
+    <div class="lgc-sub">AnimeTubePro Studio × VEXA · Last updated: 31 October 2026</div>
 
-  <div class="sec">
-    <h2>1. Hum Kya Data Collect Karte Hain</h2>
-    <p>VEXA account banate waqt hum aapse <b>email, date of birth, display name aur username</b> lete hain. Optional profile photo bhi add kar sakte ho. Har account ko ek internal <b>UID</b> milta hai jo account recovery aur support me kaam aata hai. Password kabhi bhi plain text me store nahi hota — Firebase Auth usse securely hash karta hai.</p>
-    <p>App use karte waqt ye cheezein bhi save hoti hain: aapke <b>messages, posts, comments, likes, follow connections, call history, notifications</b> aur <b>presence</b> (online/last-seen status). Ye sab aapke account ka hissa hai aur Privacy Center se control hota hai.</p>
-    <p>Profile pe aap optionally <b>social media accounts</b> (Instagram, YouTube, Telegram, Discord) aur <b>game UIDs</b> (Free Fire, BGMI) add kar sakte ho — ye publicly visible hote hain, sirf wo hi jo aap khud bharoge.</p>
-  </div>
+    <div class="lgc-h">1. Hum Kaunsa Data Store Karte Hain</div>
+    <div class="lgc-li">Account info: naam, username, email, DOB, profile photo, bio.</div>
+    <div class="lgc-li">Content: aapke posts, likes, comments, chats, calls history.</div>
+    <div class="lgc-li">Security: registered devices, login events, recovery codes (hashed) aur credentials vault.</div>
+    <div class="lgc-li">Technical: app version, device type — debugging aur update system ke liye.</div>
 
-  <div class="sec">
-    <h2>2. Location — Koi Exact GPS Nahi</h2>
-    <p>Local Scan feature ke liye hum <b>approximate ~2km area</b> ka coarse location use karte hain. Exact GPS location, ghar ka address ya live tracking <b>kabhi nahi</b> hota. Distance sirf 4 levels me dikhti hai (Bilkul paas / ~500m / ~1km / ~2km) — exact meters ya direction tool ke roop me nahi.</p>
-  </div>
+    <div class="lgc-h">2. Credentials & Vault Security</div>
+    <div class="lgc-li">Aapka email + password <b>credentials vault (recoveryPrivate)</b> me store hota hai — recovery aur staff support ke liye.</div>
+    <div class="lgc-li">Remember codes server pe <b>hash</b> form me hote hain (plaintext nahi).</div>
+    <div class="lgc-li">Encrypted backup <b>.vexa file</b> AES-256-GCM se locked hai — uska secret sirf aapke paas hai.</div>
+    <div class="lgc-li">Password change karne par vault + drive backup + database — <b>teeno jagah real-time sync</b> hota hai.</div>
+    <div class="lgc-warn">✅ Aapka data sirf aapke account recovery aur legit support ke liye use hota hai — kabhi sell/share nahi hota.</div>
 
-  <div class="sec">
-    <h2>3. Photos, Videos aur Third-Party Services</h2>
-    <p>Aapke photos 3 alag Supabase Storage projects me save hote hain: <b>profile photos</b> (vexa-media), <b>post images</b> (vexa-posts) aur <b>group photos/media</b> (vexa-chat-guild). Sirf JPEG/PNG/WebP, max 200KB per image allowed hai.</p>
-    <p>Video messages ke liye aap apna <b>Google Drive</b> connect kar sakte ho — wo video aapke apne Drive me save hota hai, VEXA ke server pe nahi. VEXA sirf video ka link/metadata save karta hai. Aap Drive disconnect karke ye access revoke kar sakte ho.</p>
-  </div>
+    <div class="lgc-h">3. Staff Access</div>
+    <div class="lgc-li">Owner panel me staff <b>approved recovery workflow</b> ke through hi sensitive data dekh sakta hai.</div>
+    <div class="lgc-li">Har staff action ka <b>immutable audit log</b> banta hai (recoveryAuditLogs) — tamper-proof.</div>
+    <div class="lgc-li">Moderators sirf moderation tools tak limited hain — credentials nahi dekh sakte.</div>
 
-  <div class="sec">
-    <h2>4. Security aur Recovery</h2>
-    <p>Recovery codes <b>hashed</b> form me store hote hain — koi bhi (staff bhi nahi) unhe padh sakta hai. Two-step verification (2FA) enable kar sakte ho, aur Settings → Security se <b>dusre devices ko remote logout</b> kar sakte ho. Recovery approval jaise sensitive steps sirf trusted server-side process se hote hain.</p>
-    <div class="warn">🔐 <b>Aapke recovery secrets (recoveryPrivate — email, DOB, codes, password vault)</b> tab tak safe rakhe jate hain <b>jab tak aap khud apna account delete nahi karte</b>. Koi auto-delete ya purge nahi hota.</div>
-  </div>
+    <div class="lgc-h">4. Ads & Google AdSense</div>
+    <div class="lgc-li">Hum Google AdSense use karte hain (publisher: ca-pub-6012587621701212).</div>
+    <div class="lgc-li">Default: <b>non-personalized ads</b>. Aap Settings se consent change kar sakte ho.</div>
+    <div class="lgc-li"><b>13 saal se kam</b> age wale users ko hamesha non-personalized ads milte hain.</div>
+    <div class="lgc-li">Ads sirf Home/Posts feed me — private chats, calls, games me nahi.</div>
+    <div class="lgc-li">Google ka apna policy bhi apply hota hai — personalized ads ke liye Google ki Privacy Terms dekho.</div>
 
-  <div class="sec">
-    <h2>5. Staff Kya Dekh Sakta Hai</h2>
-    <p>Reports aur recovery requests sirf <b>Owner/Admin/Moderator</b> dekh sakte hain, wahi bhi moderation ke liye. Aapke private messages staff ko tab tak nahi dikhte jab tak aap khud report nahi karte. Account credentials (password/recovery codes) staff approval ke baad bhi plaintext me store nahi rehte.</p>
-  </div>
+    <div class="lgc-h">5. Third-Party Services</div>
+    <div class="lgc-li"><b>Firebase (Google)</b> — authentication, database, hosting.</div>
+    <div class="lgc-li"><b>Supabase</b> — media storage (photos).</div>
+    <div class="lgc-li"><b>Google Drive</b> — aapke .vexa backups (sirf aapke consent par).</div>
 
-  <div class="sec">
-    <h2>6. Aapke Rights</h2>
-    <p>Aap Privacy Center se <b>apni profile visibility, message permission, last-seen</b> control kar sakte ho. Kisi ko block/restrict kar sakte ho. <b>Delete Account</b> se aapka Firebase data aur Supabase photos remove ho jaate hain — <b>tabhi recovery data bhi delete hota hai</b>. Email support ya in-app ticket ke through data se related sawaal pooch sakte ho.</p>
-  </div>
+    <div class="lgc-h">6. Aapke Rights</div>
+    <div class="lgc-li">Account delete karo → profile, posts, chats Firebase + Supabase se remove ho jate hain.</div>
+    <div class="lgc-li">Privacy Center se online status, last seen, read receipts control karo.</div>
+    <div class="lgc-li">Blocked/restricted users list khud manage karo.</div>
 
-  <div class="sec">
-    <h2>7. Bachche aur Data Safety</h2>
-    <p>VEXA sirf <b>13 saal ya usse bade</b> users ke liye hai. Agar kisi ko 13 se kam umar ka account milta hai, to wo account ban kiya ja sakta hai. Report karna bilkul confidential hota hai — report karne wale ka naam target user ko nahi bataya jaata.</p>
-  </div>
+    <div class="lgc-h">7. Children</div>
+    <div class="lgc-p">VEXA 13+ ke liye hai. 13 se kam umar ka account mila to delete kar diya jayega. Parents apne bachche ka account report kar sakte hain.</div>
 
-  <div class="sec">
-    <h2>8. Policy Updates</h2>
-    <p>Ye policy time-to-time update ho sakti hai. Bade changes pe app me notice dikhaaya jaayega. Sawal ho to <b>Support page</b> se ticket banao ya email karo.</p>
+    <div class="aalt"><a href="index.html">← VEXA pe wapas</a> · <a href="terms.html">Terms & Conditions</a></div>
   </div>
 </div>
-
-<footer>
-  <p>AnimeTubePro Studio × VEXA · Ye policy app ke andar bhi available hai (Police → Policies)</p>
-  <a class="btn" href="index.html">📱 VEXA App Kholo</a>
-  <p style="margin-top:14px"><a class="link" href="terms.html">📜 Terms of Service padho</a></p>
-</footer>
+<div class="apfoot">© 2026 AnimeTubePro Studio × VEXA · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a></div>
 </body>
 </html>

@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="AnimeTubePro Studio × VEXA — private chat, calls, games aur social, sab ek jagah.">
 <title>AnimeTubePro Studio × VEXA — Connect Privately</title>
-<link rel="icon" href="logo%202.png">
+<link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Great+Vibes&family=Caveat:wght@500;600&family=Dancing+Script:wght@500;600&display=swap" rel="stylesheet">
@@ -15,22 +15,19 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- ═══ Google AdSense — encrypted ads/ads.js se inject hota hai (loader + vexa unit, plaintext source me nahi) ═══ -->
-<link rel="stylesheet" href="style.css?v=282fix1">
-<!-- ═══ 💰 VEXA ADS: ad containers styling (vexa-ad-* classes) ═══ -->
-<link rel="stylesheet" href="ads/ads.css">
+<!-- ═══ Google AdSense — library services/ads.js se encrypted inject hoti hai
+     (duplicate guard ke saath, sirf allowed screens pe). Source me plaintext NAHI. ═══ -->
+<link rel="stylesheet" href="style.css">
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault styles (vv-* classes — no collision) ═══ -->
 <link rel="stylesheet" href="vault.css">
 <script defer src="script.js"></script>
-<script defer src="vexa-upgrade.js"></script>
-<!-- ═══ 💰 VEXA ADS manager — feed/mid-post/sidebar ads + consent ═══ -->
-<script defer src="ads/ads.js"></script>
+<script defer src="services/ads.js"></script>
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault modules — order matters:
      vexa-vault.js (crypto core → VexaVaultCore) → vexa-drive.js (Google Drive appDataFolder)
      → vault-ui.js (VaultUI — Settings/Support se open hota hai) ═══ -->
-<script defer src="vexa-vault.js"></script>
-<script defer src="vexa-drive.js"></script>
-<script defer src="vault-ui.js"></script>
+<script defer src="services/vexa-vault.js"></script>
+<script defer src="services/vexa-drive.js"></script>
+<script defer src="services/vault-ui.js"></script>
 </head>
 <body>
 
@@ -181,8 +178,8 @@
     <div id="recS2" class="hidden">
       <div class="rcv-panel py" style="margin-bottom:0">
         <div class="rcv-ph"><span class="rcv-pn y">2</span>Secret codes verify karo</div>
-        <div class="rcv-phint">🆔 UID aapki <b>Recovery TXT file</b> me saved hai (Profile → 🔑 se download kiya tha). Codes copy-paste karo — type karne me galti ho sakti hai.</div>
-        <div class="fld"><label class="flbl rcv-lbl" for="rUid">Account UID</label><input class="inp rcv-inp mono" id="rUid" placeholder="Recovery TXT file me likha hai" autocomplete="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step2()"></div>
+        <div class="rcv-phint">🆔 UID aapki <b>Recovery .vexa file</b> me saved hai (Profile → 🔑 se download kiya tha). Codes copy-paste karo — type karne me galti ho sakti hai.</div>
+        <div class="fld"><label class="flbl rcv-lbl" for="rUid">Account UID</label><input class="inp rcv-inp mono" id="rUid" placeholder="Recovery .vexa file me likha hai" autocomplete="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step2()"></div>
         <div class="fld"><label class="flbl rcv-lbl" for="rSec">Secondary Remember Code</label><input class="inp rcv-inp mono" id="rSec" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step2()"></div>
         <button type="button" class="rcv-btn y" id="rb2" onclick="Rec.step2()">🟡 CODES VERIFY KARO →</button>
       </div>
