@@ -4073,7 +4073,6 @@ const Settings={
     +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>'
     +'</div>'
     +'<div class="sgrp">'
-    +'<div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
     +this.driveRows()
     +'</div>'
     +'<div class="sgrp">'
@@ -4102,11 +4101,11 @@ const Settings={
    }
    return true;
  },
- /* ── ☁️ Google Drive Backup (settings section — no backend needed:
-    OAuth implicit flow, token sirf browser sessionStorage me) ── */
+ /* ── ☁️ Google Drive Backup — old wale jaisa plain srow layout.
+    POPUP flow: page kahin nahi jata, chhota "Connect to Google" popup. ── */
  driveRows:function(){
    var drv=false; try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
-   var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup app-private folder me — aapki Drive files kabhi nahi chhooti':'Tap → Google consent (signup) → wapas aake connected')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
+   var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup app-private folder me — aapki Drive files kabhi nahi chhooti':'Tap → Connect to Google popup → Allow → done')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
     +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>';
    if(drv)h+='<div class="srow" onclick="VaultUI.driveTest()"><div class="sri">🧪</div><div class="srf"><div class="srt">Test Backup Now</div><div class="srs">.vexa backup abhi Drive pe save karo</div></div><div class="sra">›</div></div>';
    return h;
@@ -4121,8 +4120,24 @@ const Settings={
        V.toast('info','⛔ Drive disconnected');
        this.open();
      }else{
-       VexaVaultDrive.connect();
-     }
+      /* ⚡CONNECT POPUP: pehle chhota "Connect to Google" info modal —
+         uske Connect button se Google ka popup khulta hai (GIS token client).
+         Page kahin nahi jata, sirf popup me account + Allow. */
+      V.mOpen('🔗 Connect to Google',
+        '<div style="text-align:center;padding:6px 0 2px">'
+        +'<div style="font-size:44px;line-height:1">☁️</div>'
+        +'<div style="font-size:16px;font-weight:800;margin-top:10px">Google Drive se connect karein?</div>'
+        +'<div class="mut" style="font-size:12px;margin-top:4px">Aapka encrypted .vexa backup Google Drive me surakshit rahega</div>'
+        +'</div>'
+        +'<div class="snote" style="margin-top:12px;line-height:1.8">'
+        +'🔒 Backup <b>app ki private folder</b> me — aapki Drive files kabhi nahi dikhti<br>'
+        +'🛡️ Sirf is app ke banaye <b>.vexa</b> backups read/write honge<br>'
+        +'⏱️ Access token sirf isi browser session me — kahin bheja nahi jata'
+        +'</div>'
+        +'<div class="snote" style="margin-top:10px">👉 <b>Agle step:</b> Connect dabao → chhota Google popup khulega → apna account chuno → <b>Allow</b>. Page kahin nahi jayega.</div>',
+        '<button class="btn bg" onclick="V.mClose()">Cancel</button>'
+        +'<button class="btn bp" onclick="V.mClose();VexaVaultDrive.connect()">Google se Connect karo</button>');
+    }
    }catch(e){ V.toast('error',(e&&e.message)||'Drive action fail') }
  },
  devices:async function(){

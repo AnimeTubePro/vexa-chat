@@ -41,11 +41,14 @@ directly edit hote hain aur hosting par upload ho jate hain.
    (`firebase deploy --only database` ya Console me paste).
 3. **Backend**: `backend/` folder me `npm install` → `firebase deploy --only functions`.
 4. **Google Drive connect (Vault)**: OAuth client `vexa-d` project ka hai.
-   Google Cloud Console → Credentials → OAuth Client me **Authorized redirect
-   URIs** me apni site ka exact URL add karo, e.g.:
-   - `https://animetubepro.github.io/vexa-chat/`
-   - `http://localhost:8080/` (local test)
-   Redirect URI mismatch → Google "Error 400: redirect_uri_mismatch" deta hai.
+   Connect dabate hi **chhota "Connect to Google" popup** khulta hai
+   (Google Identity Services — page kahin nahi jata; GIS load fail hone
+   par purana redirect flow fallback hai). Google Cloud Console →
+   Credentials → OAuth Client me:
+   - **Authorized JavaScript origins** me site ka origin add karo
+     (e.g. `https://animetubepro.github.io`) — POPUP flow ke liye
+   - **Authorized redirect URIs** me exact URL add karo
+     (e.g. `https://animetubepro.github.io/vexa-chat/`) — fallback ke liye
    `drive.appdata` scope ke liye app **Testing mode** me ho to apna Google
    account **Test users** me add karo, ya app **Publish** karo.
 
