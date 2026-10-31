@@ -321,6 +321,8 @@ input[type="checkbox"],input[type="radio"]{accent-color:var(--ac)} /* ✨NEW */
 #vrem{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;display:none}
 #vrem.show{display:block}
 #vslf{position:absolute;top:max(18px,env(safe-area-inset-top));right:15px;width:100px;height:140px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:#000;display:none;z-index:5} /* ⚡FIX: notch */
+/* 🐞FIX: rule missing thi — video call me self-camera preview (vslf) kabhi dikhta hi nahi tha */
+#vslf.show{display:block}
 .ctop{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:6;padding-top:calc(55px + env(safe-area-inset-top))} /* ⚡FIX: notch */
 .clbl{font-size:12px;letter-spacing:2px;font-weight:800;color:var(--tx2);text-transform:uppercase}
 .cavw{display:flex;flex-direction:column;align-items:center;gap:14px;animation:cp 1.8s infinite}
@@ -633,193 +635,127 @@ body.vip .qfab{box-shadow:0 6px 20px rgba(255,200,61,.45)}
 .lrbtn:active{transform:scale(.93)}
 .lrbtn.spinning{animation:lrspin .8s linear infinite;pointer-events:none;opacity:.6}
 @keyframes lrspin{to{transform:rotate(360deg)}}
+/* ✨FEATURE: chat double-tick — seen (✓✓) WhatsApp-style blue, unseen (✓) muted */
+.mmet .tick{letter-spacing:-1px;margin-left:2px;transition:color .3s}
+.mmet .tick.rd{color:#53bdeb;opacity:1;text-shadow:0 0 7px rgba(83,179,237,.5)}
 
-/* ═══════════════ VEXA UPGRADE v2.1 — NEW COMPONENT STYLES ═══════════════ */
+/* ✨FEATURE: profile social links edit grid */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin:4px 0 10px}
+.sgrid .fld{margin:0}
 
-/* ── Video messages (Drive) ── */
-.vmsg{min-width:200px;max-width:280px}
-.vmsg-v{width:100%;max-height:220px;border-radius:10px;background:#000;display:block}
-.vmsg-i{display:flex;flex-direction:column;gap:3px;margin-top:6px}
-.vmsg-n{font-size:12.5px;font-weight:700;word-break:break-all}
-.vmsg-s{font-size:11px;opacity:.65}
-.vmsg-w{font-size:10.5px;color:#ffb46b;font-weight:600}
-.vmsg-a{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+/* ✨UPGRADE: role badges (OWNER/ADMIN/MOD/VIP/VERIFIED) overlap fix — naam truncate, badges fix */
+.bnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chn,.crn,.unm{flex-wrap:nowrap}
+.chn .bnm,.crn .bnm,.unm .bnm{flex-shrink:1}
+.badm,.bmod,.bvip,.bban,.bver{flex-shrink:0;white-space:nowrap}
+.chi{overflow:hidden}
+/* note: pnm-big / pnm / cmtn (profile/posts/comments) me wrap chalu rahega — wahan jagah hai */
 
-/* ── Group tags / sender / system ── */
-.gtag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.5px;padding:1.5px 6px;border-radius:20px;background:rgba(168,85,247,.25);color:#c084fc;vertical-align:middle;text-transform:uppercase}
-.gtag-o{background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111}
-.gtag-a{background:rgba(0,217,255,.22);color:#00d9ff}
-.gwho{font-size:11px;font-weight:800;margin-bottom:3px;cursor:pointer;opacity:.9}
-.msys{margin:8px auto;max-width:82%;text-align:center;font-size:11.5px;color:var(--tx2,#9aa);background:rgba(255,255,255,.05);padding:6px 12px;border-radius:14px}
-.mimg{max-width:230px;border-radius:10px;cursor:pointer;display:block}
+/* ✨UPGRADE: jump-to-bottom FAB (chat) */
+#chatV .shell{position:relative}
+#jmpB{position:absolute;bottom:88px;right:14px;width:40px;height:40px;border-radius:50%;border:1px solid var(--bd);background:rgba(10,6,34,.92);color:var(--tx);font-size:17px;display:none;align-items:center;justify-content:center;cursor:pointer;z-index:30;box-shadow:var(--sh);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#jmpB.show{display:flex}
+#jmpB:active{transform:scale(.92)}
 
-/* ── Recovery codes grid ── */
-.rcgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
-.rccode{background:var(--bg3,#151522);border:1.5px dashed var(--bds,#333);border-radius:10px;padding:10px 6px;text-align:center;font-weight:800;letter-spacing:1px}
+/* ✨UPGRADE: search-in-chat results */
+.csrch{max-height:46vh;overflow-y:auto;margin-top:6px}
 
-/* ── Devices / sessions rows ── */
-.sesc{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg3,#151522);border:1px solid var(--bds,#2a2a3a);border-radius:12px;padding:10px 12px;margin-bottom:8px}
-.sesc.off{opacity:.45}
-.si2{flex:1;min-width:0}
-.sesd{font-size:13.5px;font-weight:700}
-.sesm{font-size:11.5px;opacity:.6;margin-top:2px;word-break:break-all}
+/* ═══════════════════════════════════════════════════════════════
+   ⚡v2.8.3 — ADVANCED SETTINGS UI (stx-* prefix)
+   2.6.2 base upgraded: priority chips + color-coded section cards
+   + live search + counts + animated hero + danger zone
+   Priority colors: Sabse Zaroori #ff5b5b · Bahut Zaroori #ff9b45
+   · Zaroori #f6b93b · Normal #00d9ff · General #8a93b2
+   ═══════════════════════════════════════════════════════════════ */
+.stx-wrap{animation:stxIn .4s ease both}
+@keyframes stxIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* ── Chat video button highlight ── */
-.vexa-video-btn{font-size:15px}
+/* ── hero card ── */
+.stx-hero{position:relative;overflow:hidden;border-radius:20px;padding:18px 16px 14px;margin-bottom:12px;
+  background:linear-gradient(135deg,rgba(0,217,255,.10),rgba(168,85,247,.12) 55%,rgba(0,217,255,.05));
+  border:1px solid rgba(0,217,255,.22);box-shadow:0 18px 44px rgba(0,0,0,.4)}
+.stx-hero-glow{position:absolute;top:-70px;right:-60px;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,.28),transparent 65%);pointer-events:none;animation:stxGlow 5s ease-in-out infinite alternate}
+@keyframes stxGlow{from{transform:translate(0,0) scale(1)}to{transform:translate(-18px,14px) scale(1.15)}}
+.stx-htop{display:flex;gap:12px;align-items:center}
+.stx-hico{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(0,217,255,.18),rgba(168,85,247,.22));border:1px solid rgba(0,217,255,.3);
+  animation:stxSpin 14s linear infinite}
+@keyframes stxSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.stx-ht{font-size:20px;font-weight:800;letter-spacing:.3px;
+  background:linear-gradient(135deg,#00d9ff,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stx-hs{font-size:11.5px;color:var(--tx2);margin-top:2px}
+.stx-uinfo{display:flex;gap:11px;align-items:center;margin-top:14px;background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:9px 12px}
+.stx-uav{width:40px;height:40px;flex:none;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;color:#04010f;background:linear-gradient(135deg,#00d9ff,#a855f7)}
+.stx-uav img{width:100%;height:100%;object-fit:cover}
+.stx-umeta{flex:1;min-width:0}
+.stx-un{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stx-uus{font-size:11px;color:var(--tx2);margin-top:1px}
 
-/* ── Security group rows (Settings) reuse .sgrp/.srow — no extra css needed ── */
+/* ── search ── */
+.stx-search{position:relative;display:flex;align-items:center;margin-bottom:10px}
+/* magnifier apni alag class — section .stx-sico se collision NAHI */
+.stx-mag{position:absolute;left:13px;font-size:13px;pointer-events:none;opacity:.7}
+.stx-sinp{width:100%;background:var(--bg2,#12121a);border:1px solid rgba(0,217,255,.18);border-radius:13px;
+  padding:12px 40px 12px 38px;font-family:inherit;font-size:13px;color:var(--tx);outline:none;transition:border .2s,box-shadow .2s}
+.stx-sinp:focus{border-color:rgba(0,217,255,.55);box-shadow:0 0 0 3px rgba(0,217,255,.12)}
+.stx-sinp::placeholder{color:var(--tx2,#8a93b2)}
+.stx-sclr{position:absolute;right:10px;width:26px;height:26px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(255,91,91,.14);color:#ff8a8a;font-size:12px}
 
-/* ═══════════════════════════════════════════════════════════
-   ⚡UPGRADE v2.2 — POLICE / SUPPORT / POLICIES PAGES
-   ═══════════════════════════════════════════════════════════ */
+/* ── priority chips (2.6.2 style — upgraded) ── */
+.stx-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none;position:sticky;top:0;z-index:6;
+  background:var(--bg1,#0a0a0f);box-shadow:0 8px 14px -6px rgba(0,0,0,.55)}
+.stx-chips::-webkit-scrollbar{display:none}
+.stx-chip{white-space:nowrap;display:inline-flex;align-items:center;gap:5px;border-radius:99px;cursor:pointer;
+  border:1.5px solid var(--bd,#232a42);background:var(--bg2,#12121a);color:var(--tx2,#8a93b2);
+  font-family:inherit;font-size:12px;font-weight:600;padding:7px 13px;transition:all .22s ease}
+.stx-chip .stx-cc{font-size:10px;font-weight:800;background:rgba(255,255,255,.07);border-radius:99px;padding:1px 6px}
+.stx-chip:hover{transform:translateY(-1px);border-color:var(--pc,var(--bd))}
+.stx-chip.act{background:color-mix(in srgb,var(--pc,#00d9ff) 16%,transparent);color:var(--pc,#00d9ff);
+  border-color:var(--pc,#00d9ff);box-shadow:0 4px 18px color-mix(in srgb,var(--pc,#00d9ff) 22%,transparent)}
+.stx-chip[data-p="all"].act{background:linear-gradient(135deg,rgba(0,217,255,.18),rgba(168,85,247,.2));color:#9fe8ff;border-color:rgba(0,217,255,.55)}
 
-/* ── Policy doc pages (privacy/terms) + modal reuse ── */
-.pol-doc{padding-bottom:24px}
-.pol-head{text-align:center;padding:6px 0 14px;border-bottom:1px solid var(--bd);margin-bottom:14px}
-.pol-big{font-size:22px;font-weight:800;background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent}
-.pol-sec{margin-bottom:16px}
-.pol-t{font-size:14.5px;font-weight:700;color:var(--cy);margin-bottom:6px}
-.pol-p{font-size:13.5px;line-height:1.75;color:var(--tx2)}
-.pol-p b{color:var(--tx)}
-.pol-foot{text-align:center;padding:10px 0 4px}
-.pol-link{color:var(--cy);font-weight:700;text-decoration:underline;text-underline-offset:2px}
-.pol-link:hover{color:var(--ac2)}
+/* ── section cards (priority-colored) ── */
+.stx-sec{background:var(--bg2,#12121a);border:1px solid var(--bd,#232a42);border-left:3px solid var(--pc,#00d9ff);
+  border-radius:16px;margin-bottom:13px;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:stxSec .45s ease both}
+@keyframes stxSec{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.stx-sec:hover{box-shadow:0 10px 30px rgba(0,0,0,.35),0 0 0 1px color-mix(in srgb,var(--pc,#00d9ff) 18%,transparent)}
+.stx-shead{display:flex;align-items:center;gap:10px;padding:12px 14px 10px;min-height:58px}
+.stx-shead .stx-badge{flex:none;margin-left:auto}
+.stx-sico{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:11px;
+  background:color-mix(in srgb,var(--pc,#00d9ff) 13%,transparent);border:1px solid color-mix(in srgb,var(--pc,#00d9ff) 30%,transparent)}
+.stx-st{flex:1;font-size:13.5px;font-weight:800;letter-spacing:.3px}
+.stx-badge{font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;border-radius:99px;padding:3px 9px;border:1px solid}
+.stx-sbody{padding:0 8px 8px}
 
-/* ── Police / Support hero ── */
-.pol-hero{text-align:center;padding:18px 14px 16px;background:linear-gradient(160deg,rgba(108,92,231,.16),rgba(0,217,255,.07));border:1px solid var(--cyl);border-radius:18px;margin-bottom:14px}
-.pol-hero-ic{font-size:44px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 4px 14px rgba(0,217,255,.35))}
-.pol-hero-t{font-size:20px;font-weight:800;letter-spacing:.5px}
-.pol-tabs{margin-bottom:14px;justify-content:center}
-.pol-item{display:flex;gap:12px;align-items:flex-start;background:var(--bg3);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin-bottom:8px;transition:var(--tr)}
-.pol-item:hover{border-color:var(--bds)}
-.pol-item-ic{font-size:20px;line-height:1.3;flex-shrink:0}
-.pol-item-b{min-width:0;flex:1}
-.pol-item-t{font-size:13.5px;font-weight:700;margin-bottom:3px}
-.pol-item-d{font-size:12.5px;color:var(--tx2);line-height:1.6}
+/* ── rows ── */
+.stx-row{display:flex;align-items:center;gap:11px;padding:10px 8px;border-radius:12px;cursor:pointer;
+  transition:background .18s ease;position:relative}
+.stx-row:hover{background:color-mix(in srgb,var(--pc,#00d9ff) 7%,transparent)}
+.stx-row:active{transform:scale(.99)}
+.stx-row+.stx-row::before{content:'';position:absolute;top:0;left:53px;right:8px;height:1px;background:rgba(255,255,255,.045)}
+.stx-rilt{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;border-radius:11px;
+  background:color-mix(in srgb,var(--pc,#00d9ff) 12%,transparent);border:1px solid color-mix(in srgb,var(--pc,#00d9ff) 24%,transparent)}
+.stx-rilt.dng{background:rgba(255,91,91,.12);border-color:rgba(255,91,91,.3)}
+.stx-rf{flex:1;min-width:0}
+.stx-rt{font-size:13px;font-weight:600}
+.stx-rs{font-size:11px;color:var(--tx2,#8a93b2);margin-top:1.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stx-rdot{width:7px;height:7px;flex:none;border-radius:99px;box-shadow:0 0 8px currentColor;opacity:.85}
+.stx-ra{font-size:17px;color:var(--tx2,#8a93b2);flex:none;line-height:1}
+.stx-dng .stx-rt{color:#ff8a8a}
 
-/* ── Support cards ── */
-.sup-hero{background:linear-gradient(160deg,rgba(46,204,113,.14),rgba(0,217,255,.07))}
-.sup-card{background:var(--bg3);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
-.sup-card-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.sup-ic{font-size:22px}
-.sup-t{font-size:15px;font-weight:800}
-.sup-d{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:10px}
-.sup-d b{color:var(--tx)}
-.sup-btns{display:flex;flex-wrap:wrap;gap:8px}
-.sup-online{border-color:rgba(46,204,113,.35)!important;background:rgba(46,204,113,.05)!important}
+/* ── empty state + footer ── */
+.stx-empty{text-align:center;padding:40px 16px;color:var(--tx2,#8a93b2);animation:stxIn .3s ease both}
+.stx-ei{font-size:34px;margin-bottom:8px}
+.stx-et{font-size:14px;font-weight:700;margin-bottom:3px}
+.stx-es{font-size:12px}
+.stx-foot{text-align:center;font-size:10.5px;color:var(--tx2,#8a93b2);opacity:.65;padding:16px 0 6px;letter-spacing:.3px}
 
-/* ── Support tickets ── */
-.tkrow{background:var(--bg4);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
-.tkh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
-.tkh b{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tkst{font-size:10px;font-weight:800;letter-spacing:.5px;flex-shrink:0}
-.tkb{font-size:12.5px;color:var(--tx2);line-height:1.6;word-break:break-word}
-.tkr{margin-top:7px;padding:8px 10px;background:var(--oks);border-radius:9px;font-size:12.5px;line-height:1.6;color:var(--tx)}
-.tkr b{color:var(--ok)}
-.tkm{margin-top:5px;font-size:10.5px;color:var(--tx3)}
-
-/* ── ⚡LAYOUT FIXES — chhote screens (320–400px) ── */
-@media(max-width:400px){
-  /* topbar buttons squeeze — gap kam, title chhota */
-  .topb{gap:5px;padding-left:8px;padding-right:8px}
-  .topb .bico{width:33px;height:33px;font-size:14px}
-  .topt{font-size:14.5px}
-  /* home tiles: 6 tiles → 3 columns (4-col me 6 tiles ajeeb lagte hain) */
-  .qgrid{grid-template-columns:repeat(3,1fr);gap:8px}
-  /* chat input: GIF button chhupao — textarea ko jagah do */
-  .cinp .bico{width:34px;height:34px;font-size:14px}
-  .cinp{gap:5px;padding-left:6px;padding-right:6px}
+@media(max-width:640px){
+  .stx-hero{padding:15px 13px 12px;border-radius:17px}
+  .stx-ht{font-size:18px}
+  .stx-chip{padding:6.5px 11px;font-size:11.5px}
 }
-@media(max-width:340px){
-  /* bohot chhota screen — sirf zaroori cheezein */
-  .cinp .bico:not(.vexa-video-btn){display:none}
-  .csend{width:40px;height:40px}
-  .qgrid{grid-template-columns:repeat(2,1fr)}
-  .dobrow{gap:6px}
-  .dobrow select{padding:11px 8px;font-size:14px}
-  .mp-btn{font-size:12px}
-}
-/* music panel — right side overflow fix (chhoti screens pe left bhi khul sake) */
-@media(max-width:360px){
-  .music-panel{right:auto;left:50%;transform:translateX(-50%);width:min(300px,calc(100vw - 24px))}
-  .music-panel.open{display:flex}
-}
-/* modal me policy doc — thoda bada area */
-.mbox .pol-doc{max-height:62vh;overflow-y:auto;padding-right:4px}
-
-/* ═══════════════════════════════════════════════════════════
-   🔐 RECOVERY CONSOLE — hamesha DARK + color-coded (v2.3)
-   Blue=Identity · Yellow=Verify · Green=Success · Red=Problem
-   Ye apna alag dark theme hai — app theme change ho tab bhi
-   console dark hi rahega taaki steps samajhna aasan ho.
-   ═══════════════════════════════════════════════════════════ */
-.rcv{background:linear-gradient(165deg,#070b16 0%,#0c1322 55%,#0a101e 100%);border:1px solid #1d2a47;border-radius:22px;padding:22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.55);color:#e7edf7}
-.rcv-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}
-.rcv-shield{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#1e3a8a,#172554);display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid #2b4a8a;flex:0 0 auto}
-.rcv-title{font-weight:900;font-size:16.5px;letter-spacing:1.6px;color:#fff}
-.rcv-sub{font-size:11.5px;color:#8fa3c8;margin-top:2px}
-.rcv-legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
-.rcv-lg{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#93a7cd;background:#101a30;border:1px solid #22335a;border-radius:999px;padding:4px 9px}
-.rcv-lg .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
-.dot.b{background:#3b82f6}.dot.y{background:#fbbf24}.dot.g{background:#22c55e}.dot.r{background:#ef4444}
-.rcv-status{display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;font-size:11.5px;font-weight:800;letter-spacing:.4px;margin-bottom:12px;border:1px solid}
-.rcv-status .rcv-tdot{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;flex:0 0 auto;animation:rcvPulse 1.6s infinite}
-.rcv-status.sb{background:rgba(59,130,246,.12);border-color:#2b5cc4;color:#7fb0ff}
-.rcv-status.sy{background:rgba(251,191,36,.1);border-color:#a97e15;color:#ffd66b}
-.rcv-status.sg{background:rgba(34,197,94,.1);border-color:#1d8a44;color:#5fe08d}
-.rcv-status.sr{background:rgba(239,68,68,.12);border-color:#a12626;color:#ff8a8a}
-@keyframes rcvPulse{0%,100%{opacity:1}50%{opacity:.3}}
-.rcv-rail{display:flex;align-items:center;margin:2px 0 4px}
-.rcv-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:900;background:#0f1830;border:2px solid #25365e;color:#5d739f;flex:0 0 auto;transition:all .25s}
-.rcv-dot.b{border-color:#3b82f6;color:#7fb0ff}
-.rcv-dot.y{border-color:#f59e0b;color:#ffd66b}
-.rcv-dot.g{border-color:#22c55e;color:#5fe08d}
-.rcv-dot.now{background:#12203c;transform:scale(1.14);box-shadow:0 0 14px rgba(59,130,246,.35)}
-.rcv-dot.done{background:#0d2b1b;border-color:#22c55e;color:#5fe08d;box-shadow:0 0 10px rgba(34,197,94,.25)}
-.rcv-line{height:3px;flex:1;background:#22335a;border-radius:2px;margin:0 4px;transition:background .3s}
-.rcv-line.lb{background:linear-gradient(90deg,#3b82f6,#3b82f6)}
-.rcv-line.lg{background:linear-gradient(90deg,#3b82f6,#22c55e)}
-.rcv-rlabels{display:flex;margin:0 0 14px}
-.rcv-rlabels span{flex:1;text-align:center;color:#5d739f;font-size:10.5px;font-weight:700;letter-spacing:.5px}
-.rcv-msg{border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:600;margin-bottom:12px;line-height:1.6;border:1px solid;word-break:break-word}
-.rcv-msg.r{background:rgba(239,68,68,.1);border-color:#7f2020;color:#ffb4b4}
-.rcv-msg.y{background:rgba(251,191,36,.08);border-color:#8a6a12;color:#ffd66b}
-.rcv-msg.g{background:rgba(34,197,94,.08);border-color:#17703a;color:#7fe3a3}
-.rcv-panel{background:#0d1526;border:1px solid #1d2a47;border-left:3px solid #3b82f6;border-radius:14px;padding:16px 14px;margin-bottom:14px;animation:fu-a .3s}
-.rcv-panel.py{border-left-color:#f59e0b}
-.rcv-panel.pg{border-left-color:#22c55e}
-.rcv-ph{font-weight:800;font-size:14px;color:#fff;display:flex;align-items:center;gap:9px;margin-bottom:4px}
-.rcv-pn{width:22px;height:22px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;flex:0 0 auto}
-.rcv-pn.b{background:#1d3a7a;color:#9cc3ff}
-.rcv-pn.y{background:#3d2f08;color:#ffd66b}
-.rcv-pn.g{background:#0d3320;color:#7fe3a3}
-.rcv-phint{font-size:11.5px;color:#8fa3c8;margin-bottom:12px;line-height:1.6}
-.rcv-lbl{color:#9db1d6!important}
-.rcv-inp,.rcv .selc{background:#0a1120!important;border-color:#25365e!important;color:#e7edf7!important}
-.rcv-inp::placeholder{color:#4a5c80}
-.rcv-inp:focus,.rcv .selc:focus{border-color:#3b82f6!important;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-.rcv .selc option{background:#0a1120;color:#e7edf7}
-.rcv-carry{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:rgba(34,197,94,.07);border:1px dashed #1d8a44;color:#7fe3a3;font-size:11.5px;border-radius:9px;padding:8px 10px;margin-bottom:12px}
-.rcv-carry b{word-break:break-all}
-.rcv-btn{width:100%;border:none;border-radius:12px;padding:13px 14px;font-weight:900;font-size:13.5px;letter-spacing:.5px;cursor:pointer;color:#fff;transition:transform .15s,box-shadow .2s,opacity .2s;font-family:inherit;margin-top:4px}
-.rcv-btn.b{background:linear-gradient(135deg,#2563eb,#3b82f6);box-shadow:0 8px 22px rgba(37,99,235,.35)}
-.rcv-btn.y{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 8px 22px rgba(180,83,9,.3)}
-.rcv-btn.g{background:linear-gradient(135deg,#15803d,#22c55e);box-shadow:0 8px 22px rgba(21,128,61,.32)}
-.rcv-btn:active{transform:scale(.98)}
-.rcv-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
-.rcv-foot{text-align:center;font-size:12px;color:#8fa3c8;margin-top:6px}
-.rcv-foot a{color:#7fb0ff;cursor:pointer;text-decoration:none}
-@media(max-width:400px){.rcv{padding:18px 14px}.rcv-dot{width:26px;height:26px;font-size:11px}.rcv-title{font-size:15px}}
-
-/* ═══ 🎮 GAME UID CHIPS — profile pe sabko dikhte hain (v2.3) ═══ */
-.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
-.gchip{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:7px 11px;font-size:12px;font-weight:700}
-.gchip .gic{font-size:14px}
-.gchip .gl{color:var(--tx2);font-weight:600}
-.gchip .gv{font-family:monospace;color:var(--ac);letter-spacing:.5px}
-.gchip .gcopy{cursor:pointer;margin-left:2px}
-.gchip.gadd{cursor:pointer;border-style:dashed;color:var(--tx2);opacity:.85}
-
-/* ── Edit profile: 2-col form grid (social/game inputs) ── */
-.sgrid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-@media(max-width:420px){.sgrid2{grid-template-columns:1fr}}

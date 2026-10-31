@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#040119">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="VEXA — Password reset link apne email pe bhejo.">
+<title>Forgot Password — VEXA</title>
+<link rel="icon" href="logo%202.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="auth-pages.css">
+<script defer src="auth-pages.js"></script>
+</head>
+<body data-page="forgot">
+
+<div class="apbg" aria-hidden="true"><div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div></div>
+
+<div class="awrap">
+  <div class="acard">
+    <div class="vlogo">VEXA</div>
+    <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="#00d9ff"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+
+    <div class="atit tc" style="margin-top:14px">🔑 Password Bhool Gaye?</div>
+    <div class="asub tc">Apna Gmail daalo — reset link email pe jayega</div>
+
+    <div class="ebox" id="fpErr" role="alert" aria-live="polite"></div>
+
+    <!-- STEP 1: email lo -->
+    <div id="fpStep1">
+      <div class="fld">
+        <label class="flbl" for="fpEmail">Email / Gmail</label>
+        <div class="iwrap"><span class="iico">📧</span>
+          <input type="email" class="inp" id="fpEmail" placeholder="you@gmail.com" autocomplete="email" inputmode="email" enterkeyhint="go" data-enter="sendReset"></div>
+      </div>
+      <button type="button" class="btn bp bbk blg" id="fpBtn" onclick="AX.sendReset()">📨 Reset Link Bhejo</button>
+      <div class="snote mt8">📩 Email me <b>password reset link</b> aayega — wahan se naya password set karke wapas login karo.</div>
+    </div>
+
+    <!-- STEP 2: confirmation -->
+    <div id="fpStep2" class="hidden">
+      <div class="ebox okbox show" style="display:block">✅ Reset link bhej diya: <b id="fpEmailShow"></b></div>
+      <div class="snote mb8">📩 <b>Email/Gmail kholo</b> → VEXA ka password reset mail → link pe click → naya password set karo → wapas login karo.</div>
+      <div class="snote">🫙 Mail nahi aaya? <b>Spam/Junk folder</b> check karo ya 1 minute baad dobara try karo.</div>
+      <button type="button" class="btn bp bbk blg" style="margin-top:16px" onclick="location.href='login.html'">🔐 Login pe wapas</button>
+    </div>
+
+    <div class="aalt">Yaad aa gaya? <a href="login.html">← Login pe wapas</a></div>
+    <div class="aalt">Email bhi kho gaya? <a href="index.html#help">🆘 Help Center</a></div>
+  </div>
+</div>
+
+<div class="apfoot">
+  <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a><br>
+  AnimeTubePro Studio × VEXA — private social network
+</div>
+
+<div id="apToast" aria-live="polite"></div>
+
+</body>
+</html>

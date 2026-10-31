@@ -15,9 +15,22 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css">
+<!-- ═══ Google AdSense — encrypted ads/ads.js se inject hota hai (loader + vexa unit, plaintext source me nahi) ═══ -->
+<link rel="stylesheet" href="style.css?v=282fix1">
+<!-- ═══ 💰 VEXA ADS: ad containers styling (vexa-ad-* classes) ═══ -->
+<link rel="stylesheet" href="ads/ads.css">
+<!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault styles (vv-* classes — no collision) ═══ -->
+<link rel="stylesheet" href="vault.css">
 <script defer src="script.js"></script>
 <script defer src="vexa-upgrade.js"></script>
+<!-- ═══ 💰 VEXA ADS manager — feed/mid-post/sidebar ads + consent ═══ -->
+<script defer src="ads/ads.js"></script>
+<!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault modules — order matters:
+     vexa-vault.js (crypto core → VexaVaultCore) → vexa-drive.js (Google Drive appDataFolder)
+     → vault-ui.js (VaultUI — Settings/Support se open hota hai) ═══ -->
+<script defer src="vexa-vault.js"></script>
+<script defer src="vexa-drive.js"></script>
+<script defer src="vault-ui.js"></script>
 </head>
 <body>
 
@@ -82,7 +95,7 @@
     <div class="fld"><label class="flbl" for="lgPw">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)" aria-label="Show password">👁️</button></div></div>
     <div style="text-align:right;margin:-5px 0 14px"><a class="sm" role="button" tabindex="0" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
     <button type="button" class="btn bp bbk blg" id="lgBtn" onclick="Auth.login()">Sign In</button>
-    <div class="aalt">Recovery code hai? <a role="button" tabindex="0" onclick="VexaSec.recoveryLoginOpen()">Recovery Code Login</a></div>
+    <div class="aalt">.vexa backup hai? <a role="button" tabindex="0" onclick="VexaVault.pick()">🔐 Restore .vexa Backup</a></div>
     <div class="aalt">Have a login code? <a role="button" tabindex="0" onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
     <div class="aalt">New to VEXA? <a role="button" tabindex="0" onclick="V.showAuth('sSignup')">Create account</a></div>
   </div>
@@ -117,6 +130,7 @@
     <div class="fld"><label class="flbl" for="suPw">Password</label><input type="password" class="inp" id="suPw" placeholder="Min 8 characters" autocomplete="new-password" enterkeyhint="next"><div class="fhint">8+ chars with letters & numbers</div></div>
     <div class="fld"><label class="flbl" for="suPw2">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••" autocomplete="new-password" enterkeyhint="done"></div>
     <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the <a class="pol-link" role="button" tabindex="0" onclick="event.preventDefault();event.stopPropagation();Policies.show('terms')">Terms & Conditions</a> and <a class="pol-link" role="button" tabindex="0" onclick="event.preventDefault();event.stopPropagation();Policies.show('privacy')">Privacy Policy</a></span></label>
+    <div class="snote">👮 <span><b>Account Creation Policy:</b> 13+ saal ka ho · sahi info do · sirf 1 account rakho · rules follow karo — na mane par <b>VEXA Police</b> action le sakti hai.</span></div>
     <button type="button" class="btn bp bbk blg" id="suBtn" onclick="Auth.signup()">CREATE ACCOUNT</button>
     <div class="aalt">Already have an account? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a></div>
   </div>
@@ -161,6 +175,7 @@
         <div class="fld"><label class="flbl rcv-lbl" for="rUname">Username</label><input class="inp rcv-inp" id="rUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step1()"></div>
         <div class="fld"><label class="flbl rcv-lbl" for="rDd1">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
         <button type="button" class="rcv-btn b" id="rb1" onclick="Rec.step1()">🔵 IDENTITY VERIFY KARO →</button>
+        <div class="rcv-phint" style="margin-top:10px;text-align:center">File se fast fill: <a class="rcv-lnk" role="button" tabindex="0" onclick="VexaVault.pick()">⬆️ .vexa Vault Backup upload karo</a> — form auto-fill hoga</div>
       </div>
     </div>
     <div id="recS2" class="hidden">
@@ -182,7 +197,7 @@
         <button type="button" class="rcv-btn g" id="rb3" onclick="Rec.step3()">🟢 ENTRY REQUEST BHEJO →</button>
       </div>
     </div>
-    <div class="rcv-foot">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a> · <a role="button" tabindex="0" onclick="VexaSec.recoveryLoginOpen()">🔑 Code Login</a></div>
+    <div class="rcv-foot">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a> · <a role="button" tabindex="0" onclick="VexaVault.pick()">🔐 .vexa Restore</a></div>
   </div>
   <div class="acard hidden" id="sHelp">
     <div class="vlogo">VEXA</div>
@@ -250,6 +265,7 @@
       <section class="scr act" id="sc-home">
         <div class="pgc">
           <div class="qgrid">
+            <div class="qt" role="button" tabindex="0" onclick="V.go('posts')"><span class="qi">📸</span><span class="ql">Posts</span></div>
             <div class="qt" role="button" tabindex="0" onclick="V.go('local')"><span class="qi">📡</span><span class="ql">Local</span></div>
             <div class="qt" role="button" tabindex="0" onclick="V.go('calls')"><span class="qi">📞</span><span class="ql">Calls</span></div>
             <div class="qt" role="button" tabindex="0" onclick="V.go('games')"><span class="qi">🎮</span><span class="ql">Games</span></div>
@@ -258,6 +274,14 @@
             <div class="qt" role="button" tabindex="0" onclick="V.go('support')"><span class="qi">🆘</span><span class="ql">Support</span></div>
           </div>
           <div class="lnkcard" id="lnkCard"></div>
+          <!-- ⚡v2.4: Home Feed Ad (spec §2A) — sirf public home screen pe, label ke saath -->
+          <div class="vexa-ad-container vexa-feed-ad" id="vexaHomeAd"><span class="vexa-ad-label">Advertisement</span><div class="vexa-ad-slot"></div></div>
+        </div>
+      </section>
+      <section class="scr" id="sc-posts">
+        <div class="pgc">
+          <!-- ═══ Posts Feed Ad (spec §2B) — reserved container, no layout shift ═══ -->
+          <div class="vexa-ad-container vexa-feed-ad" id="vexaFeedAd"><span class="vexa-ad-label">Advertisement</span><div class="vexa-ad-slot"></div></div>
           <div id="feedW"></div>
         </div>
         <button type="button" class="pfab" onclick="Posts.compose()" aria-label="Create post">✏️</button>
@@ -315,6 +339,7 @@
     </main>
     <nav class="bnav">
       <a class="bni act" data-sc="home" role="button" tabindex="0" onclick="V.go('home')"><span class="bico2">🏠</span>Home</a>
+      <a class="bni" data-sc="posts" role="button" tabindex="0" onclick="V.go('posts')"><span class="bico2">📸</span>Posts</a>
       <a class="bni" data-sc="search" role="button" tabindex="0" onclick="V.go('search')"><span class="bico2">🔍</span>Search</a>
       <a class="bni" data-sc="chat" role="button" tabindex="0" onclick="V.go('chat')"><span class="bico2">💬</span>Chat<span class="nbdg hidden" id="bChatM">0</span></a>
       <a class="bni" data-sc="games" role="button" tabindex="0" onclick="V.go('games')"><span class="bico2">🎮</span>Games</a>
@@ -323,6 +348,7 @@
     <button type="button" class="qfab" id="qfab" onclick="QFab.toggle()" title="Quick Actions" aria-label="Quick actions">⚡</button>
     <div class="qmenu" id="qmenu">
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('home')"><span>🏠</span>Home</div>
+      <div class="qmi" role="button" tabindex="0" onclick="QFab.go('posts')"><span>📸</span>Posts</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('search')"><span>🔍</span>Search</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('chat')"><span>💬</span>Chat</div>
       <div class="qmi" role="button" tabindex="0" onclick="QFab.go('calls')"><span>📞</span>Calls</div>
@@ -341,6 +367,9 @@
     </div>
   </div>
 </div>
+
+<!-- ═══ Desktop Sidebar Ad (spec §2C) — sirf wide screens pe, allowed zones me ═══ -->
+<aside class="vexa-ad-container vexa-sidebar-ad" id="vexaSidebarAd" aria-label="Advertisement"><span class="vexa-ad-label">Advertisement</span><div class="vexa-ad-slot"></div></aside>
 
 <div id="chatV"><div class="shell">
   <header class="chd">

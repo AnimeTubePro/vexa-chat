@@ -1,0 +1,111 @@
+/* ═══════════════════════════════════════════════════════════════
+   💰 VEXA ADS — ads/ads.css (v2.8.3)
+   Google AdSense containers ka complete styling.
+   Classes: vexa-ad-container · vexa-feed-ad · vexa-inline-ad
+            vexa-sidebar-ad · vexa-ad-label · vexa-ad-slot
+            vexa-consent (popup)
+   Theme: VEXA dark glass — #0a0a0f + cyan #00d9ff + purple #a855f7
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── base container (har ad ka wrapper) ── */
+.vexa-ad-container{
+  display:block;
+  width:100%;
+  margin:14px 0;
+  border:1px solid rgba(0,217,255,.14);
+  background:linear-gradient(180deg,rgba(0,217,255,.045),rgba(168,85,247,.05));
+  border-radius:16px;
+  padding:10px 10px 8px;
+  box-shadow:0 10px 34px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04);
+  overflow:hidden;
+  position:relative;
+  animation:vexaAdIn .45s ease both;
+}
+@keyframes vexaAdIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ── "Advertisement" label ── */
+.vexa-ad-label{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-family:'Poppins',sans-serif;
+  font-size:9.5px;
+  font-weight:700;
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  color:rgba(140,150,180,.85);
+  background:rgba(0,217,255,.07);
+  border:1px solid rgba(0,217,255,.16);
+  border-radius:99px;
+  padding:2.5px 9px;
+  margin-bottom:8px;
+}
+.vexa-ad-label::before{content:'💰';font-size:9px;letter-spacing:0}
+
+/* ── the actual <ins> slot ── */
+.vexa-ad-slot{width:100%;min-height:90px;display:block}
+.vexa-ad-slot .adsbygoogle{display:block!important;width:100%}
+
+/* ── top-of-feed units (posts feed / home) ── */
+.vexa-feed-ad{margin:0 0 16px}
+
+/* ── inline feed ads (posts ke beech me) ── */
+.vexa-inline-ad{margin:4px 0 18px}
+
+/* ── desktop sidebar unit (≥1180px only — ads.js toggle karta hai) ── */
+.vexa-sidebar-ad{
+  position:fixed;
+  top:96px;
+  right:16px;
+  width:300px;
+  z-index:5;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(14px);
+  transition:opacity .35s ease,transform .35s ease;
+}
+.vexa-sidebar-ad.on{opacity:1;pointer-events:auto;transform:none}
+@media(max-width:1179px){
+  .vexa-sidebar-ad{display:none}
+}
+@media(max-width:640px){
+  .vexa-ad-container{padding:8px 8px 6px;border-radius:13px;margin:12px 0}
+  .vexa-ad-slot{min-height:100px}
+}
+
+/* ── consent popup (pehli baar feed pe) ── */
+.vexa-consent{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translate(-50%,24px);
+  width:min(92vw,430px);
+  z-index:9990;
+  background:rgba(10,10,15,.96);
+  border:1px solid rgba(0,217,255,.28);
+  border-radius:18px;
+  padding:16px 16px 14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 0 1px rgba(168,85,247,.08);
+  opacity:0;
+  transition:opacity .3s ease,transform .3s ease;
+  font-family:'Poppins',sans-serif;
+  color:#e8ecf8;
+  backdrop-filter:blur(10px);
+}
+.vexa-consent.show{opacity:1;transform:translate(-50%,0)}
+.vexa-consent .vc-t{
+  font-size:13.5px;font-weight:800;letter-spacing:.4px;margin-bottom:6px;
+  background:linear-gradient(135deg,#00d9ff,#a855f7);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.vexa-consent .vc-txt{font-size:12px;line-height:1.6;color:#b9c0d8}
+.vexa-consent .vc-pol{display:block;margin-top:8px;font-size:11px;color:#8a93b2;line-height:1.55}
+.vexa-consent .vc-pol a{color:#00d9ff;text-decoration:none;font-weight:600}
+.vexa-consent .vc-btns{display:flex;gap:8px;margin-top:12px}
+.vexa-consent .vc-b{
+  flex:1;border:none;border-radius:11px;padding:10px 8px;font-family:inherit;
+  font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s ease,filter .15s ease;
+}
+.vexa-consent .vc-b:active{transform:scale(.97)}
+.vexa-consent .vc-yes{background:linear-gradient(135deg,#00d9ff,#a855f7);color:#04010f}
+.vexa-consent .vc-no{background:rgba(0,217,255,.08);border:1px solid rgba(0,217,255,.3);color:#9fe8ff}

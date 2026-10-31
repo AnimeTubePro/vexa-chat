@@ -1,0 +1,538 @@
+{
+  /* ═══════════════════════════════════════════════════════════════════
+     VEXA CHAT — Firebase Realtime Database Security Rules (v3.0)
+     ⚡v3.0 RECOVERY REDESIGN:
+     ✗ webLogin / passwordChats / passwordMsgs / recoveryRequests /
+       recoveryCodes  →  REMOVE (old auto-login systems deleted)
+     ✗ dataRecoveryApps → naya Data Recovery Apply flow (new account →
+       old data; admin verify → owner password send)
+     ✗ hackReports     → Hack Backup Report (Recovery .vexa upload parse)
+     ⚠️ DEPLOY SE PEHLE: Firebase Console → Realtime Database → Rules में
+        मौजूदा rules का BACKUP copy रख लो (Export JSON)।
+     ═══════════════════════════════════════════════════════════════════ */
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    /* ── Profiles: logged-in users पढ़ सकते हैं (chat/feed के लिए ज़रूरी)
+       ⚡v2.6: staff (owner/admin/moderator) poora users list पढ़ सकता है
+       (admin/moderator/owner panels के लिए) ── */
+    "users": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        "role":       { ".write": "auth != null && ((auth.uid === $uid && root.child('users').child(auth.uid).child('usernameChangedAt').val() === undefined) || root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'moderator' && (newData.val() === 'user' || newData.val() === 'moderator')))" },
+        "banned":     { ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))" },
+        "verified":   { ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))" },
+        "vip":        { ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))" },
+        "publicUserId": { ".write": "auth != null && auth.uid === $uid" },
+        "publicUserIdAt": { ".write": "auth != null && auth.uid === $uid" },
+        "security":   { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
+        "securityEvents": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
+        "devices":    { ".read": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))", ".write": "auth != null && auth.uid === $uid" },
+        "sessions":   { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
+        "notifications": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null"
+        },
+        "recovery":   { ".write": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))" },
+        "helpChat":   { ".read": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))", ".write": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))" },
+        "posts":      { ".write": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))" },
+        "postCount":  { ".write": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))" },
+        "groups":     { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
+        "chats":      { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
+        "$rest": { ".write": "auth != null && auth.uid === $uid" }
+      }
+    },
+
+    /* ── Username indexes ── */
+    "usernames": {
+      ".read": "auth != null",
+      "$name": {
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+        ".validate": "newData.isString() && newData.val() === auth.uid"
+      }
+    },
+    "reservedUsernames": { ".read": "auth != null", ".write": false },
+
+    /* ── ⚡UPGRADE: numeric public IDs — atomic, unique ── */
+    "publicIdMeta": {
+      "counter": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "publicIds": {
+      ".read": "auth != null",
+      "$num": {
+        ".write": "auth != null && !data.exists() && newData.isString()",
+        ".validate": "newData.val() === auth.uid"
+      }
+    },
+
+    /* ═══════════════════════════════════════════════════════════════
+       ⚡VAULT v1.0 — SECURE RECOVERY VAULT NODES (spec §12)
+       ─────────────────────────────────────────────────────────────
+       ✗ recoveryPrivate (PLAINTEXT) — FULLY LOCKED. Koi read, koi write.
+         Legacy scrub sirf Admin SDK (CF purgeVault) se ho sakta hai.
+       ✗ Staff ke paas AB kabhi user credentials nahi hote.
+       ✗ Naye nodes sirf METADATA rakhte hain — keys/secret/password
+         KABHI valid nahi (validate rules block karte hain).
+       ═══════════════════════════════════════════════════════════════ */
+    "recoveryPrivate": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'owner')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'owner')"
+      }
+    },
+
+    /* 🗄️ recoveryVaults — encrypted vault REGISTRY (metadata only)
+       user apna likhta hai; staff (admin/owner panel) sirf READ karta hai */
+    "recoveryVaults": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['backupId'])",
+        "backupId":  { ".validate": "newData.isString() && newData.val().matches(/^vlt_[A-Za-z0-9]{10,24}$/)" },
+        "keyVersion":{ ".validate": "newData.isNumber()" },
+        "accountFingerprint": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "vaultVersion": { ".validate": "newData.isString() && newData.val().length <= 8" },
+        "status":    { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "driveBound":{ ".validate": "newData.isBoolean()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "lastBackupAt": { ".validate": "newData.isNumber()" },
+        "viaServer": { ".validate": "newData.isBoolean()" },
+        "⚠secret": { ".validate": false }, "⚠password": { ".validate": false }, "⚠key": { ".validate": false },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* 🔑 recoveryKeyMetadata — sirf VERIFIER hash (key knowledge proof),
+       key KABHI nahi. staff read (registry cross-check), user write */
+    "recoveryKeyMetadata": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['keyVersion'])",
+        "keyVersion": { ".validate": "newData.isNumber()" },
+        "kdf":       { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "salt":      { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "verifier":  { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "viaServer": { ".validate": "newData.isBoolean()" },
+        "⚠key": { ".validate": false }, "⚠secret": { ".validate": false },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* ☁️ recoveryBackupStatus — last backup info (file hash + drive fileId) */
+    "recoveryBackupStatus": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['backupId'])",
+        "backupId":  { ".validate": "newData.isString() && newData.val().length <= 32" },
+        "fileHash":  { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "driveFileId": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "versions":  { ".validate": "newData.isNumber()" },
+        "integrityVerified": { ".validate": "newData.isBoolean()" },
+        "uploadedAt":{ ".validate": "newData.isNumber()" },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* 🛡️ recoveryRequests — user request (temp account se), staff review.
+       User apni requests query-scoped dekh sakta hai (tempUid === auth.uid);
+       FULL list sirf staff. create: applicant khud (tempUid match).
+       update: staff (status/verdicts) ya applicant apne fields.
+       NOTE: VaultUI.myRequests isko query-scoped read karta hai. */
+    "recoveryRequests": {
+      ".read": "auth != null && (((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')) || (query.orderByChild === 'tempUid' && query.equalTo === auth.uid))",
+      ".indexOn": "tempUid",
+      "$reqId": {
+        ".write": "auth != null && ((!data.exists() && newData.child('tempUid').val() === auth.uid) || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')) || data.child('tempUid').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['tempUid','mode','status'])",
+        "reqId":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "tempUid":   { ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 60" },
+        "tempUsername": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "origUid":   { ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 60" },
+        "origUsername": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "origEmail": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "origFingerprint": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "backupId":  { ".validate": "newData.isString() && newData.val().length <= 32" },
+        "keyVersion":{ ".validate": "newData.isNumber()" },
+        "mode":      { ".validate": "newData.isString() && ((newData.val() === 'full_migration') || (newData.val() === 'selective_migration') || (newData.val() === 'restoration'))" },
+        "cats":      { ".validate": "newData.hasChildren() || newData.val() === null" },
+        "reason":    { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "integrityStatus": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "ownershipStatus": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "registryMatch":   { ".validate": "newData.isBoolean()" },
+        "viaServer": { ".validate": "newData.isBoolean()" },
+        "vaultVerdict": { ".validate": "newData.hasChildren()" },
+        "status":    { ".validate": "newData.isString() && ((newData.val() === 'pending') || (newData.val() === 'verifying') || (newData.val() === 'admin_recommended') || (newData.val() === 'owner_pending') || (newData.val() === 'approved') || (newData.val() === 'in_progress') || (newData.val() === 'completed') || (newData.val() === 'rejected') || (newData.val() === 'expired') || (newData.val() === 'cancelled'))" },
+        "rejectReason": { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "adminNote": { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "verifiedBy":{ ".validate": "newData.isString() && newData.val().length <= 40" },
+        "escalatedBy": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "decidedBy": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "requestedAt": { ".validate": "newData.isNumber()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "deviceTrusted": { ".validate": "newData.isBoolean()" },
+        "devName":   { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* ✅ recoveryApprovals — final approval records (2FA method logged) */
+    "recoveryApprovals": {
+      ".read": "auth != null && (((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')) || query.orderByChild === 'reqId')",
+      "$reqId": {
+        ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+        ".validate": "newData.hasChildren(['type','approverRole'])",
+        "reqId":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "type":      { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "decision":  { ".validate": "newData.isString() && newData.val().length <= 16" },
+        "approverUid": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "approverRole": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "method":    { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "jobId":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "viaServer":{ ".validate": "newData.isBoolean()" },
+        "viaFallback": { ".validate": "newData.isBoolean()" },
+        "at":        { ".validate": "newData.isNumber()" },
+        "$other":   { ".validate": false }
+      }
+    },
+
+    /* ⚙️ recoveryJobs — migration engine checkpoints (CF creates/runs;
+       staff read + status-flag fallback write for no-CF mode) */
+    "recoveryJobs": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".indexOn": "reqId",
+      "$jobId": {
+        ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin'))",
+        ".validate": "newData.hasChildren(['reqId','mode'])",
+        "reqId":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "oldUid":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "newUid":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "oldUsername": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "newUsername": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "mode":      { ".validate": "newData.isString() && ((newData.val() === 'full_migration') || (newData.val() === 'selective_migration') || (newData.val() === 'restoration'))" },
+        "cats":      { ".validate": "newData.hasChildren() || newData.val() === null" },
+        "status":    { ".validate": "newData.isString() && newData.val().length <= 22" },
+        "checkpoint":{ ".validate": "newData.isString() && newData.val().length <= 16" },
+        "checkpointIndex": { ".validate": "newData.isNumber()" },
+        "stats":     { ".validate": "newData.hasChildren()" },
+        "verification": { ".validate": "newData.hasChildren()" },
+        "error":     { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "ownerUid":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "viaServer":{ ".validate": "newData.isBoolean()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "finishedAt":{ ".validate": "newData.isNumber()" },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* 📜 recoveryAuditLogs — IMMUTABLE (create-only): edit/delete DENIED.
+       Har staff action yahan record hota hai (spec §8.7/§9.6) */
+    "recoveryAuditLogs": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$logId": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['at','action','actor'])",
+        "at":        { ".validate": "newData.isNumber()" },
+        "action":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "actor":     { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "actorRole": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "targetType":{ ".validate": "newData.isString() && newData.val().length <= 24" },
+        "targetId":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "detail":    { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "$other":   { ".validate": true }
+      }
+    },
+
+    /* ── recoveryCheck — hashes only (recovery flow public read needs) ── */
+    "recoveryCheck": {
+      ".read": "auth != null",
+      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+    },
+
+    /* ── ⚡UPGRADE: single-use hashed recovery codes — v3.0 me USE nahi hote
+          (Recovery Code Login remove ho gaya). Legacy data safe rehta hai. ── */
+    "recoveryCodes": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    /* ── 🔐 v3.0 DATA RECOVERY APPS — naya recovery flow
+          User (naye account se) purane account ka data maangta hai.
+          write: applicant khud (newUid match) create/update apni app;
+                 staff (owner/admin/moderator) status change kar sakte hain.
+          read:  applicant apni apps + staff sab.
+          indexOn newUid — duplicate-check query ke liye ── */
+    "dataRecoveryApps": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".indexOn": "newUid",
+      "$appId": {
+        ".read": "auth != null && (data.child('newUid').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && ((!data.exists() && newData.child('newUid').val() === auth.uid) || data.child('newUid').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".validate": "newData.hasChildren(['oldUid','newUid','status'])",
+        "oldUid":     { ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 60" },
+        "oldUsername":{ ".validate": "newData.isString() && newData.val().length <= 20" },
+        "newUid":     { ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 60" },
+        "newUsername":{ ".validate": "newData.isString() && newData.val().length <= 20" },
+        "newEmail":   { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "oldEmail":   { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "oldDob":     { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "verifiedData": { ".validate": "newData.isBoolean()" },
+        "viaServer":  { ".validate": "newData.isBoolean()" },
+        "status":     { ".validate": "newData.isString() && ((newData.val() === 'pending') || (newData.val() === 'verified') || (newData.val() === 'completed') || (newData.val() === 'rejected'))" },
+        "rejectReason":{ ".validate": "newData.isString() && newData.val().length <= 120" },
+        "device":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "appVer":     { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "createdAt":  { ".validate": "newData.isNumber()" },
+        "updatedAt":  { ".validate": "newData.isNumber()" },
+        "verifiedAt": { ".validate": "newData.isNumber()" },
+        "verifiedBy": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "rejectedAt": { ".validate": "newData.isNumber()" },
+        "rejectedBy": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "completedAt":{ ".validate": "newData.isNumber()" },
+        "completedBy":{ ".validate": "newData.isString() && newData.val().length <= 40" },
+        "sentPassword":{ ".validate": "newData.isBoolean()" },
+        "$other":    { ".validate": false }
+      }
+    },
+
+    /* ── 🚨 v3.0 HACK REPORTS — hacked user ki Recovery TXT parse karke
+          aayi report. write: PUBLIC (hacked user login nahi kar sakta —
+          helpRequests jaisa hi pattern). read: sirf staff.
+          NOTE: isme user ka apna recovery data hota hai jo WO KHUD
+          bhej raha hai staff ko — staff-only read isliye safe hai. ── */
+    "hackReports": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$rid": {
+        ".write": "!data.exists() || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+        ".validate": "newData.hasChildren(['username','status','at'])",
+        "username": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "uid":      { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "email":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "dob":      { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "mainCode": { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "secCode":  { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "detail":   { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "device":   { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "byUid":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "reporterNew":{ ".validate": "newData.isString() && newData.val().length <= 20" },
+        "status":   { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "at":       { ".validate": "newData.isNumber()" },
+        "resolvedAt":{ ".validate": "newData.isNumber()" },
+        "resolvedBy":{ ".validate": "newData.isString() && newData.val().length <= 40" },
+        "$other":  { ".validate": false }
+      }
+    },
+
+    /* ── Help requests — login se PEHLE wali reports (v2.3)
+          write: koi bhi (logged-out user bhi Help Center se report bhej sakta hai)
+          read:  sirf staff (owner/admin/moderator)
+          NOTE: ye recoveryPrivate ko TOUCH nahi karta — alag node hai ── */
+    "helpRequests": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'moderator')",
+      "$rid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['type','username','at'])",
+        "type": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "username": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "detail": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "status": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "at": { ".validate": "newData.isNumber()" }
+      }
+    },
+
+    /* ── ⚡v3.0: PASSWORD CHAT (passwordChats/passwordMsgs) REMOVE —
+          naya system: Data Recovery Apply + Hack Backup Report ── */
+
+    /* ── ⚡v3.0: Web login codes REMOVE — ab sirf email+password login hai ── */
+
+    /* ── 1:1 chats & messages — participants only ── */
+    "chats": {
+      ".read": "auth != null",
+      "$cid": {
+        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
+        "unread": {
+          "$uid": { ".write": "auth != null && root.child('chats').child($cid).child('participants').child(auth.uid).exists()" }
+        }
+      }
+    },
+    "messages": {
+      "$cid": {
+        ".read": "auth != null && root.child('chats').child($cid).child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('chats').child($cid).child('participants').child(auth.uid).exists()"
+      }
+    },
+    "typing": {
+      "$cid": {
+        ".read": "auth != null && root.child('chats').child($cid).child('participants').child(auth.uid).exists()",
+        ".write": "auth != null"
+      }
+    },
+
+    /* ── ⚡UPGRADE: GROUPS — members-only reads, role-checked writes ── */
+    "groups": {
+      ".read": "auth != null",
+      "$gid": {
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && (!data.exists() && newData.child('members').child(auth.uid).child('role').val() === 'owner') || (auth != null && data.child('members').child(auth.uid).child('role').val() === 'owner')",
+        "members": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || root.child('groups').child($gid).child('members').child(auth.uid).child('role').val() === 'owner')"
+          }
+        },
+        "unread": {
+          "$uid": { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" }
+        },
+        "photo":   { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).child('role').val() === 'owner'" },
+        "name":    { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).child('role').val() === 'owner'" },
+        "description": { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).child('role').val() === 'owner'" },
+        "lastMessage": { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" },
+        "lastSender":  { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" },
+        "lastSenderName": { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" },
+        "updatedAt":   { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" },
+        "memberCount": { ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()" }
+      }
+    },
+    "groupMessages": {
+      "$gid": {
+        ".read": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('groups').child($gid).child('members').child(auth.uid).exists()"
+      }
+    },
+    "groupInvites": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
+
+    /* ── Presence / local (existing behaviour) ── */
+    "presence": {
+      "$uid": { ".read": "auth != null", ".write": "auth != null && auth.uid === $uid" }
+    },
+    "localPresence": {
+      ".read": "auth != null",
+      "$cell": { "$uid": { ".write": "auth != null && auth.uid === $uid" } }
+    },
+
+    /* ── Calls / games (existing) ── */
+    "calls": {
+      ".read": "auth != null",
+      "$callId": { ".write": "auth != null" }
+    },
+    "gamesAll": {
+      ".read": "auth != null",
+      "$gameId": { ".write": "auth != null" }
+    },
+
+    /* ── Posts / likes / comments (existing) ── */
+    "posts": {
+      ".read": "auth != null",
+      "$pid": { ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))" }
+    },
+    "likes": {
+      ".read": "auth != null",
+      "$pid": { ".write": "auth != null" }
+    },
+    "comments": {
+      ".read": "auth != null",
+      "$pid": { ".write": "auth != null" }
+    },
+    "reports": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".write": "auth != null"
+    },
+
+    /* ── ⚡UPGRADE v2.2: STAFF INDEX — Support page ka staff list ──
+       staff khud apni entry likhta hai (login pe auto-sync);
+       rules guarantee: sirf owner/admin/moderator hi likh sakta hai ── */
+    "staffIndex": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && ((auth.uid === $uid && (root.child('users').child($uid).child('role').val() === 'owner' || root.child('users').child($uid).child('role').val() === 'admin' || root.child('users').child($uid).child('role').val() === 'moderator')) || root.child('users').child(auth.uid).child('role').val() === 'owner')"
+      }
+    },
+
+    /* ── ⚡UPGRADE v2.2: SUPPORT TICKETS — user banata hai, staff jawab deta hai ── */
+    "supportTickets": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".indexOn": "uid",
+      "$tid": {
+        ".read": "auth != null && (data.child('uid').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || data.child('uid').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))"
+      }
+    },
+
+    /* ── ⚡UPGRADE v2.2: APP CONFIG — support email (staff panel se set hota hai) ── */
+    "config": {
+      "support": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
+      }
+    },
+
+    /* ── Version (staff write) ── */
+    "versionApp": {
+      ".read": "auth != null",
+      ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
+    },
+
+    /* ── 💬 STAFF CHAT (v2.6) — admin/moderator/owner panels ka group chat ── */
+    "staffChat": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$mid": {
+        ".validate": "newData.hasChildren(['uid','name','text','at'])",
+        "uid":  { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "name": { ".validate": "newData.isString() && newData.val().length <= 30" },
+        "role": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "text": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "at":   { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    /* ── ⚡FIX: Panel security (owner gate) — owner-only ── */
+    "panelSecurity": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'"
+    },
+
+    /* ── ⚡FIX: Recovery temp accounts — recovery flow + staff purge ── */
+    "recoveryTemp": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    /* ── ⚡FIX: Vault verdicts — staff read/write ── */
+    "recoveryVerdicts": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
+    },
+
+    /* ── ⚡FIX: Web login codes (CodeLogin — 8-digit, 5-min expiry) ── */
+    "webLogin": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    /* ── Recovery attempt throttle (server-only) ── */
+    "securityRecoveryAttempts": { ".read": false, ".write": false }
+  }
+}

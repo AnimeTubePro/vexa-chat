@@ -1,0 +1,11 @@
+{
+  "name": "vexa-backend",
+  "description": "VEXA Chat Cloud Functions — Secure Recovery Vault v1.0",
+  "main": "vexaBackend.js",
+  "engines": { "node": "18" },
+  "dependencies": {
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^4.8.1"
+  },
+  "private": true
+}

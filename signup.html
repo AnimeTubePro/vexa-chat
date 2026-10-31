@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="VEXA — Create your private account.">
+<title>Create Account — AnimeTubePro Studio × VEXA</title>
+<link rel="icon" href="logo%202.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="style.css">
+<script defer src="auth-pages.js"></script>
+</head>
+<body class="ap-body" data-page="signup">
+
+<noscript><div style="position:fixed;inset:0;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;text-align:center;padding:20px">⚠️ VEXA chalane ke liye JavaScript enable karo.</div></noscript>
+
+<div class="tcont" id="apToasts" aria-live="polite"></div>
+
+<div class="ap-wrap">
+
+  <!-- ── Brand side (desktop only) ── -->
+  <aside class="ap-side" aria-hidden="true">
+    <div>
+      <div class="vlogo">VEXA</div>
+      <div class="ap-side-tag">AnimeTubePro Studio × VEXA</div>
+      <div class="ap-side-head">Naya account,<br>naya private space 🚀</div>
+      <div class="ap-feat"><i>📸</i><span><b>Posts &amp; Feed</b> — apni duniya banao</span></div>
+      <div class="ap-feat"><i>👥</i><span><b>Groups &amp; Chats</b> — doston se connect</span></div>
+      <div class="ap-feat"><i>🎮</i><span><b>Games &amp; Calls</b> — masti + baatein</span></div>
+      <div class="ap-feat"><i>🔐</i><span><b>Recovery Codes</b> — account hamesha safe</span></div>
+    </div>
+  </aside>
+
+  <!-- ── Form side ── -->
+  <main class="ap-main">
+
+    <div class="ap-wait" id="apWait">
+      <div class="vlogo">VEXA</div>
+      <div class="spinner lg" style="margin:18px auto"></div>
+      <div class="sm mut" id="apBootMsg">Session check ho raha hai…</div>
+      <div id="apBootBar" style="margin-top:10px"><div class="spinner"></div></div>
+    </div>
+
+    <div class="hidden" id="apForm">
+
+      <!-- ═══ SIGNUP CARD ═══ -->
+      <div class="acard" id="suCard">
+        <div class="vlogo">VEXA</div>
+        <div class="atp-mini"><svg class="atptri" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#0a0a0f"/></svg> AnimeTubePro Studio</div>
+        <div class="atag">Create your private identity</div>
+        <div class="atit">Create Account</div>
+        <div class="ebox" id="suErr" role="alert" aria-live="polite"></div>
+        <div class="pup"><div class="ava lg" id="suAva" onclick="document.getElementById('suPhoto').click()" role="button" tabindex="0" aria-label="Choose profile photo">📷</div><input type="file" id="suPhoto" accept="image/*" class="hidden" onchange="AP.previewPhoto(this)"><span class="sm mut">Profile photo (optional)</span></div>
+        <div class="fld"><label class="flbl" for="suName">Display Name</label><input class="inp" id="suName" maxlength="30" placeholder="Your name" autocomplete="name" enterkeyhint="next"></div>
+        <div class="fld"><label class="flbl" for="suUname">Username</label><div class="iwrap"><span class="iico">@</span><input class="inp" id="suUname" maxlength="20" placeholder="username" autocomplete="off" autocapitalize="none" spellcheck="false" oninput="AP.checkUname()" enterkeyhint="next"></div>
+          <div class="ferr" id="suUnErr" role="alert"></div><div class="fok" id="suUnOk">✓ Username available</div><div class="fhint">4–20 chars: letters, numbers, underscore</div></div>
+        <div class="fld"><label class="flbl" for="suEmail">Email</label><input type="email" class="inp" id="suEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" enterkeyhint="next"></div>
+        <div class="fld"><label class="flbl" for="suDd">Date of Birth</label><div class="dobrow"><select class="selc" id="suDd" aria-label="Day"><option value="">DD</option></select><select class="selc" id="suMm" aria-label="Month"><option value="">MM</option></select><select class="selc" id="suYy" aria-label="Year"><option value="">YYYY</option></select></div><div class="fhint">DOB recovery ke kaam aati hai — sahi daalo</div></div>
+        <div class="fld"><label class="flbl" for="suPw">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="suPw" placeholder="Min 8 characters" autocomplete="new-password" enterkeyhint="next" style="padding-right:48px"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="AP.pwToggle('suPw',this)" aria-label="Show password">👁️</button></div><div class="fhint">8+ chars with letters &amp; numbers</div></div>
+        <div class="fld"><label class="flbl" for="suPw2">Confirm Password</label><input type="password" class="inp" id="suPw2" placeholder="••••••••" autocomplete="new-password" enterkeyhint="done"></div>
+        <label class="trow"><input type="checkbox" id="suTerms"><span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span></label>
+        <div class="snote">👮 <span><b>Account Creation Policy:</b> 13+ saal ka ho · sahi info do · sirf 1 account rakho · rules follow karo — na mane par <b>VEXA Police</b> action le sakti hai. <a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></span></div>
+        <button type="button" class="btn bp bbk blg" id="suBtn" onclick="AP.signup()">CREATE ACCOUNT</button>
+        <div class="aalt">Already have an account? <a href="login.html">Sign in</a></div>
+        <div class="ap-foot"><a href="index.html?auth=help">🆘 Help Center</a> · <a href="index.html?auth=recovery">🔐 Account Recovery</a></div>
+      </div>
+
+      <!-- ═══ REMEMBER CODES CARD (signup success) ═══ -->
+      <div class="acard hidden" id="scCard">
+        <div class="vlogo">VEXA</div>
+        <div class="atit tc">🎉 Account Created!</div>
+        <div class="asub tc">Ye codes sambhal ke rakho — recovery ke liye chahiye</div>
+        <div class="stit">Main Remember Code</div><div class="cdisp" id="scMain"></div>
+        <div class="cacts"><button type="button" class="btn bg bsm" onclick="AP.copy(document.getElementById('scMain').textContent,'Main code copied')">📋 Copy</button></div>
+        <div class="stit mt16">Secondary Remember Code</div><div class="cdisp" id="scSec"></div>
+        <div class="cacts"><button type="button" class="btn bg bsm" onclick="AP.copy(document.getElementById('scSec').textContent,'Secondary code copied')">📋 Copy</button></div>
+        <div class="snote">⚠️ <span><b>Recovery = AUTO-LOGIN</b> + password/email wapas! Yaad rakho: <b>Main Code + UID + DOB</b>. In codes ko kisi ke saath share mat karo.</span></div>
+        <div class="snote">💾 <span>Signup ke baad app me <b>Settings → Vault Backup (.vexa)</b> se encrypted backup bana sakte ho.</span></div>
+        <button type="button" class="btn bp bbk blg mt16" onclick="AP.finishSignup()">Continue to Login →</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="lgTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00d9ff"/><stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () { AP.boot('signup'); });
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  var el = e.target;
+  if (!el || !el.id) return;
+  if (el.id === 'suPw2' || el.id === 'suPw') { e.preventDefault(); AP.signup(); }
+  else if (el.id === 'suEmail') { e.preventDefault(); AP.signup(); }
+});
+</script>
+
+</body>
+</html>
