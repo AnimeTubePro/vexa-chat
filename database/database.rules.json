@@ -454,6 +454,21 @@
       ".read": "auth != null",
       "$pid": { ".write": "auth != null" }
     },
+    /* 🎬REELS — posts jaisa pattern: body owner/staff write, likes/counts
+       sabke liye (granular child rule), comments alag node */
+    "reels": {
+      ".read": "auth != null",
+      "$rid": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        "likes":       { ".write": "auth != null" },
+        "likeCount":   { ".write": "auth != null" },
+        "commentCount":{ ".write": "auth != null" }
+      }
+    },
+    "reelComments": {
+      ".read": "auth != null",
+      "$rid": { ".write": "auth != null" }
+    },
     "reports": {
       ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
       ".write": "auth != null"

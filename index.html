@@ -28,8 +28,24 @@
 <script defer src="services/vexa-vault.js"></script>
 <script defer src="services/vexa-drive.js"></script>
 <script defer src="services/vault-ui.js"></script>
+<script defer src="services/vexa-temp.js"></script>
 </head>
 <body>
+<script>
+/* ⚡EARLY-CLICK SHIM: defer scripts load hone se pehle user link dabaye to
+   bhi graceful response mile (ReferenceError nahi). Load hone ke baad real
+   module apne aap take-over kar leta hai.                                   */
+function VXpick(){
+  if (window.VexaVault && typeof VexaVault.pick==='function') return VexaVault.pick();
+  try{ sessionStorage.setItem('vexaPickQueue','1') }catch(e){}
+  alert('⏳ VEXA abhi load ho raha hai — 2-3 second baad dobara try karo.');
+}
+function VXtemp(){
+  if (window.TempRec && typeof TempRec.start==='function') return TempRec.start();
+  try{ sessionStorage.setItem('vexaTempQueue','1') }catch(e){}
+  alert('⏳ VEXA abhi load ho raha hai — 2-3 second baad dobara try karo.');
+}
+</script>
 
 <noscript><div style="position:fixed;inset:0;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;text-align:center;padding:20px">⚠️ VEXA chalane ke liye JavaScript enable karo.</div></noscript>
 
@@ -92,7 +108,8 @@
     <div class="fld"><label class="flbl" for="lgPw">Password</label><div class="iwrap"><span class="iico">🔒</span><input type="password" class="inp" id="lgPw" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="iico" style="left:auto;right:12px;background:none;pointer-events:auto" onclick="V.pwToggle('lgPw',this)" aria-label="Show password">👁️</button></div></div>
     <div style="text-align:right;margin:-5px 0 14px"><a class="sm" role="button" tabindex="0" onclick="V.showAuth('sRec')">🔐 Recovery</a> · <a class="sm" role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a></div>
     <button type="button" class="btn bp bbk blg" id="lgBtn" onclick="Auth.login()">Sign In</button>
-    <div class="aalt">.vexa backup hai? <a role="button" tabindex="0" onclick="VexaVault.pick()">🔐 Restore .vexa Backup</a></div>
+    <div class="aalt">.vexa backup hai? <a role="button" tabindex="0" onclick="VXpick()">🔐 Restore .vexa Backup</a></div>
+    <div class="aalt">Account kho gaya? <a role="button" tabindex="0" onclick="VXtemp()">🧡 Temporary Account Access</a></div>
     <div class="aalt">Have a login code? <a role="button" tabindex="0" onclick="V.showAuth('sCodeLogin')">Login with Code</a></div>
     <div class="aalt">New to VEXA? <a role="button" tabindex="0" onclick="V.showAuth('sSignup')">Create account</a></div>
   </div>
@@ -172,7 +189,7 @@
         <div class="fld"><label class="flbl rcv-lbl" for="rUname">Username</label><input class="inp rcv-inp" id="rUname" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter')Rec.step1()"></div>
         <div class="fld"><label class="flbl rcv-lbl" for="rDd1">Date of Birth</label><div class="dobrow"><select class="selc" id="rDd1" aria-label="Day"><option value="">DD</option></select><select class="selc" id="rMm1" aria-label="Month"><option value="">MM</option></select><select class="selc" id="rYy1" aria-label="Year"><option value="">YYYY</option></select></div></div>
         <button type="button" class="rcv-btn b" id="rb1" onclick="Rec.step1()">🔵 IDENTITY VERIFY KARO →</button>
-        <div class="rcv-phint" style="margin-top:10px;text-align:center">File se fast fill: <a class="rcv-lnk" role="button" tabindex="0" onclick="VexaVault.pick()">⬆️ .vexa Vault Backup upload karo</a> — form auto-fill hoga</div>
+        <div class="rcv-phint" style="margin-top:10px;text-align:center">File se fast fill: <a class="rcv-lnk" role="button" tabindex="0" onclick="VXpick()">⬆️ .vexa Vault Backup upload karo</a> — form auto-fill hoga</div>
       </div>
     </div>
     <div id="recS2" class="hidden">
@@ -194,7 +211,7 @@
         <button type="button" class="rcv-btn g" id="rb3" onclick="Rec.step3()">🟢 ENTRY REQUEST BHEJO →</button>
       </div>
     </div>
-    <div class="rcv-foot">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a> · <a role="button" tabindex="0" onclick="VexaVault.pick()">🔐 .vexa Restore</a></div>
+    <div class="rcv-foot">Remembered? <a role="button" tabindex="0" onclick="V.showAuth('sLogin')">Sign in</a> · <a role="button" tabindex="0" onclick="V.showAuth('sHelp')">🆘 Help</a> · <a role="button" tabindex="0" onclick="VXpick()">🔐 .vexa Restore</a> · <a role="button" tabindex="0" onclick="VXtemp()">🧡 Temp Access</a></div>
   </div>
   <div class="acard hidden" id="sHelp">
     <div class="vlogo">VEXA</div>
@@ -279,9 +296,14 @@
         <div class="pgc">
           <!-- ═══ Posts Feed Ad (spec §2B) — reserved container, no layout shift ═══ -->
           <div class="vexa-ad-container vexa-feed-ad" id="vexaFeedAd"><span class="vexa-ad-label">Advertisement</span><div class="vexa-ad-slot"></div></div>
+          <div class="seg ctabs" id="postTabs" style="margin-bottom:10px">
+            <div class="sgi sel" data-t="posts" role="button" tabindex="0" onclick="Posts.tabSet('posts')">📸 Posts</div>
+            <div class="sgi" data-t="reels" role="button" tabindex="0" onclick="Posts.tabSet('reels')">🎬 Reels</div>
+          </div>
           <div id="feedW"></div>
+          <div id="reelW" class="hidden"></div>
         </div>
-        <button type="button" class="pfab" onclick="Posts.compose()" aria-label="Create post">✏️</button>
+        <button type="button" class="pfab" onclick="Posts.fabTap()" aria-label="Create post or reel">✏️</button>
       </section>
       <section class="scr" id="sc-search"><div class="pgc">
         <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Users or #hashtags..." oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"></div>

@@ -1026,6 +1026,14 @@ const V={
    for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);
    return new Blob([a],{type:mime});
  },
+ /* 🎬REEL: video file upload (Supabase Storage — raw file, image compress nahi) */
+ uploadVideo:async function(file,path,ctype){
+   var r=await sb.storage.from(CFG.supabase.bucket).upload(path,file,{contentType:ctype||file.type||'video/mp4',upsert:true});
+   if(r.error)throw r.error;
+   var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl(path).data.publicUrl;
+   if(!pub)throw new Error('public url fail');
+   return pub;
+ },
  uploadPhoto:async function(dataUrl,path){
    try{
      var r=await sb.storage.from(CFG.supabase.bucket).upload(path,V.d2b(dataUrl),{contentType:'image/jpeg',upsert:true});
@@ -2621,7 +2629,104 @@ const Posts={
    db.ref('users/'+V.uid+'/draft').set({caption:cap,privacy:(sel&&sel.dataset.v)||'everyone',updatedAt:Date.now()});
    V.mClose();V.toast('success','Draft saved');
  },
- tabGrid:function(uid){this.grid(uid)},
+ /* ═══ 🎬 REELS — posts ke andar reel support (user spec: Supabase 2.8MB limit,
+        reels ka apna alag database node `reels/` + storage folder `reels/`) ═══ */
+ RMB:Math.round(2.8*1024*1024),
+ tabSet:function(t){
+   this._ptab=t||'posts';
+   document.querySelectorAll('#postTabs .sgi').forEach(function(x){x.classList.toggle('sel',x.dataset.t===(t||'posts'))});
+   var f=V.g('feedW'),r=V.g('reelW');
+   if(t==='reels'){ if(f)f.classList.add('hidden'); if(r){r.classList.remove('hidden');Reels.load()} }
+   else{ if(f)f.classList.remove('hidden'); if(r)r.classList.add('hidden'); this.load() }
+ },
+ fabTap:function(){ if(this._ptab==='reels')this.reelCompose(); else this.compose() },
+ reelCompose:function(){
+   this._reel=null;
+   V.mOpen('🎬 Reel Banao',
+    '<div class="pgadd" id="relP" onclick="Posts.reelPick()" style="height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px"><span style="font-size:34px">🎬</span><span style="font-size:12.5px;font-weight:700">Video choose karo</span><span class="mut" style="font-size:11px">MP4/WebM · max 2.8MB (Supabase limit) · ≤90 sec</span></div>'
+    +'<div class="uprog hidden" id="relProg"><div class="ubar" id="relBar"></div></div>'
+    +'<div class="fld"><textarea class="txta" id="relCap" placeholder="Reel caption... use #hashtags" maxlength="300"></textarea></div>'
+    +'<div class="fld"><label class="flbl">Privacy</label><div class="seg" id="relPr"><div class="sgi sel" data-v="everyone">🌍 Everyone</div><div class="sgi" data-v="followers">👥 Followers</div><div class="sgi" data-v="onlyme">🔒 Only Me</div></div></div>',
+    '<button class="btn bg" onclick="V.mClose()">Cancel</button><button class="btn bp" id="relGo" onclick="Posts.reelPublish()">🎬 Reel post karo</button>');
+   document.querySelectorAll('#relPr .sgi').forEach(function(el){
+     el.onclick=function(){document.querySelectorAll('#relPr .sgi').forEach(function(x){x.classList.remove('sel')});el.classList.add('sel')};
+   });
+ },
+ reelPick:function(){
+   var self=this;
+   var i=document.createElement('input');
+   i.type='file';i.accept='video/mp4,video/webm,video/*';
+   i.onchange=async function(){
+     var f=i.files&&i.files[0];
+     if(!f)return;
+     if(f.size>self.RMB){V.toast('error','Video 2.8MB se bada hai (Supabase limit) — chhota clip lo');return}
+     try{
+       var dur=await new Promise(function(res,rej){
+         var v=document.createElement('video');v.preload='metadata';
+         var u=URL.createObjectURL(f);
+         v.onloadedmetadata=function(){URL.revokeObjectURL(u);res(v.duration||0)};
+         v.onerror=function(){URL.revokeObjectURL(u);rej(new Error('Video read fail'))};
+         v.src=u;
+       });
+       if(dur>90){V.toast('error','Reel max 90 sec hai — ye '+Math.round(dur)+'s ka hai');return}
+       self._reel={file:f,dur:Math.round(dur)};
+       var p=V.g('relP');
+       if(p)p.innerHTML='<span style="font-size:34px">✅</span><span style="font-size:12.5px;font-weight:700">'+V.esc(f.name||'video')+'</span><span class="mut" style="font-size:11px">'+(f.size/1048576).toFixed(2)+'MB · '+Math.round(dur)+'s</span>';
+     }catch(e){V.toast('error',e.message||'Video invalid')}
+   };
+   i.click();
+ },
+ reelThumb:async function(file){
+   /* first-frame → JPEG dataURL (thumb grid ke liye) */
+   var u=URL.createObjectURL(file);
+   try{
+     var v=document.createElement('video');
+     v.muted=true;v.playsInline=true;v.preload='auto';v.src=u;
+     await new Promise(function(res,rej){v.onloadeddata=function(){try{v.currentTime=Math.min(0.1,(v.duration||1)/3)}catch(e){}res()} ;v.onerror=function(){rej(new Error('thumb fail'))}});
+     await new Promise(function(res){setTimeout(res,350)});
+     var c=document.createElement('canvas');
+     var w=Math.min(540,v.videoWidth||540),h=Math.round(w*(v.videoHeight||960)/(v.videoWidth||540));
+     c.width=w;c.height=h;
+     c.getContext('2d').drawImage(v,0,0,w,h);
+     return c.toDataURL('image/jpeg',0.72);
+   }finally{ try{URL.revokeObjectURL(u)}catch(e){} }
+ },
+ reelPublish:async function(){
+   if(!this._reel)return V.toast('warning','Pehle video choose karo (max 2.8MB)');
+   var cap=V.g('relCap').value.trim();
+   var sel=document.querySelector('#relPr .sgi.sel');
+   var pr=(sel&&sel.dataset.v)||'everyone';
+   var b=V.g('relGo');
+   b.disabled=true;b.textContent='Uploading…';
+   V.g('relProg').classList.remove('hidden');
+   try{
+     var rid=db.ref('reels').push().key;
+     V.g('relBar').style.width='20%';
+     var thumb='';
+     try{ thumb=await this.reelThumb(this._reel.file) }catch(e){ console.warn('thumb skip',e) }
+     V.g('relBar').style.width='40%';
+     var vurl=await V.uploadVideo(this._reel.file,'reels/'+V.uid+'/'+rid+'.mp4');
+     V.g('relBar').style.width='85%';
+     var turl='';
+     if(thumb){
+       try{ turl=await V.uploadPhoto(thumb,'reels/'+V.uid+'/'+rid+'_thumb.jpg') }catch(e){ console.warn('thumb up fail',e) }
+     }
+     V.g('relBar').style.width='100%';
+     var rd={userId:V.uid,caption:cap,title:cap.slice(0,60),videoUrl:vurl,thumbUrl:turl,
+       size:this._reel.file.size,duration:this._reel.dur||0,privacy:pr,
+       hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),
+       createdAt:firebase.database.ServerValue.TIMESTAMP,likeCount:0,commentCount:0};
+     await db.ref('reels/'+rid).set(rd);
+     try{ await db.ref('users/'+V.uid+'/reels/'+rid).set({caption:cap,thumbUrl:turl,videoUrl:vurl,privacy:pr,createdAt:Date.now()}) }catch(e){}
+     V.mClose();V.toast('success','🎬 Reel published!');
+     this._reel=null;
+     this.tabSet('reels');
+   }catch(e){
+     V.toast('error','Reel fail: '+(e.message||'error'),6000);
+     if(b){b.disabled=false;b.textContent='🎬 Reel post karo'}
+   }
+  },
+  tabGrid:function(uid){this.grid(uid)},
  grid:async function(uid){
    var g=V.g('pGrid');if(!g)return;
    g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
@@ -2649,12 +2754,145 @@ const Posts={
  }
 };
 
+/* ═══ 🎬 REELS FEED — alag database node (`reels/`) + alag storage folder,
+   jaise user ne kaha: "reel ke liye alag group/guild wala data base" ═══ */
+const Reels={
+ _ids:[],
+ load:async function(){
+   var w=V.g('reelW');if(!w)return;
+   w.innerHTML='<div class="skel" style="height:110px;margin-bottom:10px"></div><div class="skel" style="height:110px;margin-bottom:10px"></div><div class="skel" style="height:110px"></div>';
+   try{
+     var s=await db.ref('reels').limitToLast(60).get();
+     if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">🎬</div><div class="et">No reels yet</div><div class="ex">✏️ tap karke pehli reel banao!</div></div>';return}
+     var arr=[];
+     s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
+     arr.sort(function(a,b){return (b.val.createdAt||0)-(a.val.createdAt||0)});
+     var vis=await Promise.all(arr.map(function(a){return Privacy.canViewPost(a.val)}));
+     var shown=arr.filter(function(a,i){return vis[i]});
+     this._ids=shown.map(function(a){return a.id});
+     var cells='';
+     for(var i=0;i<shown.length;i++){
+       var rid=shown[i].id,p=shown[i].val;
+       var th=p.thumbUrl?'<img src="'+V.esc(p.thumbUrl)+'" loading="lazy">':'<div class="rgph">🎬</div>';
+       cells+='<div class="rgv" onclick="Reels.open(\''+rid+'\')">'+th
+        +'<span class="r play">▶</span>'
+        +'<span class="rmeta">❤️ '+(p.likeCount||0)+' · 💬 '+(p.commentCount||0)+'</span>'
+        +(p.duration?'<span class="rdur">'+p.duration+'s</span>':'')
+        +'</div>';
+     }
+     w.innerHTML=cells?'<div class="rgrid">'+cells+'</div>':'<div class="empo"><div class="ei">🔒</div><div class="et">No reels to show</div></div>';
+   }catch(e){
+     w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+   }
+ },
+ open:async function(rid){
+   var s=await db.ref('reels/'+rid).get().catch(function(){return null});
+   if(!s||!s.exists())return V.toast('error','Reel nahi mila');
+   var p=s.val();
+   var au=await db.ref('users/'+p.userId).get().catch(function(){return null});
+   var a=(au&&au.val())||{displayName:'User',username:'?'};
+   var liked=false;
+   try{liked=(await db.ref('reels/'+rid+'/likes/'+V.uid).get()).exists()}catch(e){}
+   var mine=p.userId===V.uid;
+   var h='<video src="'+V.esc(p.videoUrl||'')+'" '+(p.thumbUrl?'poster="'+V.esc(p.thumbUrl)+'" ':'')
+     +'controls autoplay loop playsinline style="width:100%;max-height:56vh;background:#000;border-radius:14px"></video>'
+    +'<div class="phd" style="padding:10px 2px 0">'+V.ava(a,'md')+'<div class="pinfo"><div class="pnm" onclick="V.openProfile(\''+p.userId+'\')">'+V.nameB(a)+'</div><div class="ptm">@'+V.esc(a.username||'')+' · '+V.timeAgo(p.createdAt)+(p.duration?' · '+p.duration+'s':'')+'</div></div></div>'
+    +(p.caption?'<div class="pcap" style="padding:6px 2px 0">'+V.htg(V.esc(p.caption))+'</div>':'')
+    +'<div class="pacts" style="padding:10px 2px">'
+    +'<span class="pab'+(liked?' lk':'')+'" onclick="Reels.like(\''+rid+'\',this)"><span class="pi">'+(liked?'❤️':'🤍')+'</span><span class="lc" id="rlc">'+(p.likeCount||0)+'</span></span>'
+    +'<span class="pab" onclick="Reels.comments(\''+rid+'\')"><span class="pi">💬</span><span class="cc">'+(p.commentCount||0)+'</span></span>'
+    +'<span class="pab" onclick="Reels.share(\''+rid+'\')"><span class="pi">↗️</span></span>'
+    +(mine?'<span class="pab" onclick="Reels.del(\''+rid+'\')"><span class="pi">🗑️</span></span>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:8px;padding:0 2px 4px">'
+    +'<button class="btn bg bsm" style="flex:1" onclick="Reels.nav(\''+rid+'\',-1)">⬆️ Prev</button>'
+    +'<button class="btn bg bsm" style="flex:1" onclick="Reels.nav(\''+rid+'\',1)">⬇️ Next</button>'
+    +'</div>';
+   V.mOpen('🎬 Reel', h);
+ },
+ nav:function(rid,dir){
+   var i=this._ids.indexOf(rid);
+   if(i<0)return;
+   var n=i+dir;
+   if(n<0)n=this._ids.length-1;
+   if(n>=this._ids.length)n=0;
+   this.open(this._ids[n]);
+ },
+ like:async function(rid,el){
+   var r=db.ref('reels/'+rid+'/likes/'+V.uid);
+   var ex=(await r.get()).exists();
+   if(ex)await r.remove();else await r.set(true);
+   db.ref('reels/'+rid+'/likeCount').transaction(function(n){return Math.max(0,(n||0)+(ex?-1:1))});
+   if(el){
+     el.classList.toggle('lk',!ex);
+     var ic=el.querySelector('.pi'),lc=el.querySelector('.lc');
+     if(ic)ic.textContent=ex?'🤍':'❤️';
+     if(lc)lc.textContent=Math.max(0,(parseInt(lc.textContent)||0)+(ex?-1:1));
+   }
+ },
+ comments:async function(rid){
+   V.mOpen('💬 Reel Comments','<div id="rcL" style="max-height:44vh;overflow-y:auto"><div class="spn" style="margin:18px auto"></div></div>'
+    +'<div class="fld"><textarea class="txta" id="rcIn" placeholder="Comment likho..." maxlength="300"></textarea></div>'
+    +'<button class="btn bp bbk" onclick="Reels.cSend(\''+rid+'\')">Send</button>');
+   this._cLoad(rid);
+ },
+ _cLoad:async function(rid){
+   var w=V.g('rcL');if(!w)return;
+   try{
+     var s=await db.ref('reelComments/'+rid).limitToLast(80).get();
+     if(!s.exists()){w.innerHTML='<div class="empo" style="padding:18px"><div class="ei">💬</div><div class="et">Pehla comment tum karo!</div></div>';return}
+     var h='';
+     s.forEach(function(c){
+       var v=c.val()||{};
+       h+='<div class="card" style="margin-bottom:8px"><div class="cmeta"><b>'+V.esc(v.name||'User')+'</b> · '+V.timeAgo(v.createdAt)+'</div><div style="font-size:13.5px;margin-top:4px">'+V.esc(v.text||'')+'</div>'+(v.userId===V.uid?'<div style="text-align:right"><a class="sm mut" onclick="Reels.cDel(\''+rid+'\',\''+c.key+'\')">Delete</a></div>':'')+'</div>';
+     });
+     w.innerHTML=h;
+   }catch(e){ w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>' }
+ },
+ cSend:async function(rid){
+   var t=(V.g('rcIn').value||'').trim();
+   if(!t)return;
+   await db.ref('reelComments/'+rid).push({userId:V.uid,name:(me&&me.displayName)||'User',text:t,createdAt:Date.now()});
+   db.ref('reels/'+rid+'/commentCount').transaction(function(n){return (n||0)+1});
+   V.g('rcIn').value='';
+   this._cLoad(rid);
+ },
+ cDel:async function(rid,cid){
+   await db.ref('reelComments/'+rid+'/'+cid).remove();
+   db.ref('reels/'+rid+'/commentCount').transaction(function(n){return Math.max(0,(n||1)-1)});
+   this._cLoad(rid);
+ },
+ share:async function(rid){
+   var link=location.origin+location.pathname+'#reel-'+rid;
+   try{ if(navigator.share){ await navigator.share({title:'VEXA Reel',url:link}); return } }catch(e){}
+   V.copy(link,'🔗 Reel link copied!');
+ },
+ del:async function(rid){
+   if(!confirm('🎬 Reel delete karein? (video Supabase se bhi remove hoga)'))return;
+   try{ await sb.storage.from(CFG.supabase.bucket).remove(['reels/'+V.uid+'/'+rid+'.mp4','reels/'+V.uid+'/'+rid+'_thumb.jpg']) }catch(e){}
+   try{ await db.ref('reels/'+rid).remove(); await db.ref('reelComments/'+rid).remove(); await db.ref('users/'+V.uid+'/reels/'+rid).remove() }catch(e){}
+   V.mClose();V.toast('success','Reel deleted');this.load();
+ }
+};
+window.Reels=Reels;
+
 /* ================= CHAT — ⚡index-based FAST load + rules-safe fallback ================= */
 const ChatUI={
  peerUid:null,chatId:null,_unlocked:{},replyTo:null,tabC:'all',unsubs:[],_tt:null,
 
  openWith:async function(uid){
    if(!uid)return;
+   /* 🧡TEMP: temp recovery account sirf admin/owner se chat kar sakta hai */
+   try{
+     if(typeof me!=='undefined'&&me&&me.tempRecovery&&uid!==V.uid){
+       var ps=await db.ref('users/'+uid+'/role').get().catch(function(){return null});
+       var pr=(ps&&ps.val())||'';
+       if(!(pr==='owner'||pr==='admin')){
+         V.toast('warning','🧡 Temp account sirf admin/owner se chat kar sakta hai',4500);
+         return;
+       }
+     }
+   }catch(e){}
    var chk=await Privacy.check('message',uid);
    if(!chk.ok)return V.toast('warning',chk.msg);
    this.peerUid=uid;
@@ -3008,6 +3246,23 @@ const ChatUI={
    V.g('emoP').classList.remove('open');
  },
 
+ /* 🧡TEMP: temp user ke liye staff (owner/admin) chat direct kholo */
+ openWithStaff:async function(){
+   try{
+     var s=await db.ref('users').get();
+     var pick='',owners=[],admins=[];
+     if(s.exists())s.forEach(function(c){
+       var v=c.val()||{};
+       if(v.banned===true)return;
+       if(v.role==='owner')owners.push(c.key);
+       else if(v.role==='admin')admins.push(c.key);
+     });
+     pick=owners[0]||admins[0]||'';
+     if(!pick)return V.toast('warning','Abhi koi staff online nahi — thodi der baad try karo');
+     return ChatUI.openWith(pick);
+   }catch(e){ V.toast('error','Staff load fail: '+(e.message||e)) }
+ },
+
  tab:function(t){this.tabC=t;document.querySelectorAll('#sc-chat .ctabs .sgi').forEach(function(x){x.classList.toggle('sel',x.dataset.t===t)});this.load()},
 
  /* ⚡FAST: apna index (1 read) → metas parallel. Rules deny = fallback query + self-heal */
@@ -3086,6 +3341,21 @@ const ChatUI={
      var us=await Promise.all(rows0.map(function(o){
        return db.ref('users/'+o.other).get().catch(function(){return null});
      }));
+     /* 🧡TEMP: temp account ki list me sirf owner/admin rows rakho */
+     if(typeof me!=='undefined'&&me&&me.tempRecovery){
+       var keep=[];
+       for(var tq=0;tq<rows0.length;tq++){
+         var tur=((us[tq]&&us[tq].val())||{}).role||'';
+         if(tur==='owner'||tur==='admin')keep.push(tq);
+       }
+       if(!keep.length){
+         w.innerHTML='<div class="empo"><div class="ei">💬</div><div class="et">Sirf staff chat allowed</div><div class="ex">🧡 Staff intro message ka wait karo</div></div>';
+         return;
+       }
+       var r2=[],u2=[];
+       for(var kq=0;kq<keep.length;kq++){r2.push(rows0[keep[kq]]);u2.push(us[keep[kq]])}
+       rows0=r2;us=u2;
+     }
      var h='';
      for(var q=0;q<rows0.length;q++){
        var o2=rows0[q],u2=(us[q]&&us[q].val())||{displayName:'User'};
@@ -4050,7 +4320,7 @@ const Settings={
    try{
      var _rl=me.role||'user';
      if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
-       staffBlock='<div class="sgrp">'
+       staffBlock='<div class="sgrp" data-cat="staff">'
         +'<div class="sgrp-title" style="color:var(--wn)">🛠️ STAFF — VERSION CONTROL</div>'
         +'<div class="srow" onclick="Ver.adminPrompt()"><div class="sri">📢</div><div class="srf"><div class="srt">Set Latest Version</div><div class="srs">Version + note + APK link — Firebase me</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="Ver.apkPrompt()"><div class="sri">🔗</div><div class="srf"><div class="srt">APK Download Link Update</div><div class="srs">Firebase se — SABKO yahi link milega</div></div><div class="sra">›</div></div>'
@@ -4058,16 +4328,21 @@ const Settings={
         +'</div>';
      }
    }catch(e){}
+   var _staff=false;try{_staff=(me.role==='owner'||me.role==='admin'||me.role==='moderator')}catch(e){}
    var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote
-    +'<div class="sgrp"><div class="sgrp-title">👤 ACCOUNT</div>'
+    +this.catBar(_staff)
+    +'<div class="sgrp" data-cat="acct"><div class="sgrp-title">👤 ACCOUNT</div>'
     +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
     +this.verifRows()
     +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.copy(\''+V.uid+'\',\'UID copied!\')"><div class="sri">🆔</div><div class="srf"><div class="srt">My UID</div><div class="srs mono">'+V.esc(V.uid||'')+'</div></div><div class="sra">📋</div></div>'
+    +(me.tempRecovery
+      ?'<div class="srow" style="border:1px solid var(--in);border-radius:14px;margin-top:6px" onclick="TempRec.status()"><div class="sri">🧡</div><div class="srf"><div class="srt">Temp Recovery Account — '+V.esc(me.tempUid||'')+'</div><div class="srs">Sirf admin/owner chat · Status / delete yahin</div></div><div class="sra">›</div></div>'
+      :'')
     +'</div>'
-    +'<div class="sgrp"><div class="sgrp-title" style="color:var(--in)">🛡️ PRIVACY & SECURITY</div>'
+    +'<div class="sgrp" data-cat="sec"><div class="sgrp-title" style="color:var(--in)">🛡️ PRIVACY & SECURITY</div>'
     +'<div class="srow" onclick="Privacy.open()"><div class="sri">🔒</div><div class="srf"><div class="srt">Privacy Center</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Privacy.restrictedOpen()"><div class="sri">🚧</div><div class="srf"><div class="srt">Restricted Users</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Privacy.blockedOpen()"><div class="sri">🚷</div><div class="srf"><div class="srt">Blocked Users</div></div><div class="sra">›</div></div>'
@@ -4077,30 +4352,50 @@ const Settings={
     +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>'
     +'</div>'
-    +'<div class="sgrp"><div class="sgrp-title" style="color:var(--ac)">📜 LEGAL & SUPPORT</div>'
+    +'<div class="sgrp" data-cat="legal"><div class="sgrp-title" style="color:var(--ac)">📜 LEGAL & SUPPORT</div>'
     +'<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.go(\'police\')"><div class="sri">👮</div><div class="srf"><div class="srt">Police — Rules & Reports</div><div class="srs">Community rules + report karo</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.go(\'support\')"><div class="sri">🆘</div><div class="srf"><div class="srt">Support</div><div class="srs">Recovery · Email · Staff chat</div></div><div class="sra">›</div></div>'
     +'</div>'
-    +'<div class="sgrp"><div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
+    +'<div class="sgrp" data-cat="bak"><div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
     +this.driveRows()
     +'</div>'
-    +'<div class="sgrp"><div class="sgrp-title">🎨 CUSTOMIZATION</div>'
+    +'<div class="sgrp" data-cat="look"><div class="sgrp-title">🎨 CUSTOMIZATION</div>'
     +'<div class="srow" onclick="ImgThemes.open()"><div class="sri">🖼️</div><div class="srf"><div class="srt">Image Themes</div><div class="srs">NTH / VTH — bg + colour</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Themes.open()"><div class="sri">🎨</div><div class="srf"><div class="srt">Themes</div><div class="srs">204 themes</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Fonts.open()"><div class="sri">🔤</div><div class="srf"><div class="srt">App Fonts</div><div class="srs">Global — sab pe lagega</div></div><div class="sra">›</div></div>'
     +'</div>'
-    +'<div class="sgrp"><div class="sgrp-title">📱 APP & INFO</div>'
+    +'<div class="sgrp" data-cat="app"><div class="sgrp-title">📱 APP & INFO</div>'
     +'<div class="srow"><div class="sri">📱</div><div class="srf"><div class="srt">App Version</div><div class="srs">v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)</div></div></div>'
     +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>'
     +'</div>'
     +staffBlock
-    +'<div class="sgrp"><div class="sgrp-title" style="color:var(--wn)">⚠️ DANGER ZONE</div>'
+    +'<div class="sgrp" data-cat="dng"><div class="sgrp-title" style="color:var(--wn)">⚠️ DANGER ZONE</div>'
+    +(me.tempRecovery
+      ?'<div class="srow dng2" onclick="TempRec.deleteFlow()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Temporary Account</div><div class="srs">"delete" type + temp password — temp account remove</div></div><div class="sra">›</div></div>'
+      :'')
     +'<div class="srow dng2" onclick="Settings.deleteAcct()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Account</div><div class="srs">Saara data Firebase + Supabase se remove</div></div><div class="sra">›</div></div>'
     +'</div></div>';
    pc.innerHTML=h;
+ },
+ /* ── ⭐ SETTINGS CATEGORIES — alag category chips UI (All/Account/Security/…) ── */
+ catBar:function(staff){
+   var c=[['all','🗂️ All'],['acct','👤 Account'],['sec','🛡️ Security'],['bak','☁️ Backup'],['look','🎨 Look'],['legal','📜 Legal'],['app','📱 App'],['dng','⚠️ Danger']];
+   if(staff)c.push(['staff','🛠️ Staff']);
+   var h='<div class="scats" id="sCats">';
+   for(var i=0;i<c.length;i++)h+='<button type="button" class="scat'+(i?'':' sel')+'" data-c="'+c[i][0]+'" onclick="Settings.cat(\''+c[i][0]+'\',this)">'+c[i][1]+'</button>';
+   return h+'</div>';
+ },
+ cat:function(c,el){
+   var cs=document.querySelectorAll('#sCats .scat');
+   for(var i=0;i<cs.length;i++)cs[i].classList.toggle('sel',cs[i]===el);
+   var gs=document.querySelectorAll('#profC .sgrp');
+   for(var j=0;j<gs.length;j++){
+     var dc=gs[j].getAttribute('data-cat')||'';
+     gs[j].style.display=(c==='all'||dc===c)?'':'none';
+   }
  },
  guardSensitive:async function(){
    var until=0;
@@ -4117,7 +4412,9 @@ const Settings={
  driveRows:function(){
    var drv=false; try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
    var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup app-private folder me — aapki Drive files kabhi nahi chhooti':'Tap → Connect to Google popup → Allow → done')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
-    +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>';
+    +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="VaultUI.downloadBackup()"><div class="sri">⬇️</div><div class="srf"><div class="srt">Download Backup (.vexa)</div><div class="srs">Latest backup file phone me save karo</div></div><div class="sra">⬇️</div></div>'
+    +'<div class="srow" onclick="VaultUI.showSecret()"><div class="sri">🔑</div><div class="srf"><div class="srt">Vault Secret — 8-block Code</div><div class="srs">Recovery code dekho / copy karo</div></div><div class="sra">›</div></div>';
    if(drv)h+='<div class="srow" onclick="VaultUI.driveTest()"><div class="sri">🧪</div><div class="srf"><div class="srt">Test Backup Now</div><div class="srs">.vexa backup abhi Drive pe save karo</div></div><div class="sra">›</div></div>';
    return h;
  },

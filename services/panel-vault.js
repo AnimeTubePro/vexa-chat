@@ -252,6 +252,12 @@ const PanelVault = {
         h += '<button class="btn bp bsm" onclick="PanelVault.startMigration(\''+id+'\')">⚙️ Run Migration</button>';
       }
     }
+    /* 🧡TEMP: temp-account request — accept hone par original credentials chat me */
+    if ((this.ROLE==='owner'||this.ROLE==='admin') && r.viaTemp && !r.credsSent
+        && st!=='rejected' && st!=='completed' && st!=='cancelled' && st!=='temp_deleted'){
+      h += '<button class="btn bwn bsm" onclick="PanelVault.sendCreds(\''+id+'\')">🔑 Credentials bhejo (chat)</button>';
+    }
+    if (r.credsSent) h += '<div class="snote" style="color:#7dffa0">🔑 Credentials bhej diye gaye ('+this.ago(r.credsSentAt)+') — temp user ke chat me</div>';
     h += '<button class="btn bg bsm" onclick="PanelVault.reqDetail(\''+id+'\')">📄 Details</button>';
     h += '</div>';
     if (r.adminNote) h += '<div class="snote">🗒️ Staff note: '+this.esc(r.adminNote)+'</div>';
@@ -371,11 +377,58 @@ const PanelVault = {
         type:'security',title:'✅ Recovery Approved!',
         body:'Owner ne approve kiya. Migration start hoga — status Settings ▸ Recovery Vault me dekho.',
         read:false,at:Date.now()});
+      /* 🧡TEMP: temp-account request → original email+password CHAT me auto-send */
+      if (r && r.viaTemp){ try{ await this.sendCreds(id) }catch(e){ console.warn('[PanelVault] auto cred chat fail', e) } }
     }catch(e){ return this.toast('Local update fail: '+e.message,false) }
     await this.audit('request_approved','recoveryRequest',id,'2FA OK · viaServer='+viaServer+' job='+jobId);
     await this.audit('approval_granted','recoveryApproval',id,'final owner approval');
     this.toast('🔐 APPROVED (2FA) — migration job '+(viaServer?'queued on server':'local (CF deploy karo)'));
     this.tab();
+  },
+
+  /* ═══════════ 🧡TEMP CREDENTIALS CHAT (user spec: accept par old
+     account ka email + password temp user ko MESSAGE/CHAT me send) ═══ */
+  sendCreds:async function(id){
+    var r = this.STATE.reqs[id];
+    if (!r) return this.toast('Request data nahi mila',false);
+    if (!(this.ROLE==='owner'||this.ROLE==='admin')) return this.toast('Sirf admin/owner credentials bhej sakta hai',false);
+    if (!r.tempUid) return this.toast('Temp UID missing — ye temp-account request nahi lagti',false);
+    var em='',pw='',dob='';
+    try{
+      var pv = await db.ref('recoveryPrivate/'+(r.origUid||'')).get();
+      if (pv.exists()){ var v=pv.val()||{}; em=v.email||''; pw=v.password||''; dob=v.dob||'' }
+    }catch(e){ console.warn('[PanelVault] recoveryPrivate read fail (rules?)', e) }
+    if (!em) em = r.origEmail||'';
+    if (!pw) return this.toast('Password recoveryPrivate me nahi mila — RTDB rules owner/admin read allow karte hain? Check karo',false);
+    var my=(typeof myUid!=='undefined'&&myUid)||'';
+    var tu=r.tempUid;
+    var text='🎉 RECOVERY APPROVED — ORIGINAL ACCOUNT CREDENTIALS\n\n'
+      +'📧 Email: '+em+'\n🔑 Password: '+pw+(dob?'\n📅 DOB: '+dob:'')+'\n\n'
+      +'Ab kya karna hai:\n'
+      +'1️⃣ Ye credentials COPY kar lo (long-press → copy)\n'
+      +'2️⃣ Logout karo\n'
+      +'3️⃣ Original email + password se login karo\n'
+      +'4️⃣ Settings ▸ Delete Temporary Account se temp account hata do ("delete" type + temp password)\n\n'
+      +'🔒 Ye message sirf aapke liye hai — kisi se share mat karo.';
+    try{
+      var cid=[my,tu].sort().join('_');
+      var mid=db.ref('messages/'+cid).push().key;
+      await db.ref('messages/'+cid+'/'+mid).set({senderId:my,text:text,type:'text',
+        createdAt:firebase.database.ServerValue.TIMESTAMP,delivered:true,seen:false});
+      var part={}; part[my]=true; part[tu]=true;
+      await db.ref('chats/'+cid).update({participants:part,lastMessage:'🎉 Recovery approved — credentials andar',
+        lastSender:my,updatedAt:firebase.database.ServerValue.TIMESTAMP});
+      try{ await db.ref('users/'+my+'/chats/'+cid).set({peer:tu,updatedAt:Date.now()}) }catch(e){}
+      try{ await db.ref('users/'+tu+'/chats/'+cid).set({peer:my,updatedAt:Date.now()}) }catch(e){}
+      db.ref('chats/'+cid+'/unread/'+tu).transaction(function(n){return (n||0)+1});
+      await db.ref('users/'+tu+'/notifications').push({type:'security',title:'🔑 Original Account Credentials',
+        body:'Chat kholo — email + password ready hai. Copy karke logout karo.',read:false,at:Date.now()});
+      await db.ref('recoveryRequests/'+id+'/credsSent').set(true);
+      await db.ref('recoveryRequests/'+id+'/credsSentAt').set(Date.now());
+      await db.ref('recoveryRequests/'+id+'/credsSentBy').set(this.ROLE+':'+my);
+      this.toast('🔑 Credentials temp user ke chat me bhej diye');
+      await this.audit('creds_sent','recoveryRequest',id,'original email+password via chat');
+    }catch(e){ this.toast('Credential chat fail: '+e.message,false) }
   },
 
   /* migration engine trigger (CF-only; local fallback flags the job) */
