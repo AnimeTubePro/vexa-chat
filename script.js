@@ -949,7 +949,7 @@ const V={
    document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('act')});
    var el=V.g('sc-'+sc);if(el)el.classList.add('act');
    document.querySelectorAll('.bni').forEach(function(n){n.classList.toggle('act',n.dataset.sc===sc)});
-   var titles={home:'ATP × VEXA',search:'Search',local:'Local Scan',chat:'Chats',calls:'Calls',games:'Games',notif:'Notifications',profile:'Profile'};
+   var titles={home:'ATP × VEXA',search:'Search',local:'Local Scan',chat:'Chats',calls:'Calls',games:'Games',notif:'Notifications',profile:'Profile',police:'👮 Police',support:'🆘 Support',privacy:'Privacy Policy',terms:'Terms of Service'};
    var tt=V.g('topTitle');if(tt)tt.textContent=titles[sc]||'ATP × VEXA';
    if(sc==='home')Posts.load();
    if(sc==='chat')ChatUI.load();
@@ -957,6 +957,11 @@ const V={
    if(sc==='games')Games.home();
    if(sc==='notif')Notif.load();
    if(sc==='local')Local.load();
+   /* ⚡PORT v3: Police · Support · Policies screens wapas */
+   if(sc==='police')Police.load();
+   if(sc==='support')Support.load();
+   if(sc==='privacy')Policies.renderPage('privacy');
+   if(sc==='terms')Policies.renderPage('terms');
    /* ⚡ADS: sidebar + feed ad zones (sirf home/posts — ads.js khud check karta hai) */
    try{if(window.VexaAds)VexaAds.onScreen(sc)}catch(e){}
  },
@@ -4072,6 +4077,12 @@ const Settings={
     +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>'
     +'</div>'
+    +'<div class="sgrp"><div class="sgrp-title" style="color:var(--ac)">📜 LEGAL & SUPPORT</div>'
+    +'<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.go(\'police\')"><div class="sri">👮</div><div class="srf"><div class="srt">Police — Rules & Reports</div><div class="srs">Community rules + report karo</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.go(\'support\')"><div class="sri">🆘</div><div class="srf"><div class="srt">Support</div><div class="srs">Recovery · Email · Staff chat</div></div><div class="sra">›</div></div>'
+    +'</div>'
     +'<div class="sgrp"><div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
     +this.driveRows()
     +'</div>'
@@ -4495,3 +4506,381 @@ Rec.downloadTxt=async function(){
     V.toast('error','Download failed: '+(e.message||''));
   }
 };
+
+const Policies={
+ lastUpdated:'October 2025',
+ privacy:function(){
+  return '<div class="pol-head"><div class="pol-big">🔒 Privacy Policy</div><div class="sm mut">Last updated: '+this.lastUpdated+' · AnimeTubePro Studio × VEXA</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">1. Hum Kya Data Collect Karte Hain</div>'
+  +'<div class="pol-p">VEXA account banate waqt hum aapse <b>email, date of birth, display name aur username</b> lete hain. Optional profile photo bhi add kar sakte ho. Har account ko ek internal <b>UID</b> milta hai jo account recovery aur support me kaam aata hai. Password kabhi bhi plain text me store nahi hota — Firebase Auth usse securely hash karta hai.</div>'
+  +'<div class="pol-p">App use karte waqt ye cheezein bhi save hoti hain: aapke <b>messages, posts, comments, likes, follow connections, call history, notifications</b> aur <b>presence</b> (online/last-seen status). Ye sab aapke account ka hissa hai aur Privacy Center se control hota hai.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">2. Location — Koi Exact GPS Nahi</div>'
+  +'<div class="pol-p">Local Scan feature ke liye hum <b>approximate ~2km area</b> ka coarse location use karte hain. Exact GPS location, ghar ka address ya live tracking <b>kabhi nahi</b> hota. Distance sirf 4 levels me dikhti hai (Bilkul paas / ~500m / ~1km / ~2km) — exact meters ya direction tool ke roop me nahi.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">3. Photos, Videos aur Third-Party Services</div>'
+  +'<div class="pol-p">Aapke photos 3 alag Supabase Storage projects me save hote hain: <b>profile photos</b> (vexa-media), <b>post images</b> (vexa-posts) aur <b>group photos/media</b> (vexa-chat-guild). Sirf JPEG/PNG/WebP, max 200KB per image allowed hai.</div>'
+  +'<div class="pol-p">Video messages ke liye aap apna <b>Google Drive</b> connect kar sakte ho — wo video aapke apne Drive me save hota hai, VEXA ke server pe nahi. VEXA sirf video ka link/metadata save karta hai. Aap Drive disconnect karke ye access revoke kar sakte ho.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">4. Security aur Recovery</div>'
+  +'<div class="pol-p">Recovery codes <b>hashed</b> form me store hote hain — koi bhi (staff bhi nahi) unhe padh sakta hai. Two-step verification (2FA) enable kar sakte ho, aur Settings → Security se <b>dusre devices ko remote logout</b> kar sakte ho. Recovery approval jaise sensitive steps sirf trusted server-side process se hote hain.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">5. Staff Kya Dekh Sakta Hai</div>'
+  +'<div class="pol-p">Reports aur recovery requests sirf <b>Owner/Admin/Moderator</b> dekh sakte hain, wahi bhi moderation ke liye. Aapke private messages staff ko tab tak nahi dikhte jab tak aap khud report nahi karte. Account credentials (password/recovery codes) staff approval ke baad bhi plaintext me store nahi rehte.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">6. Aapke Rights</div>'
+  +'<div class="pol-p">Aap Privacy Center se <b>apni profile visibility, message permission, last-seen</b> control kar sakte ho. Kisi ko block/restrict kar sakte ho. <b>Delete Account</b> se aapka Firebase data aur Supabase photos remove ho jaate hain. Email support ya in-app ticket ke through data se related sawaal pooch sakte ho.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">7. Bachche aur Data Safety</div>'
+  +'<div class="pol-p">VEXA sirf <b>13 saal ya usse bade</b> users ke liye hai. Agar kisi ko 13 se kam umar ka account milta hai, to wo account ban kiya ja sakta hai. Report karna bilkul confidential hota hai — report karne wale ka naam target user ko nahi bataya jaata.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">8. Policy Updates</div>'
+  +'<div class="pol-p">Ye policy time-to-time update ho sakti hai. Bade changes pe app me notice dikhaaya jaayega. Sawal ho to <b>Support page</b> se ticket banao ya email karo.</div></div>';
+ },
+ terms:function(){
+  return '<div class="pol-head"><div class="pol-big">📜 Terms of Service</div><div class="sm mut">Last updated: '+this.lastUpdated+' · AnimeTubePro Studio × VEXA</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">1. Terms Ki Acceptance</div>'
+  +'<div class="pol-p">VEXA app use karke aap in Terms of Service se agree karte ho. Account banate waqt aapne checkbox se ye accept kiya tha. Agar aap in terms se agree nahi karte, to app use mat karo. Ye terms AnimeTubePro Studio × VEXA (aage sirf "VEXA") pe apply hote hain.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">2. Account Rules</div>'
+  +'<div class="pol-p">Har person sirf <b>ek account</b> bana sakta hai. Apna account kisi ke saath <b>share, sell ya transfer</b> mat karo. Username, display name ya badges se <b>khud ko staff (Owner/Admin/Mod) ya verified/VIP mat dikhao</b> — impersonation ban ka direct reason hai. Account ki security aapki zimmedari hai: strong password rakho, recovery codes safe sambhalo.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">3. Umar Ki Limit</div>'
+  +'<div class="pol-p">VEXA sirf <b>13+ umar</b> ke users ke liye hai. Galat DOB dene ya fake account banane pe account permanently ban ho sakta hai.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">4. Prohibited Content aur Behaviour</div>'
+  +'<div class="pol-p">Ye cheezein strictly mana hain: <b>harassment, hate speech, threats, stalking</b> · <b>spam, scams, phishing</b> · <b>illegal content</b> ya kisi bhi dhang ka unlawful activity · <b>NSFW/adult content</b> photos ya videos me · <b>hacking, reverse-engineering</b> ya app ka misuse · <b>doosron ka account hack karne ki koshish</b> · fake reports banana.</div>'
+  +'<div class="pol-p">Media rules follow karo: sirf JPEG/PNG/WebP images (max 200KB). Copyright ka respect karo — doosron ka content bina permission ke apna mat banao.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">5. Moderation aur Enforcement</div>'
+  +'<div class="pol-p">Staff (Owner/Admin/Moderator) rules todne wale users pe action le sakta hai. Enforcement ladder: <b>Warning → Mute/Restrict → Temporary Ban → Permanent Ban</b>. Serious violations (illegal content, hacking, threats) me seedha permanent ban ho sakta hai. Galat ban lage to <b>Support page</b> se appeal karo — har appeal review hoti hai.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">6. Aapka Content</div>'
+  +'<div class="pol-p">Aapke posts, messages aur photos ka <b>ownership aapka</b> rehta hai. App use karke aap VEXA ko sirf itna permission dete ho ki wo content app ke andar display aur store kar sake (posts feed, chats, profile). Aap post delete karke ya account delete karke wo permission wapas le sakte ho.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">7. Recovery aur Account Loss</div>'
+  +'<div class="pol-p">Recovery codes (Main Code + UID + DOB) aapki zimmedari hai. Inhe khone pe staff help kar sakta hai, lekin bina sahi verification account wapas milna guarantee nahi. Codes kisi ke saath share mat karo — wo aapka account access kar sakte hain.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">8. Service aur Availability</div>'
+  +'<div class="pol-p">VEXA "as-is" diya jaata hai. Features badal sakte hain, kabhi ruk bhi sakte hain (maintenance/upgrades). App free hai — hum data aapko bechte nahi.</div></div>'
+  +'<div class="pol-sec"><div class="pol-t">9. Terms Me Changes</div>'
+  +'<div class="pol-p">VEXA in terms ko update kar sakta hai. Continue use karne ka matlab aap naye terms accept karte ho. Koi sawal ho to Support page se contact karo.</div></div>';
+ },
+ renderPage:function(kind){
+   var el=V.g(kind==='privacy'?'privacyC':'termsC');
+   if(!el)return;
+   var page=kind==='privacy'?'privacy.html':'terms.html';
+   el.innerHTML=this[kind]()
+    +'<div class="pol-foot" style="display:flex;flex-direction:column;gap:9px;align-items:center"><a class="btn bp" style="text-decoration:none" href="'+page+'" target="_blank" rel="noopener">🌐 Full page kholo (link share karo)</a><button type="button" class="btn bg" onclick="V.go(\'support\')">🆘 Koi sawal? Support se contact karo</button></div>';
+ },
+ show:function(kind){
+   /* Auth screen + kahin bhi — modal me dikhaao (login zaroori nahi) */
+   V.mOpen(kind==='privacy'?'🔒 Privacy Policy':'📜 Terms of Service',
+     '<div class="pol-doc">'+this[kind]()+'</div>',
+     '<button class="btn bp" onclick="V.mClose()">Samajh gaya</button>');
+ }
+};
+window.Policies=Policies;
+
+/* ═══════════════════════════════════════════════════════════
+   👮 POLICE — Rules & Policies + Report flow (v2.2)
+   - Tabs: Rules | Actions | Report
+   - Report → existing `reports` node (staff-only read)
+   ═══════════════════════════════════════════════════════════ */
+const Police={
+ tab:'rules',
+ RULES:[
+  {ic:'🤝',t:'Respect rakho',d:'Kisi ko harass, threaten, hate speech ya bullying mat karo. Doosre users ko waise treat karo jaise aap chahte ho.'},
+  {ic:'🚫',t:'Spam aur Scam mana',d:'Faltu spam, phishing links, fake giveaways ya paise ki scam mat karo. Links bhejte waqt verify karo.'},
+  {ic:'🎭',t:'Impersonation mana',d:'Kisi doosre user ki nakal mat karo — especially staff (Owner/Admin/Mod) ya verified/VIP users. Fake staff ban karna direct ban hai.'},
+  {ic:'⚖️',t:'Illegal content mana',d:'Koi bhi illegal content, drugs, weapons, violence promotion ya unlawful activity allowed nahi hai.'},
+  {ic:'🔞',t:'NSFW mana',d:'Adult/18+ photos, videos ya links strictly prohibited hain. VEXA sab umar ke users ke liye safe jagah hai.'},
+  {ic:'📅',t:'Umar 13+',d:'VEXA sirf 13 saal ya usse bade users ke liye hai. Galat DOB dene pe account ban ho sakta hai.'},
+  {ic:'🖼️',t:'Media rules follow karo',d:'Sirf JPEG/PNG/WebP images (max 200KB). Doosron ka content chura ke apna mat banao — copyright respect karo.'},
+  {ic:'🛡️',t:'Ladai mat karo — report karo',d:'Koi galti ho to ladai mat karo, Police page se report karo. Fake reports khud violation hai.'},
+  {ic:'🔑',t:'Account sharing mana',d:'Apna account, password ya recovery codes kisi ke saath share/sell/transfer mat karo. Ek person = ek account.'},
+  {ic:'🎮',t:'Fair play',d:'Games me cheating, glitches ka exploit ya doosron ka game destroy karna mana hai.'}
+ ],
+ ACTIONS:[
+  {ic:'1️⃣',t:'Warning',d:'Pehli baar halki galti pe staff warning deta hai. Warning ke baad rules follow karo.'},
+  {ic:'2️⃣',t:'Mute / Restrict',d:'Continue karne pe account mute ya restrict ho sakta hai — posting/messaging limited ho jaayegi.'},
+  {ic:'3️⃣',t:'Temporary Ban',d:'Bade violations pe account kuch din ke liye ban hota hai.'},
+  {ic:'4️⃣',t:'Permanent Ban',d:'Serious violations (illegal content, hacking, threats, repeated bans) pe account hamesha ke liye ban.'},
+  {ic:'📮',t:'Appeal',d:'Galat action lage to Support page se appeal karo. Har appeal staff review karta hai — sahi proof ke saath bhejo.'}
+ ],
+ load:function(){
+   var w=V.g('policeC');if(!w)return;
+   this.tab=this.tab||'rules';
+   w.innerHTML='<div class="pol-hero"><div class="pol-hero-ic">👮</div><div class="pol-hero-t">VEXA Police</div><div class="sm mut">Rules follow karo — community safe rakho</div></div>'
+    +'<div class="seg pol-tabs">'
+    +'<div class="sgi'+(this.tab==='rules'?' sel':'')+'" role="button" tabindex="0" onclick="Police.tabSet(\'rules\')">📋 Rules</div>'
+    +'<div class="sgi'+(this.tab==='actions'?' sel':'')+'" role="button" tabindex="0" onclick="Police.tabSet(\'actions\')">⚖️ Enforcement</div>'
+    +'<div class="sgi'+(this.tab==='report'?' sel':'')+'" role="button" tabindex="0" onclick="Police.tabSet(\'report\')">🚨 Report</div>'
+    +'</div><div id="polBody"></div>';
+   this.renderTab();
+ },
+ tabSet:function(t){this.tab=t;this.load()},
+ renderTab:function(){
+   var b=V.g('polBody');if(!b)return;
+   var h='';
+   if(this.tab==='rules'){
+     h='<div class="stit">📋 Community Rules</div>';
+     for(var i=0;i<this.RULES.length;i++){
+       var r=this.RULES[i];
+       h+='<div class="pol-item"><div class="pol-item-ic">'+r.ic+'</div><div class="pol-item-b"><div class="pol-item-t">'+(i+1)+'. '+V.esc(r.t)+'</div><div class="pol-item-d">'+V.esc(r.d)+'</div></div></div>';
+     }
+     h+='<div class="snote mt8">Rules todtay ho to 👮 Enforcement tab me dekho kya hoga.</div>';
+   }else if(this.tab==='actions'){
+     h='<div class="stit">⚖️ Enforcement Ladder</div>';
+     for(var j=0;j<this.ACTIONS.length;j++){
+       var a=this.ACTIONS[j];
+       h+='<div class="pol-item"><div class="pol-item-ic">'+a.ic+'</div><div class="pol-item-b"><div class="pol-item-t">'+V.esc(a.t)+'</div><div class="pol-item-d">'+V.esc(a.d)+'</div></div></div>';
+     }
+     h+='<div class="snote mt8">Policies detail me padhna ho to: <a class="pol-link" onclick="Policies.show(\'terms\')">Terms of Service</a> · <a class="pol-link" onclick="Policies.show(\'privacy\')">Privacy Policy</a></div>';
+   }else{
+     h='<div class="stit">🚨 Report Karo</div>'
+      +'<div class="snote mb8">🔒 Report confidential hoti hai — aapka naam target ko nahi dikhega.</div>'
+      +'<div class="fld"><label class="flbl">Kisko report karna hai?</label><div class="seg">'
+      +'<div class="sgi sel" data-rt="user" role="button" tabindex="0" onclick="Police.rtype(this)">👤 User</div>'
+      +'<div class="sgi" data-rt="post" role="button" tabindex="0" onclick="Police.rtype(this)">📝 Post</div>'
+      +'<div class="sgi" data-rt="group" role="button" tabindex="0" onclick="Police.rtype(this)">👥 Group</div>'
+      +'</div></div>'
+      +'<div class="fld"><label class="flbl">Target — username / UID / post link</label><input class="inp mono" id="rpTarget" placeholder="@username ya UID" autocomplete="off" spellcheck="false"></div>'
+      +'<div class="fld"><label class="flbl">Reason</label><select class="selc" id="rpReason">'
+      +'<option value="harassment">Harassment / Bullying</option>'
+      +'<option value="hate">Hate Speech</option>'
+      +'<option value="spam">Spam / Scam</option>'
+      +'<option value="nsfw">NSFW Content</option>'
+      +'<option value="illegal">Illegal Content</option>'
+      +'<option value="impersonation">Impersonation</option>'
+      +'<option value="hacking">Hacking / Exploit</option>'
+      +'<option value="other">Other</option>'
+      +'</select></div>'
+      +'<div class="fld"><label class="flbl">Details (optional)</label><textarea class="txta" id="rpDetail" maxlength="500" placeholder="Kya hua — short me likho"></textarea></div>'
+      +'<button type="button" class="btn bp bbk blg" id="rpBtn" onclick="Police.submit()">🚨 Submit Report</button>';
+   }
+   b.innerHTML=h;
+ },
+ _rtype:'user',
+ rtype:function(el){
+   var seg=el.parentNode.querySelectorAll('.sgi');
+   for(var i=0;i<seg.length;i++)seg[i].classList.remove('sel');
+   el.classList.add('sel');
+   this._rtype=el.dataset.rt||'user';
+ },
+ submit:async function(){
+   var target=V.g('rpTarget'),reason=V.g('rpReason'),detail=V.g('rpDetail'),btn=V.g('rpBtn');
+   if(!target||!target.value.trim())return V.toast('warning','Target likho — kisko report kar rahe ho');
+   if(!btn)return;
+   btn.disabled=true;btn.textContent='Submitting…';
+   try{
+     await db.ref('reports').push({
+       type:this._rtype,
+       target:target.value.trim(),
+       reason:reason?reason.value:'other',
+       details:(detail&&detail.value.trim())||'',
+       by:V.uid, byName:(me&&me.username)||'',
+       status:'open', at:Date.now()
+     });
+     V.toast('success','🚨 Report submit ho gayi — staff review karega');
+     this.tabSet('rules');
+   }catch(e){V.toast('error','Report fail: '+(e.message||''))}
+   if(btn){btn.disabled=false;btn.textContent='🚨 Submit Report'}
+ }
+};
+window.Police=Police;
+
+/* ═══════════════════════════════════════════════════════════
+   🆘 SUPPORT — Recovery + Email + Staff direct chat (v2.2)
+   - Account Recovery → existing Recovery Center (VexaSec)
+   - Email Support → config/support (staff panel se set hota hai)
+     + in-app ticket → supportTickets node
+   - Direct chat → staffIndex se online staff → ChatUI.openWith
+   ═══════════════════════════════════════════════════════════ */
+const VEXA_SUPPORT={email:''}; /* staff panel Firebase config/support me set karega — client pe hardcoded email NAHI */
+const Support={
+ _supCfg:null,
+ load:async function(){
+   var w=V.g('supportC');if(!w)return;
+   w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
+   /* support email — Firebase config, fail-safe */
+   if(this._supCfg===null){
+     try{var s=await db.ref('config/support').get();this._supCfg=(s.exists()&&s.val())||{}}catch(e){this._supCfg={}}
+   }
+   var em=(this._supCfg&&this._supCfg.email)||VEXA_SUPPORT.email||'';
+   var h='<div class="pol-hero sup-hero"><div class="pol-hero-ic">🆘</div><div class="pol-hero-t">VEXA Support</div><div class="sm mut">Recovery · Email · Staff se direct baat</div></div>';
+
+   /* ── 1) ACCOUNT RECOVERY ── */
+   h+='<div class="sup-card"><div class="sup-card-h"><span class="sup-ic">🔐</span><span class="sup-t">Account Recovery</span></div>'
+    +'<div class="sup-d">Account kho gaya? Recovery = <b>Main Code + UID + DOB</b>. Codes safe hain to auto-login milega.</div>'
+    +'<div class="sup-btns"><button type="button" class="btn bp bsm" onclick="Support.recoveryOpen()">🔐 Recovery Center kholo</button>'
+    +'<button type="button" class="btn bo bsm" onclick="Rec.downloadTxt()">💾 Recovery TXT</button></div></div>';
+
+   /* ── 2) EMAIL SUPPORT ── */
+   h+='<div class="sup-card"><div class="sup-card-h"><span class="sup-ic">📧</span><span class="sup-t">Email Support</span></div>'
+    +(em
+      ?'<div class="sup-d">Email: <b class="mono" id="supEmail">'+V.esc(em)+'</b></div>'
+       +'<div class="sup-btns"><button type="button" class="btn bp bsm" onclick="Support.mailto()">✉️ Email App kholo</button>'
+       +'<button type="button" class="btn bo bsm" onclick="Support.copyEmail()">📋 Copy email</button></div>'
+      :'<div class="sup-d">Email address abhi staff ne set nahi kiya. Tab tak <b>in-app ticket</b> ya <b>direct chat</b> use karo.</div>')
+    +'<div class="sup-btns"><button type="button" class="btn bo bsm" onclick="Support.ticketOpen()">🎫 In-app Ticket banao</button></div></div>';
+
+   /* ── 3) DIRECT CHAT ── */
+   h+='<div class="sup-card"><div class="sup-card-h"><span class="sup-ic">💬</span><span class="sup-t">Admin / Moderator se Direct Chat</span></div>'
+    +'<div class="sup-d">Online staff ke saath seedha baat karo:</div>'
+    +'<div id="supStaff"><div class="spn" style="margin:12px auto"></div></div></div>';
+
+   /* ── My tickets ── */
+   h+='<div class="sup-card"><div class="sup-card-h"><span class="sup-ic">🎫</span><span class="sup-t">Mere Tickets</span></div><div id="supTickets"><div class="spn" style="margin:12px auto"></div></div></div>';
+
+   w.innerHTML=h;
+   this.loadStaff();
+   this.loadTickets();
+ },
+ recoveryOpen:function(){
+   try{
+     if(window.VexaSec&&VexaSec.recoveryOpen){VexaSec.recoveryOpen();return}
+   }catch(e){}
+   try{V.showAuth('sRec')}catch(e){V.toast('info','Logout karke Login → Recovery se jao')}
+ },
+ mailto:function(){
+   var em=(this._supCfg&&this._supCfg.email)||VEXA_SUPPORT.email||'';
+   if(!em)return V.toast('warning','Email set nahi hai');
+   window.open('mailto:'+em+'?subject='+encodeURIComponent('VEXA Support — '+(me&&me.username||'user')),'_blank');
+ },
+ copyEmail:function(){
+   var em=(this._supCfg&&this._supCfg.email)||VEXA_SUPPORT.email||'';
+   if(!em)return V.toast('warning','Email set nahi hai');
+   V.copy(em,'Email copied!');
+ },
+ /* ── STAFF LIST (online-first) ── */
+ loadStaff:function(){
+   var box=V.g('supStaff');if(!box)return;
+   db.ref('staffIndex').get().then(function(s){
+     if(!box)return;
+     if(!s.exists()){box.innerHTML='<div class="empo" style="padding:14px"><div class="ei">🛌</div><div class="et">Abhi staff list me koi nahi — Ticket banao ya email karo</div></div>';return}
+     var arr=[];s.forEach(function(c){var v=c.val()||{};if(v.role)arr.push(Object.assign({uid:c.key},v))});
+     if(!arr.length){box.innerHTML='<div class="empo" style="padding:14px"><div class="ei">🛌</div><div class="et">Staff available nahi</div></div>';return}
+     /* presence check — parallel */
+     Promise.all(arr.map(function(st){
+       /* V.ava displayName/profilePhoto expect karta hai — staffIndex se map karo */
+       st.displayName=st.name||'Staff';
+       st.profilePhoto=st.photo||'';
+       return db.ref('presence/'+st.uid).get().then(function(p){
+         var pv=(p.exists()&&p.val())||{};
+         st.online=!!pv.online;
+         st.lastSeen=pv.lastSeen||0;
+         return st;
+       }).catch(function(){st.online=false;return st});
+     })).then(function(list){
+       list.sort(function(a,b){return (b.online?1:0)-(a.online?1:0)});
+       var h2='';
+       for(var i=0;i<list.length;i++){
+         var st=list[i],role=st.role||'staff';
+         var badge=role==='owner'?'<span class="badm" style="background:linear-gradient(135deg,#ffd700,#ffec8b);color:#111">👑 OWNER</span>':role==='admin'?'<span class="badm">👑 ADMIN</span>':'<span class="bmod">🛡️ MOD</span>';
+         var stTxt=st.online?'🟢 Online — chat karo':'Seen '+(st.lastSeen?V.timeAgo(st.lastSeen):'long ago');
+         h2+='<div class="urow'+(st.online?' sup-online':'')+'" onclick="Support.chatWith(\''+st.uid+'\')">'
+          +V.ava(st,'md')+'<div class="uinf"><div class="unm">'+V.esc(st.name||'Staff')+' '+badge+'</div><div class="uun">'+stTxt+'</div></div>'
+          +'<button class="btn bp bsm">💬</button></div>';
+       }
+       if(box)box.innerHTML=h2;
+     });
+   }).catch(function(){
+     if(box)box.innerHTML='<div class="empo" style="padding:14px"><div class="ei">⚠️</div><div class="et">Staff list load nahi hui</div></div>';
+   });
+ },
+ chatWith:function(uid){
+   if(!uid)return;
+   if(typeof ChatUI!=='undefined'&&ChatUI.openWith){ChatUI.openWith(uid);return}
+   V.toast('warning','Chat abhi open nahi ho raha');
+ },
+ /* ── TICKETS ── */
+ ticketOpen:function(){
+   V.mOpen('🎫 Support Ticket',
+     '<div class="fld"><label class="flbl">Subject</label><input class="inp" id="tkSub" maxlength="80" placeholder="Kis baare me hai?"></div>'
+    +'<div class="fld"><label class="flbl">Message</label><textarea class="txta" id="tkBody" maxlength="1000" placeholder="Detail me likho — screenshot ho to chat me bhej dena"></textarea></div>'
+    +'<div class="snote">Ticket staff ko chala jaayega — reply yahi aur Notifications me milega.</div>',
+     '<button class="btn bp" id="tkBtn" onclick="Support.ticketSubmit()">Submit</button>');
+ },
+ ticketSubmit:async function(){
+   var sub=V.g('tkSub'),body=V.g('tkBody'),btn=V.g('tkBtn');
+   if(!sub||!sub.value.trim())return V.toast('warning','Subject likho');
+   if(!body||!body.value.trim())return V.toast('warning','Message likho');
+   if(btn){btn.disabled=true;btn.textContent='Sending…'}
+   try{
+     var ref=db.ref('supportTickets').push();
+     await ref.set({
+       uid:V.uid, byName:(me&&me.username)||'', subject:sub.value.trim(), body:body.value.trim(),
+       status:'open', at:Date.now()
+     });
+     /* per-user index — RTDB queries ke liye root read chahiye hota hai jo users ke paas nahi;
+        isliye apne tickets users/{uid}/tickets se index karke per-ticket read karte hain (rules-safe) */
+     try{await db.ref('users/'+V.uid+'/tickets/'+ref.key).set(true)}catch(e){}
+     V.mClose();
+     V.toast('success','🎫 Ticket bana — staff reply karega');
+     this.loadTickets();
+   }catch(e){V.toast('error','Ticket fail: '+(e.message||''))}
+   if(btn){btn.disabled=false;btn.textContent='Submit'}
+ },
+ loadTickets:function(){
+   var box=V.g('supTickets');if(!box)return;
+   var self=this;
+   db.ref('users/'+V.uid+'/tickets').limitToLast(10).get().then(function(idx){
+     if(!box)return;
+     if(!idx.exists()){box.innerHTML='<div class="sm mut">Abhi koi ticket nahi.</div>';return}
+     var ids=[];idx.forEach(function(c){ids.push(c.key)});
+     ids.reverse();
+     Promise.all(ids.map(function(tid){
+       return db.ref('supportTickets/'+tid).get().then(function(s){
+         return (s.exists()?Object.assign({id:tid},s.val()):null);
+       }).catch(function(){return null});
+     })).then(function(list){
+       if(!box)return;
+       list=list.filter(Boolean);
+       if(!list.length){box.innerHTML='<div class="sm mut">Abhi koi ticket nahi.</div>';return}
+       box.innerHTML=self._ticketsHtml(list);
+     });
+   }).catch(function(){if(box)box.innerHTML='<div class="sm mut">Tickets load nahi hue.</div>'});
+ },
+ _ticketsHtml:function(arr){
+   var h='';
+   for(var i=0;i<arr.length;i++){
+     var t=arr[i];
+     var stc=t.status==='closed'?'var(--tx3)':t.status==='answered'?'var(--ok)':'var(--wn)';
+     h+='<div class="tkrow"><div class="tkh"><b>'+V.esc(t.subject||'Ticket')+'</b><span class="tkst" style="color:'+stc+'">'+V.esc((t.status||'open').toUpperCase())+'</span></div>'
+      +'<div class="tkb">'+V.esc(t.body||'')+'</div>'
+      +(t.reply?'<div class="tkr"><b>🛡️ Staff:</b> '+V.esc(t.reply)+'</div>':'')
+      +'<div class="tkm">'+V.timeAgo(t.at)+'</div></div>';
+   }
+   return h;
+ }
+};
+window.Support=Support;
+window.VEXA_SUPPORT=VEXA_SUPPORT;
+
+/* ═══════════════════════════════════════════════════════════
+   🆘 HELP SHIM (v2.3 — bug fix)
+   Auth screen ka Help Center pehle se `Help.report()` call
+   karta tha lekin Help module exist hi nahi karta tha — sab
+   buttons broken the (ReferenceError). Ab ye shim login se
+   pehle wali help requests handle karta hai:
+   - helpRequests node me public write (rules me add kiya)
+   - staff panel → Recovery tab me list hoti hai (resolve ke saath)
+   Logged-in users ke liye Support page ka ticket system hai.
+   ═══════════════════════════════════════════════════════════ */
+window.Help={
+ report:function(type){
+   var t={lost_account:'📱 Account Lost',lost_device:'🔒 Device Lost (6-hour rule)',hacked:'🚨 Account Hacked',other:'💬 Other Issue'}[type]||'💬 Help';
+   V.mOpen('🆘 '+t,
+    '<div class="snote mb8">Ye report <b>staff ko</b> jayegi. Login ke baad staff ka reply <b>Notifications</b> aur <b>Support page</b> me milega.</div>'
+   +'<div class="fld"><label class="flbl">Aapka Username</label><input class="inp" id="hpU" maxlength="20" placeholder="your_username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>'
+   +'<div class="fld"><label class="flbl">Extra details (optional)</label><textarea class="txta" id="hpD" maxlength="300" placeholder="Kya hua, kab hua…"></textarea></div>',
+    '<button class="btn bp" id="hpBtn" onclick="Help.send(\''+type+'\')">Send Report →</button>');
+ },
+ send:async function(type){
+   var u=V.g('hpU'),d=V.g('hpD'),b=V.g('hpBtn');
+   if(!u||!u.value.trim())return V.toast('warning','Username likho — staff aise verify karega');
+   if(b){b.disabled=true;b.textContent='Sending…'}
+   try{
+     await db.ref('helpRequests').push({
+       type:type,
+       username:u.value.trim().toLowerCase().slice(0,20),
+       detail:(d&&d.value.trim().slice(0,300))||'',
+       status:'open',
+       at:Date.now()
+     });
+     V.mClose();
+     V.mOpen('✅ Report Sent','<div class="tc"><p style="font-weight:700">Report staff ko chali gayi!</p><p class="mt8 sm mut">Staff jald review karega. Login karne ke baad Support page se follow-up kar sakte ho.</p></div>','<button class="btn bp" onclick="V.mClose();V.showAuth(\'sLogin\')">OK</button>');
+   }catch(e){
+     if(b){b.disabled=false;b.textContent='Send Report →'}
+     V.toast('error','Report fail: '+(e.message||'network issue'));
+   }
+ }
+};
+

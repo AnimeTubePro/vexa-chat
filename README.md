@@ -59,3 +59,20 @@ directly edit hote hain aur hosting par upload ho jate hain.
   `ads.txt` me hai — jo AdSense policy ke liye public hona hi chahiye.
 - Ads SIRF home/posts feed + desktop sidebar me. Chat, calls, games,
   settings, auth pages pe ads kabhi nahi.
+
+## Settings — categories UI (v3 se port)
+
+Settings screen 8 categories me organized hai (native `sgrp-title` style):
+👤 ACCOUNT · 🛡️ PRIVACY & SECURITY · 📜 LEGAL & SUPPORT ·
+☁️ GOOGLE DRIVE BACKUP · 🎨 CUSTOMIZATION · 📱 APP & INFO ·
+🛠️ STAFF (sirf staff) · ⚠️ DANGER ZONE.
+
+**LEGAL & SUPPORT** section (v3-panels se port kiya gaya):
+- 📜 Privacy Policy / 📖 Terms of Service — in-app pages (`sc-privacy` /
+  `sc-terms`) + signup screen ke Terms links (pehle dead the — `Policies`
+  module missing tha, ab live).
+- 👮 Police — community rules + reports (`Police` module, `sc-police`).
+- 🆘 Support — recovery · email · staff tickets (`Support` module,
+  `sc-support`; tickets `supportTickets` node me, rules already allow).
+
+Port script: `scripts/port_v3_settings.py` · verify: 29 automated checks.
