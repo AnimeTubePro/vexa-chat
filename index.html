@@ -23,8 +23,9 @@
 <script defer src="script.js"></script>
 <script defer src="services/ads.js"></script>
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault modules — order matters:
-     vexa-vault.js (crypto core → VexaVaultCore) → vexa-drive.js (Google Drive appDataFolder)
-     → vault-ui.js (VaultUI — Settings/Support se open hota hai) ═══ -->
+     vexa-vault.js (crypto core → VexaVaultCore) → vexa-drive.js (Google Drive
+     drive.file — visible "VEXA Backups" folder) → vault-ui.js (VaultUI —
+     Settings/Support se open hota hai) ═══ -->
 <script defer src="services/vexa-vault.js"></script>
 <script defer src="services/vexa-drive.js"></script>
 <script defer src="services/vault-ui.js"></script>
@@ -32,18 +33,36 @@
 </head>
 <body>
 <script>
+/* ⚡SPLASH WAIT: splash/loading screen ke PICHE modal khul ke "loading screen
+   par ye kaam nahi kar raha" jaisa lagta tha. Ye helper splash fade hone tak
+   wait karta hai (max 15s), phir callback chalata hai. Global — vault-ui.js
+   aur vexa-temp.js dono use karte hain.                                       */
+function VexaSplashWait(cb){
+  var n=0;
+  (function poll(){
+    var sp=document.getElementById('splash');
+    if(!sp||sp.classList.contains('fade')||sp.style.display==='none')return cb();
+    if(++n>75)return cb();
+    setTimeout(poll,200);
+  })();
+}
 /* ⚡EARLY-CLICK SHIM: defer scripts load hone se pehle user link dabaye to
-   bhi graceful response mile (ReferenceError nahi). Load hone ke baad real
-   module apne aap take-over kar leta hai.                                   */
+   bhi graceful response mile (ReferenceError nahi). Module ready ho to splash
+   khatam hone ke baad action apne aap chal jata hai — dobara click ki zaroorat
+   nahi. Module ready na ho to queue + friendly alert.                          */
 function VXpick(){
-  if (window.VexaVault && typeof VexaVault.pick==='function') return VexaVault.pick();
+  if (window.VexaVault && typeof VexaVault.pick==='function'){
+    return VexaSplashWait(function(){ try{ VexaVault.pick() }catch(e){} });
+  }
   try{ sessionStorage.setItem('vexaPickQueue','1') }catch(e){}
-  alert('⏳ VEXA abhi load ho raha hai — 2-3 second baad dobara try karo.');
+  alert('⏳ VEXA abhi load ho raha hai — loading khatam hote hi restore khul jayega.');
 }
 function VXtemp(){
-  if (window.TempRec && typeof TempRec.start==='function') return TempRec.start();
+  if (window.TempRec && typeof TempRec.start==='function'){
+    return VexaSplashWait(function(){ try{ TempRec.start() }catch(e){} });
+  }
   try{ sessionStorage.setItem('vexaTempQueue','1') }catch(e){}
-  alert('⏳ VEXA abhi load ho raha hai — 2-3 second baad dobara try karo.');
+  alert('⏳ VEXA abhi load ho raha hai — loading khatam hote hi temp access khul jayega.');
 }
 </script>
 

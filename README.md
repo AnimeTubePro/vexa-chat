@@ -17,7 +17,7 @@ directly edit hote hain aur hosting par upload ho jate hain.
 ├── services/      ← frontend service modules
 │   ├── ads.js          (AdSense manager — IDs encrypted, self-inject loader)
 │   ├── vexa-vault.js   (crypto core — AES-256-GCM vault)
-│   ├── vexa-drive.js   (Google Drive appDataFolder backup — OAuth implicit)
+│   ├── vexa-drive.js   (Google Drive backup — drive.file, visible "VEXA Backups" folder)
 │   ├── vault-ui.js     (Vault UI — Settings/Support se open hota hai)
 │   ├── panel-vault.js  (staff panels vault module)
 │   ├── panel-ai.js     (staff panels inline AI assistant)
@@ -49,8 +49,10 @@ directly edit hote hain aur hosting par upload ho jate hain.
      (e.g. `https://animetubepro.github.io`) — POPUP flow ke liye
    - **Authorized redirect URIs** me exact URL add karo
      (e.g. `https://animetubepro.github.io/vexa-chat/`) — fallback ke liye
-   `drive.appdata` scope ke liye app **Testing mode** me ho to apna Google
+   `drive.file` scope ke liye app **Testing mode** me ho to apna Google
    account **Test users** me add karo, ya app **Publish** karo.
+   ⚡ Backup files user ke My Drive ke visible **"VEXA Backups" folder** me
+   jaati hain — Settings ▸ "Drive Folder Kholo" se direct khul jata hai.
 
 ## Ads (privacy)
 

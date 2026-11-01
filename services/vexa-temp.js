@@ -421,9 +421,15 @@ const TempRec = {
 };
 window.TempRec = TempRec;
 
-/* queued early-clicks (VXtemp shim) consume karo */
+/* queued early-clicks (VXtemp shim) consume karo — splash khatam hone ke
+   BAAD, warna modal loading screen ke piche chala jata tha */
 try{
   window.addEventListener('load', function(){
-    try{ if (sessionStorage.getItem('vexaTempQueue')==='1'){ sessionStorage.removeItem('vexaTempQueue'); TempRec.start(); } }catch(e){}
+    try{
+      if (sessionStorage.getItem('vexaTempQueue')==='1'){
+        sessionStorage.removeItem('vexaTempQueue');
+        (window.VexaSplashWait||function(cb){ setTimeout(cb,600) })(function(){ try{ TempRec.start() }catch(e){} });
+      }
+    }catch(e){}
   });
 }catch(e){}

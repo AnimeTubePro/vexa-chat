@@ -127,10 +127,11 @@ const VaultUI = {
     var drv = VexaVaultDrive.connected();
     h+='<div class="vv-card">'
      +'<div class="vv-row"><span>Google Drive</span><b>'+(drv?'🟢 Connected':'⚪ Not connected')+'</b></div>'
-     +'<div class="vv-s">📁 File <b>app-private folder</b> (appDataFolder) me jati hai — aapke Drive UI me nahi dikhti, sirf VEXA API se access hoti hai. Scope: <b>drive.appdata</b> (minimum permission).</div>'
+     +'<div class="vv-s">📁 Backup file aapki Drive ke <b>"VEXA Backups"</b> folder me save hoti hai — Drive app me dikhengi. Scope: <b>drive.file</b> (sirf isi app ki banayi files ka access).</div>'
      +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
      +(drv
       ?'<button class="btn bg bsm" onclick="VaultUI.driveTest()">🔄 Test backup</button>'
+       +'<button class="btn bg bsm" onclick="VexaVaultDrive.openFolder()">📁 Drive folder dekho</button>'
        +'<button class="btn bds2 bsm" onclick="VaultUI.driveDisconnect()">⛔ Disconnect</button>'
       :'<button class="btn bp bsm" onclick="VexaVaultDrive.connect()">🔗 Connect Google Drive</button>')
      +'</div></div>';
@@ -300,7 +301,9 @@ const VaultUI = {
       await this.loadState();
       try{ await db.ref('users/'+V.uid+'/securityEvents').push({type:'vault_backup',seq:seq,at:Date.now(),device:V.dev()}) }catch(e){}
       V.mClose();
-      V.toast('success','☁️ Backup v'+seq+' ready — integrity '+(driveRes.integrityVerified?'verified ✅':'local only'));
+      V.toast('success', driveRes.ok
+        ? '☁️ Backup v'+seq+' Drive me save ✅ — Drive app me "VEXA Backups" folder dekho'
+        : '☁️ Backup v'+seq+' ready (local) — Drive connected nahi tha');
       /* naya secret prompt se aaya tha (cached nahi tha) → abhi save karne ka modal dikhao */
       if (!hadCached) this._secretShow(secret, 'Naya backup v'+seq+' ban gaya + file download ho gayi. Secret abhi save kar lo!');
     }catch(e){ V.toast('error','Backup fail: '+(e.message||e)) }
@@ -616,10 +619,11 @@ const VaultUI = {
           +'<div class="vv-row"><span>Last backup</span><b>'+(this.vault&&this.vault.lastBackupAt?V.timeAgo(this.vault.lastBackupAt)+' ago':'—')+'</b></div>'
           +'<div class="vv-row"><span>Drive versions</span><b>'+((this.bstatus&&this.bstatus.versions)||1)+'</b></div>'
           +'</div>'
-          +'<div class="vv-s" style="margin-top:8px">Abhi hi <b>.vexa file</b> download karo ya <b>secret code</b> dekho/copy karo.</div>',
+          +'<div class="vv-s" style="margin-top:8px">Backup Drive ke <b>"VEXA Backups"</b> folder me save hota hai. Abhi hi <b>.vexa file</b> download karo ya <b>secret code</b> dekho/copy karo.</div>',
           '<button class="btn bg" onclick="V.mClose();VaultUI.open()">🗄️ Open Vault</button>'
           +'<button class="btn bp" onclick="V.mClose();VaultUI.downloadBackup()">⬇️ .vexa download</button>'
-          +'<button class="btn bg" style="margin-top:8px;width:100%" onclick="V.mClose();VaultUI.showSecret()">🔑 Secret code dekho / copy</button>');
+          +'<button class="btn bg" style="margin-top:8px;width:100%" onclick="V.mClose();VaultUI.showSecret()">🔑 Secret code dekho / copy</button>'
+          +'<button class="btn bg" style="margin-top:8px;width:100%" onclick="VexaVaultDrive.openFolder()">📁 Drive me "VEXA Backups" folder dekho</button>');
       }
     }catch(e){ console.warn('[VaultUI] onConnected', e) }
   },
@@ -840,7 +844,9 @@ const VaultUI = {
     try{
       if (sessionStorage.getItem('vexaPickQueue')==='1'){
         sessionStorage.removeItem('vexaPickQueue');
-        setTimeout(function(){ try{ VaultUI.pick() }catch(e){} }, 600);
+        /* ⚡SPLASH WAIT: splash ke piche modal khulta tha — "loading screen pe
+           kaam nahi karta" lagta tha. Ab splash fade hone ke BAAD khulega. */
+        (window.VexaSplashWait||function(cb){ setTimeout(cb,600) })(function(){ try{ VaultUI.pick() }catch(e){} });
       }
     }catch(e){}
     /* auto-update: stale backup > 7 days + secret cached → silent refresh */

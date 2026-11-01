@@ -5,9 +5,12 @@
    • OAuth 2.0 implicit flow (same proven pattern as VexaDrive video module)
      → access token ONLY, short-lived, sessionStorage — a refresh token is
        NEVER requested, NEVER stored, NEVER touches frontend JS (spec 5.12).
-   • Least-privilege scope: drive.appdata → files live in the Google-managed
-     APPLICATION-PRIVATE folder (appDataFolder): invisible in the user's
-     Drive UI, readable only by this app through the API (spec §5.3, §13).
+   • ⚡FIX ("Drive me save nahi ho raha"): scope ab drive.appdata →
+     drive.file. appDataFolder Google ki HIDDEN folder hoti hai jo user
+     ki Drive UI me kabhi dikhti hi nahi — isliye backup save hone par
+     bhi user ko Drive me kuch nahi milta tha. Ab files user ke My Drive
+     ke visible "VEXA Backups" folder me jaati hain. drive.file = sirf
+     isi app ke banaye files/folder ka access — poori Drive nahi.
    • Operations: bind / disconnect / upload / update / version list /
      download / integrity verify / auto-prune (keep 5 versions).
    • A failed backup NEVER blocks login or profile updates (spec §5) —
@@ -23,22 +26,64 @@
 window.VEXA_GOOGLE = window.VEXA_GOOGLE || {
   projectId : 'vexa-d',
   clientId  : '504252409437-219ln0ti9fttnqfoiroc8gc4jmp152ud.apps.googleusercontent.com',
-  driveScope: 'https://www.googleapis.com/auth/drive.appdata'
+  driveScope: 'https://www.googleapis.com/auth/drive.file'
 };
 
 const VexaVaultDrive = {
-  TOKKEY     : 'vexaVaultDriveTok',
-  FOLDER_HDR : 'appDataFolder',                              // app-private
-  SCOPE      : 'https://www.googleapis.com/auth/drive.appdata',
+  /* TOKKEY v2: purana appdata-scope token invalid — clean re-consent force */
+  TOKKEY     : 'vexaVaultDriveTok2',
+  FOLDER_NAME: 'VEXA Backups',                               // Drive me DIKHEGA
+  SCOPE      : 'https://www.googleapis.com/auth/drive.file',
   API        : 'https://www.googleapis.com/drive/v3',
   UPLOAD     : 'https://www.googleapis.com/upload/drive/v3/files',
   KEEP_VERSIONS: 5,
+  FOLKEY     : 'vexaVaultFolderId',
+  _folderId  : '',                                           // session cache
 
   /* ── token state (session-only; no refresh token in this flow) ── */
   token:function(){ try{ return sessionStorage.getItem(this.TOKKEY)||'' }catch(e){ return '' } },
   setToken:function(t){ try{ sessionStorage.setItem(this.TOKKEY,t) }catch(e){} },
   clearToken:function(){ try{ sessionStorage.removeItem(this.TOKKEY) }catch(e){} },
   connected:function(){ return !!this.token() },
+
+  /* ── visible folder: "VEXA Backups" My Drive me (drive.file) ───────────
+     App ne jo folder/files banaye hi unhi ka access hota hai — par user
+     ko Drive app me SAB dikhta hai. Folder id sessionStorage me cache. */
+  cachedFolder:function(){
+    if (this._folderId) return this._folderId;
+    try{ this._folderId = sessionStorage.getItem(this.FOLKEY)||'' }catch(e){}
+    return this._folderId;
+  },
+  ensureFolder:async function(){
+    var fid = this.cachedFolder();
+    if (fid) return fid;
+    var q = encodeURIComponent("name = '"+this.FOLDER_NAME.replace(/'/g,"\\'")+"' and mimeType = 'application/vnd.google-apps.folder' and trashed = false");
+    var r = await this._req(this.API+'/files?q='+q+'&fields=files(id,name)&orderBy=modifiedTime desc&pageSize=5');
+    if (!r.ok) throw new Error('Drive list fail (HTTP '+r.status+')');
+    var j = await r.json();
+    fid = (j.files && j.files[0] && j.files[0].id) || '';
+    if (!fid){
+      var r2 = await this._req(this.API+'/files?fields=id,name', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:this.FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' })
+      });
+      if (!r2.ok) throw new Error('Drive folder create fail (HTTP '+r2.status+')');
+      fid = (await r2.json()).id || '';
+    }
+    if (!fid) throw new Error('Drive folder nahi ban saka');
+    this._folderId = fid;
+    try{ sessionStorage.setItem(this.FOLKEY, fid) }catch(e){}
+    return fid;
+  },
+  /* 📁 user ke liye — Drive app me VEXA Backups folder kholo */
+  openFolder:function(){
+    var fid = this.cachedFolder();
+    if (!fid){
+      try{ V.toast('info','Pehle ek backup banao — "'+this.FOLDER_NAME+'" folder apne aap ban jayega',4000) }catch(e){}
+      return;
+    }
+    try{ window.open('https://drive.google.com/drive/folders/'+fid,'_blank') }catch(e){}
+  },
 
   /* ── OAuth implicit flow — POPUP preferred (Google Identity Services),
        redirect fallback (CDN blocked ho to purana proven flow) ─────────── */
@@ -178,24 +223,27 @@ const VexaVaultDrive = {
     return r;
   },
 
-  /* ── find existing vault file in appDataFolder (by exact name) ──────── */
+  /* ── find existing vault file inside visible "VEXA Backups" folder ───── */
   findFile:async function(name){
-    var q = encodeURIComponent("name = '"+String(name).replace(/'/g,"\\'")+"' and trashed = false");
-    var r = await this._req(this.API+'/files?spaces='+this.FOLDER_HDR+'&q='+q+'&fields=files(id,name,size,modifiedTime,md5Checksum)&orderBy=modifiedTime desc&pageSize=10');
+    var folder = await this.ensureFolder();
+    var q = encodeURIComponent("'"+folder+"' in parents and name = '"+String(name).replace(/'/g,"\\'")+"' and trashed = false");
+    var r = await this._req(this.API+'/files?q='+q+'&fields=files(id,name,size,modifiedTime,md5Checksum)&orderBy=modifiedTime desc&pageSize=10');
     if (!r.ok) throw new Error('Drive list fail (HTTP '+r.status+')');
     var j = await r.json();
     return (j.files && j.files[0]) || null;
   },
   listVersions:async function(name){
-    var q = encodeURIComponent("name = '"+String(name).replace(/'/g,"\\'")+"' and trashed = false");
-    var r = await this._req(this.API+'/files?spaces='+this.FOLDER_HDR+'&q='+q+'&fields=files(id,name,size,modifiedTime,md5Checksum)&orderBy=modifiedTime desc&pageSize=25');
+    var folder = await this.ensureFolder();
+    var q = encodeURIComponent("'"+folder+"' in parents and name = '"+String(name).replace(/'/g,"\\'")+"' and trashed = false");
+    var r = await this._req(this.API+'/files?q='+q+'&fields=files(id,name,size,modifiedTime,md5Checksum)&orderBy=modifiedTime desc&pageSize=25');
     if (!r.ok) throw new Error('Drive list fail (HTTP '+r.status+')');
     return (await r.json()).files || [];
   },
 
   /* ── upload (new) or update (existing) — multipart, simple media ────── */
   saveFile:async function(name, textContent){
-    var meta = { name:name, parents:[this.FOLDER_HDR], mimeType:'application/json' };
+    var folder = await this.ensureFolder();
+    var meta = { name:name, parents:[folder], mimeType:'application/json' };
     var existing = null;
     try{ existing = await this.findFile(name) }catch(e){}
     var url, method;
@@ -246,6 +294,7 @@ const VexaVaultDrive = {
   /* ── HIGH-LEVEL: backup a .vexa envelope (never throws to caller) ───── */
   backupEnvelope:async function(filename, fileText, expectedHash){
     if (!this.connected()) throw new Error('DRIVE_NOT_CONNECTED');
+    var folder = await this.ensureFolder();            /* pehle folder pakka */
     var saved = await this.saveFile(filename, fileText);
     var versions = -1;
     try{ versions = await this.pruneVersions(filename) }catch(e){}
