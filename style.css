@@ -185,6 +185,10 @@ input[type="checkbox"],input[type="radio"]{accent-color:var(--ac)} /* ✨NEW */
 .pgv{aspect-ratio:1;position:relative;cursor:pointer;overflow:hidden;background:var(--bg3)}
 .pgv img{width:100%;height:100%;object-fit:cover}
 .pgc2{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px}
+/* 🆕PROFILE-GRID (v2.8.2): Instagram-style like/comment overlay on post cells */
+.pgv .pov{position:absolute;bottom:6px;left:6px;right:6px;display:flex;gap:10px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);pointer-events:none;z-index:2}
+.pgv .pov span{display:inline-flex;align-items:center;gap:3px}
+.pgv::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 62%,rgba(0,0,0,.42));pointer-events:none}
 .pfd-modern .pfh{padding:0 0 14px;text-align:left;display:block;background:linear-gradient(160deg,var(--acs),transparent 70%);border-radius:0 0 24px 24px}
 .pfd-modern .pava-ring{margin:20px 16px 0;padding:3px;background:var(--gr);border-radius:24px;display:inline-block}
 .pfd-modern .pava-ring .ava{border-radius:24px!important}

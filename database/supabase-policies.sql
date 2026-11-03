@@ -4,7 +4,7 @@
 -- SQL Editor में अलग-अलग चलाओ (एक ही editor में नहीं):
 --   [1] ygbkjnwuvjcgdzbqwgwv.supabase.co → bucket vexa-media    (avatars)
 --   [2] qrrcyvtvwjzhsdklxluh.supabase.co → bucket vexa-posts    (post images)
---   [3] kjsfenhmlhgdlhqipqts.supabase.co → bucket vexa-chat-guild (guild media)
+--   [3] kjsfenhmlhgdlhqipqts.supabase.co → bucket vexa-chat-guild (guild media + 🎬 REELS videos)
 --
 -- ⚠️ PATTERN: app anon/publishable key से upload करता है (Supabase user login
 --    नहीं है)। इसलिए policies "anon" role को app-path prefixes तक limit करती हैं।
@@ -78,11 +78,17 @@ on storage.objects for delete
 to anon, authenticated
 using (bucket_id = 'vexa-posts' and (storage.foldername(name))[1] = 'posts');
 
--- ─────────────── [3] SUPABASE PROJECT 3 — vexa-chat-guild (guild/group media) ───────────────
+-- ─────────────── [3] SUPABASE PROJECT 3 — vexa-chat-guild (guild/group media + 🎬 REELS) ───────────────
 -- ⚠️ पहले DASHBOARD में bucket name VERIFY करो!
-insert into storage.buckets (id, name, public)
-values ('vexa-chat-guild', 'vexa-chat-guild', true)
-on conflict (id) do update set public = true;
+-- ⚠️ v2.8.2-R3 REELS FIX: bucket ki Allowed MIME types में video/mp4 (+ video/webm)
+--    होना चाहिए — वरना app में "mime type video/mp4 is not supported" error आएगा.
+--    Dashboard: Storage → vexa-chat-guild → Settings → Allowed MIME types:
+--    video/mp4, video/webm  (या field KHALI छोड़ो = सब types allowed)
+--    नीचे का SQL चलाने से भी हो जाएगा (allowed_mime_types NULL = सब allowed,
+--    file_size_limit 3MB = reels की 2.8MB limit के साथ):
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('vexa-chat-guild', 'vexa-chat-guild', true, 3145728, null)
+on conflict (id) do update set public = true, file_size_limit = 3145728, allowed_mime_types = null;
 
 create policy "vexa_guild_public_read"
 on storage.objects for select

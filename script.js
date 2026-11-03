@@ -871,10 +871,19 @@ const CFG={
  firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"},
  supabase:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media"}
 };
+/* ⚡REEL-FIX (v2.8.2): 3 Supabase projects (database/supabase-policies.sql spec) —
+   reels/guild media PROJECT-3 (vexa-chat-guild) me jayenge, avatars/media project-1 me.
+   Pehle reels galti se vexa-media (image-only bucket) me upload ho rahe the →
+   "mime type video/mp4 is not supported" error. Ab guild project pe route honge. */
+const VEXA_STORAGE={
+ avatars:{url:"https://ygbkjnwuvjcgdzbqwgwv.supabase.co",anonKey:"sb_publishable__0S4cvfvVDrEnONXnuHjGQ_Yl_bjC-o",bucket:"vexa-media",folder:"profile"},
+ posts:{url:"https://qrrcyvtvwjzhsdklxluh.supabase.co",anonKey:"sb_publishable_xv8P8Lo3wwLCjO1GexlJtQ_oQBvT6m4",bucket:"vexa-posts",folder:"posts"},
+ guilds:{url:"https://kjsfenhmlhgdlhqipqts.supabase.co",anonKey:"sb_publishable_t5BhzEaXtTCq5fkJfvzD0g_9v7As_Sd",bucket:"vexa-chat-guild",folder:"guilds"}
+};
 const CF_URL='https://us-central1-vexa-b3a1d.cloudfunctions.net/recoveryLogin';
 const CF_STORE_URL=CF_URL.replace('recoveryLogin','vexaSecureStore');
 const CF_CREDCHAT_URL=CF_URL.replace('recoveryLogin','recoveryCredChat');
-let auth=null,db=null,sb=null,me=null;
+let auth=null,db=null,sb=null,sgb=null,me=null;
 
 /* ================= CORE ================= */
 const V={
@@ -1026,19 +1035,87 @@ const V={
    for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);
    return new Blob([a],{type:mime});
  },
- /* 🎬REEL: video file upload (Supabase Storage — raw file, image compress nahi) */
- uploadVideo:async function(file,path,ctype){
-   var r=await sb.storage.from(CFG.supabase.bucket).upload(path,file,{contentType:ctype||file.type||'video/mp4',upsert:true});
-   if(r.error)throw r.error;
-   var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl(path).data.publicUrl;
+ /* ⚡STORAGE-FIX: multi-project storage helpers */
+ sbFor:function(store){ return (store==='guilds'&&sgb)?sgb:sb },
+ vidExt:function(m){
+   m=(m||'').toLowerCase();
+   if(m==='video/webm')return 'webm';
+   if(m==='video/quicktime'||m==='video/mov')return 'mov';
+   if(m==='video/x-matroska')return 'mkv';
+   if(m==='video/x-msvideo')return 'avi';
+   if(m==='video/ogg')return 'ogv';
+   if(m==='video/3gpp')return '3gp';
+   return 'mp4';
+ },
+ storErr:function(e){
+   try{
+     var m=((e&&(e.message||(e.error&&e.error.message)))||'')+'',mt,mm;
+     if(/bucket not found|nosuchbucket/i.test(m))return new Error('Storage bucket nahi mila ❌ — Supabase Dashboard → Storage → New bucket banao (naam: vexa-chat-guild, Public ON, Allowed MIME types: video/mp4, video/webm — ya field khaali). Detail: '+m);
+     if(/mime type/i.test(m)&&/not supported/i.test(m)){
+       mt=(m.match(/mime type ([\w\/\-\+\.]+)/i)||[])[1]||'file type';
+       return new Error('Storage bucket ne "'+mt+'" reject kiya (bucket ki Allowed MIME types list me nahi hai). Fix: Supabase Dashboard → Storage → bucket → Settings → Allowed MIME types me "'+mt+'" add karo YA field khaali chhodo (sab types allowed) → Save.');
+     }
+     if(/payload too large|size limit|exceeded the maximum/i.test(m))return new Error('File bucket ki size limit se badi hai — chhota file lo');
+     if(/row-level security|policy/i.test(m))return new Error('Storage policy ne block kiya — supabase-policies.sql ke policies project me chalao');
+     if(/invalid api key|jwt/i.test(m))return new Error('Storage key invalid — bucket project ka publishable/anon key CFG/VEXA_STORAGE me sahi hai?');
+     return (e instanceof Error)?e:new Error(m||'Storage fail');
+   }catch(e2){ return new Error('Storage fail') }
+ },
+ /* ⚡REEL-FIX: Storage Check — Supabase buckets live probe (Settings se)
+    Reels "mime type video/mp4 is not supported" / "Bucket not found" ka
+    self-diagnosis: har bucket pe chhota test upload, result modal me. */
+ storageCheck:async function(){
+   V.toast('info','📊 Storage check chal raha hai…');
+   var rows=[];
+   async function probe(store,bkt,path,ct){
+     var s=(store&&VEXA_STORAGE[store])||null;
+     var base=s?s.url:CFG.supabase.url, key=s?s.anonKey:CFG.supabase.anonKey;
+     var url=base+'/storage/v1/object/'+bkt+'/'+path;
+     var hdr={'Authorization':'Bearer '+key,'apikey':key,'Content-Type':ct};
+     try{
+       var r=await fetch(url,{method:'POST',headers:hdr,body:'vexa-check'});
+       if(r.ok){
+         try{ await fetch(url,{method:'DELETE',headers:{'Authorization':'Bearer '+key,'apikey':key}}) }catch(e){}
+         return {ok:true,msg:'Upload OK — bucket sahi configured hai ✅'};
+       }
+       var j=null; try{ j=await r.json() }catch(e){}
+       var mm=(j&&(j.message||j.error))||('HTTP '+r.status);
+       if(/bucket not found/i.test(mm))return {ok:false,msg:'Bucket "'+bkt+'" nahi mila ❌ — Supabase Dashboard → Storage → New bucket "'+bkt+'" (Public ON) banao, ya supabase-policies.sql chalao'};
+       if(/mime type/i.test(mm))return {ok:false,msg:'Bucket hai, par "'+ct+'" allowed nahi ⚠️ — bucket Settings → Allowed MIME types me "'+ct+'" add karo (ya field khaali)'};
+       if(/row-level security|policy/i.test(mm))return {ok:false,msg:'Bucket hai, par RLS policy upload rok rahi hai ⚠️ — supabase-policies.sql ke policies project ke SQL Editor me chalao'};
+       return {ok:false,msg:mm};
+     }catch(e){ return {ok:false,msg:'Network fail — internet/CDN check karo'} }
+   }
+   var ts=Date.now();
+   rows.push(['🖼️ vexa-media — profile/post images (project-1)', await probe(null,CFG.supabase.bucket,'profile/.vexa-check-'+ts+'.jpg','image/jpeg')]);
+   rows.push(['🎬 vexa-chat-guild — reels video/mp4 (project-3)', await probe('guilds',VEXA_STORAGE.guilds.bucket,'guilds/.vexa-check-'+ts+'.mp4','video/mp4')]);
+   rows.push(['🎥 vexa-chat-guild — reels video/webm (project-3)', await probe('guilds',VEXA_STORAGE.guilds.bucket,'guilds/.vexa-check-'+ts+'.webm','video/webm')]);
+   var h='<div class="snote" style="line-height:1.9">';
+   rows.forEach(function(r){
+     h+='<div style="margin-bottom:10px">'+(r[1].ok?'✅':'❌')+' <b>'+V.esc(r[0])+'</b><br>'
+       +'<span class="mut" style="font-size:11.5px">'+V.esc(r[1].msg)+'</span></div>';
+   });
+   h+='</div><div class="snote mut" style="margin-top:6px">🎬 Reels ke liye <b>project-3 (kjsfenhmlhgdlhqipqts)</b> me bucket <b>vexa-chat-guild</b> hona zaroori hai — Public ON + Allowed MIME types me video/mp4 (ya field khaali). RLS policies ke liye database/supabase-policies.sql usi project ke SQL Editor me chalao.</div>';
+   V.mOpen('📊 Storage Check', h, '<button class="btn bp" onclick="V.mClose()">Theek hai</button>');
+ },
+ /* 🎬REEL: video file upload (Supabase Storage — raw file, image compress nahi)
+    ⚡FIX: store param — 'guilds' = vexa-chat-guild project (reels wahan jate hain) */
+ uploadVideo:async function(file,path,ctype,store){
+   var st=(store&&VEXA_STORAGE[store])||null;
+   var cli=V.sbFor(store), bkt=st?st.bucket:CFG.supabase.bucket;
+   var r=await cli.storage.from(bkt).upload(path,file,{contentType:ctype||file.type||'video/mp4',upsert:true});
+   if(r.error)throw V.storErr(r.error);
+   var pub=cli.storage.from(bkt).getPublicUrl(path).data.publicUrl;
    if(!pub)throw new Error('public url fail');
    return pub;
  },
- uploadPhoto:async function(dataUrl,path){
+ uploadPhoto:async function(dataUrl,path,store){
    try{
-     var r=await sb.storage.from(CFG.supabase.bucket).upload(path,V.d2b(dataUrl),{contentType:'image/jpeg',upsert:true});
+     var st=(store&&VEXA_STORAGE[store])||null;
+     var cli=V.sbFor(store), bkt=st?st.bucket:CFG.supabase.bucket;
+     var r=await cli.storage.from(bkt).upload(path,V.d2b(dataUrl),{contentType:'image/jpeg',upsert:true});
      if(r.error)throw r.error;
-     var pub=sb.storage.from(CFG.supabase.bucket).getPublicUrl(path).data.publicUrl;
+     var pub=cli.storage.from(bkt).getPublicUrl(path).data.publicUrl;
      var ok=await new Promise(function(res){
        var i=new Image();i.onload=function(){res(true)};i.onerror=function(){res(false)};
        i.src=pub;setTimeout(function(){res(false)},5000);
@@ -2136,9 +2213,12 @@ const Profile={
       +(links?'<div class="slinks">'+links+'</div>':'')
       +(own?'<div class="puid"><span>🆔 UID <span class="sm mut">(recovery)</span></span><span class="mono">'+V.esc(uid)+'</span><a onclick="V.copy(\''+uid+'\',\'UID copied\')">📋</a></div>':'')
       +'</div>'
-      +'<div class="ptabs"><div class="ptb act">📸 Posts</div></div>'
-      +'<div id="pGrid"></div></div>';
+      +'<div class="ptabs"><div class="ptb act" id="ptbPosts" onclick="Profile.ptab(\'posts\',this)">📸 Posts</div><div class="ptb" id="ptbReels" onclick="Profile.ptab(\'reels\',this)">🎬 Reels</div></div>'
+      +'<div id="pGrid"></div><div id="pReelGrid" class="hidden"></div></div>';
      if(rid!==Profile._rr)return;
+     var _pg=V.g('pGrid'),_rg=V.g('pReelGrid');
+     if(_pg)_pg.dataset.uid=uid;
+     if(_rg)_rg.dataset.uid=uid;
      Posts.grid(uid);
      /* ⚡BACKGROUND: presence + photo — paint ko block nahi karte */
      this._bg(uid,own,u,rid);
@@ -2178,6 +2258,22 @@ const Profile={
        }
      }
    }catch(e){}
+ },
+ /* ⚡PROFILE-TABS (user request): Posts | Reels switch — Instagram-style */
+ ptab:function(t,el){
+   document.querySelectorAll('#profC .ptb').forEach(function(x){x.classList.remove('act')});
+   if(el)el.classList.add('act');
+   var pg=V.g('pGrid'),rg=V.g('pReelGrid');
+   if(!pg||!rg)return;
+   var uid=(pg&&pg.dataset&&pg.dataset.uid)||(rg&&rg.dataset&&rg.dataset.uid)||V.uid;
+   if(t==='reels'){
+     pg.classList.add('hidden');
+     rg.classList.remove('hidden');
+     Reels.grid(uid);
+   }else{
+     rg.classList.add('hidden');
+     pg.classList.remove('hidden');
+   }
  },
  designPicker:function(){
    var cur=(me.settings&&me.settings.profileDesign)||'modern';
@@ -2399,7 +2495,7 @@ const Posts={
    for(var i=0;i<ph.length;i++){
      var src=V.esc(ph[i]||'');
      var fbUrl='';
-     try{fbUrl=sb.storage.from(CFG.supabase.bucket).getPublicUrl('posts/'+p.userId+'/'+id+'_'+i+'.jpg').data.publicUrl;}catch(e){}
+     try{fbUrl=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket).getPublicUrl('posts/'+p.userId+'/'+id+'_'+i+'.jpg').data.publicUrl;}catch(e){}
      imgs+='<img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)" onclick="Posts.view(this.src)">';
    }
    return '<div class="pcard" id="pc-'+id+'">'
@@ -2603,7 +2699,8 @@ const Posts={
      var urls=[];
      for(var i=0;i<this.photos.length;i++){
        V.g('cmpB').style.width=Math.round((i+1)/this.photos.length*100)+'%';
-       urls.push(await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg'));
+       /* ⚡POST-FIX: post images ab vexa-posts project (project-2) me — user spec */
+       urls.push(await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg','posts'));
      }
      var postData={userId:V.uid,title:cap.slice(0,60),caption:cap,photoRefs:urls,postUrl:urls[0]||'',privacy:pr,hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),createdAt:firebase.database.ServerValue.TIMESTAMP,commentCount:0,likeCount:0};
      await db.ref('posts/'+pid).set(postData);
@@ -2669,7 +2766,7 @@ const Posts={
          v.src=u;
        });
        if(dur>90){V.toast('error','Reel max 90 sec hai — ye '+Math.round(dur)+'s ka hai');return}
-       self._reel={file:f,dur:Math.round(dur)};
+       self._reel={file:f,dur:Math.round(dur),ext:V.vidExt(f.type)};
        var p=V.g('relP');
        if(p)p.innerHTML='<span style="font-size:34px">✅</span><span style="font-size:12.5px;font-weight:700">'+V.esc(f.name||'video')+'</span><span class="mut" style="font-size:11px">'+(f.size/1048576).toFixed(2)+'MB · '+Math.round(dur)+'s</span>';
      }catch(e){V.toast('error',e.message||'Video invalid')}
@@ -2705,15 +2802,17 @@ const Posts={
      var thumb='';
      try{ thumb=await this.reelThumb(this._reel.file) }catch(e){ console.warn('thumb skip',e) }
      V.g('relBar').style.width='40%';
-     var vurl=await V.uploadVideo(this._reel.file,'reels/'+V.uid+'/'+rid+'.mp4');
+     var ext=this._reel.ext||V.vidExt(this._reel.file.type);
+    /* ⚡FIX: guild bucket (vexa-chat-guild project) — 'guilds/' prefix RLS policy ke liye zaroori */
+    var vurl=await V.uploadVideo(this._reel.file,'guilds/reels/'+V.uid+'/'+rid+'.'+ext,null,'guilds');
      V.g('relBar').style.width='85%';
      var turl='';
      if(thumb){
-       try{ turl=await V.uploadPhoto(thumb,'reels/'+V.uid+'/'+rid+'_thumb.jpg') }catch(e){ console.warn('thumb up fail',e) }
+       try{ turl=await V.uploadPhoto(thumb,'guilds/reels/'+V.uid+'/'+rid+'_thumb.jpg','guilds') }catch(e){ console.warn('thumb up fail',e) }
      }
      V.g('relBar').style.width='100%';
      var rd={userId:V.uid,caption:cap,title:cap.slice(0,60),videoUrl:vurl,thumbUrl:turl,
-       size:this._reel.file.size,duration:this._reel.dur||0,privacy:pr,
+       size:this._reel.file.size,duration:this._reel.dur||0,privacy:pr,ext:ext,
        hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),
        createdAt:firebase.database.ServerValue.TIMESTAMP,likeCount:0,commentCount:0};
      await db.ref('reels/'+rid).set(rd);
@@ -2726,7 +2825,7 @@ const Posts={
      if(b){b.disabled=false;b.textContent='🎬 Reel post karo'}
    }
   },
-  tabGrid:function(uid){this.grid(uid)},
+  tabGrid:function(uid){Profile.ptab('posts',V.g('ptbPosts'));this.grid(uid)},
  grid:async function(uid){
    var g=V.g('pGrid');if(!g)return;
    g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
@@ -2736,21 +2835,42 @@ const Posts={
      var arr=[];
      s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
      arr.reverse();
+     /* ⚡PROFILE-GRID (user request): like/comment counts users index me nahi hote —
+        posts/<pid> parallel reads (max 24) → Instagram-style overlay */
+     var full=await Promise.all(arr.map(function(a){return db.ref('posts/'+a.id).get().catch(function(){return null})}));
+     var vis=await Promise.all(full.map(function(x,i){var r=(x&&x.val())||arr[i].val;return Privacy.canViewPost(r).catch(function(){return true})}));
      var cells='';
      for(var i=0;i<arr.length;i++){
-       var p=arr[i].val,pid=arr[i].id;
-       if(p.privacy==='onlyme'&&uid!==V.uid)continue;
+       var p=arr[i].val,pid=arr[i].id,r=(full[i]&&full[i].val())||p;
+       if(!vis[i])continue;
+       if((r.privacy||p.privacy)==='onlyme'&&uid!==V.uid)continue;
        var ph=[];
        if(p.postUrl)ph.push(p.postUrl);
        if(p.photoRefs&&p.photoRefs.length)ph=ph.concat(p.photoRefs);
        if(!ph.length)continue;
        var fbUrl='';
-       try{fbUrl=sb.storage.from(CFG.supabase.bucket).getPublicUrl('posts/'+uid+'/'+pid+'_0.jpg').data.publicUrl;}catch(e){}
+       try{fbUrl=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket).getPublicUrl('posts/'+uid+'/'+pid+'_0.jpg').data.publicUrl;}catch(e){}
        var src=V.esc(ph[0]);
-       cells+='<div class="pgv"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)" onclick="Posts.view(this.src)">'+(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
+       var lc=r.likeCount||(r.likes?Object.keys(r.likes).length:0)||0;
+       var cc=r.commentCount||0;
+       cells+='<div class="pgv" onclick="Posts.openPost(\''+pid+'\')"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)">'
+        +'<span class="pov"><span>❤️ '+lc+'</span><span>💬 '+cc+'</span></span>'
+        +(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
      }
      g.innerHTML=cells?'<div class="pgrid2">'+cells+'</div>':'<div class="empo"><div class="ei">📷</div><div class="et">No visible posts</div></div>';
    }catch(e){g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
+ },
+ /* ⚡OPEN-POST (user request): profile grid tap → full post card (like/comment/save/share live) */
+ openPost:async function(pid){
+   var s=await db.ref('posts/'+pid).get().catch(function(){return null});
+   if(!s||!s.exists())return V.toast('error','Post nahi mila');
+   var p=s.val();
+   try{
+     var can=await Privacy.canViewPost(p);
+     if(!can)return V.mOpen('🔒 Private','<div class="empo"><div class="ei">🔒</div><div class="et">Ye post private hai</div></div>');
+   }catch(e){}
+   var card=await Posts.card(pid,p);
+   V.mOpen('📸 Post',card);
  }
 };
 
@@ -2783,6 +2903,36 @@ const Reels={
      w.innerHTML=cells?'<div class="rgrid">'+cells+'</div>':'<div class="empo"><div class="ei">🔒</div><div class="et">No reels to show</div></div>';
    }catch(e){
      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+   }
+ },
+ /* ⚡PROFILE-REELS (user request): profile me user ke reels — ❤️/💬 counts overlay,
+    tap → Reels.open (like/comment ke saath). users/<uid>/reels index + reels/<rid> counts. */
+ grid:async function(uid){
+   var g=V.g('pReelGrid');if(!g)return;
+   g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
+   try{
+     var s=await db.ref('users/'+uid+'/reels').limitToLast(24).get();
+     if(!s.exists()){g.innerHTML='<div class="empo"><div class="ei">🎬</div><div class="et">No reels yet</div><div class="ex">Posts tab → 🎬 Reels → ✏️ se banao</div></div>';return}
+     var arr=[];
+     s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
+     arr.reverse();
+     /* ⚡PERF: counts users index me nahi hote — reels/<rid> parallel reads (max 24) */
+     var full=await Promise.all(arr.map(function(a){return db.ref('reels/'+a.id).get().catch(function(){return null})}));
+     var cells='';
+     for(var i=0;i<arr.length;i++){
+       var rid=arr[i].id,base=arr[i].val||{},r=(full[i]&&full[i].val())||base;
+       if((r.privacy||base.privacy)==='onlyme'&&uid!==V.uid)continue;
+       var th=r.thumbUrl?'<img src="'+V.esc(r.thumbUrl)+'" loading="lazy">':'<div class="rgph">🎬</div>';
+       var lc=r.likeCount||0,cc=r.commentCount||0;
+       cells+='<div class="rgv" onclick="Reels.open(\''+rid+'\')">'+th
+        +'<span class="r play">▶</span>'
+        +'<span class="rmeta">❤️ '+lc+' · 💬 '+cc+'</span>'
+        +(r.duration?'<span class="rdur">'+r.duration+'s</span>':'')
+        +'</div>';
+     }
+     g.innerHTML=cells?'<div class="rgrid">'+cells+'</div>':'<div class="empo"><div class="ei">🎬</div><div class="et">No reels to show</div></div>';
+   }catch(e){
+     g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
    }
  },
  open:async function(rid){
@@ -2869,6 +3019,8 @@ const Reels={
  },
  del:async function(rid){
    if(!confirm('🎬 Reel delete karein? (video Supabase se bhi remove hoga)'))return;
+   var ext='mp4';try{ var rr=await db.ref('reels/'+rid+'/ext').get(); if(rr&&rr.exists())ext=rr.val()||'mp4' }catch(e){}
+   try{ await V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket).remove(['guilds/reels/'+V.uid+'/'+rid+'.'+ext,'guilds/reels/'+V.uid+'/'+rid+'_thumb.jpg']) }catch(e){}
    try{ await sb.storage.from(CFG.supabase.bucket).remove(['reels/'+V.uid+'/'+rid+'.mp4','reels/'+V.uid+'/'+rid+'_thumb.jpg']) }catch(e){}
    try{ await db.ref('reels/'+rid).remove(); await db.ref('reelComments/'+rid).remove(); await db.ref('users/'+V.uid+'/reels/'+rid).remove() }catch(e){}
    V.mClose();V.toast('success','Reel deleted');this.load();
@@ -4316,21 +4468,10 @@ const Settings={
    var pc=V.g('profC');if(!pc)return;
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
-   var staffBlock='';
-   try{
-     var _rl=me.role||'user';
-     if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
-       staffBlock='<div class="sgrp" data-cat="staff">'
-        +'<div class="sgrp-title" style="color:var(--wn)">🛠️ STAFF — VERSION CONTROL</div>'
-        +'<div class="srow" onclick="Ver.adminPrompt()"><div class="sri">📢</div><div class="srf"><div class="srt">Set Latest Version</div><div class="srs">Version + note + APK link — Firebase me</div></div><div class="sra">›</div></div>'
-        +'<div class="srow" onclick="Ver.apkPrompt()"><div class="sri">🔗</div><div class="srf"><div class="srt">APK Download Link Update</div><div class="srs">Firebase se — SABKO yahi link milega</div></div><div class="sra">›</div></div>'
-        +'<div class="srow" onclick="Ver.recheck()"><div class="sri">🔄</div><div class="srf"><div class="srt">Check Update Now</div><div class="srs">Abhi ka version check karo</div></div><div class="sra">›</div></div>'
-        +'</div>';
-     }
-   }catch(e){}
-   var _staff=false;try{_staff=(me.role==='owner'||me.role==='admin'||me.role==='moderator')}catch(e){}
+   /* ⚡STAFF-REMOVED (user request): staff version-control block Settings se hataya —
+      Ver.* tools ab sirf owner.html/admin.html panels me hain. */
    var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote
-    +this.catBar(_staff)
+    +this.catBar()
     +'<div class="sgrp" data-cat="acct"><div class="sgrp-title">👤 ACCOUNT</div>'
     +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
@@ -4371,7 +4512,6 @@ const Settings={
     +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>'
     +'</div>'
-    +staffBlock
     +'<div class="sgrp" data-cat="dng"><div class="sgrp-title" style="color:var(--wn)">⚠️ DANGER ZONE</div>'
     +(me.tempRecovery
       ?'<div class="srow dng2" onclick="TempRec.deleteFlow()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Temporary Account</div><div class="srs">"delete" type + temp password — temp account remove</div></div><div class="sra">›</div></div>'
@@ -4381,9 +4521,8 @@ const Settings={
    pc.innerHTML=h;
  },
  /* ── ⭐ SETTINGS CATEGORIES — alag category chips UI (All/Account/Security/…) ── */
- catBar:function(staff){
+ catBar:function(){
    var c=[['all','🗂️ All'],['acct','👤 Account'],['sec','🛡️ Security'],['bak','☁️ Backup'],['look','🎨 Look'],['legal','📜 Legal'],['app','📱 App'],['dng','⚠️ Danger']];
-   if(staff)c.push(['staff','🛠️ Staff']);
    var h='<div class="scats" id="sCats">';
    for(var i=0;i<c.length;i++)h+='<button type="button" class="scat'+(i?'':' sel')+'" data-c="'+c[i][0]+'" onclick="Settings.cat(\''+c[i][0]+'\',this)">'+c[i][1]+'</button>';
    return h+'</div>';
@@ -4414,7 +4553,8 @@ const Settings={
    var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup Drive ke "VEXA Backups" folder me — Drive app me dikhega':'Tap → Connect to Google popup → Allow → done')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
     +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="VaultUI.downloadBackup()"><div class="sri">⬇️</div><div class="srf"><div class="srt">Download Backup (.vexa)</div><div class="srs">Latest backup file phone me save karo</div></div><div class="sra">⬇️</div></div>'
-    +'<div class="srow" onclick="VaultUI.showSecret()"><div class="sri">🔑</div><div class="srf"><div class="srt">Vault Secret — 8-block Code</div><div class="srs">Recovery code dekho / copy karo</div></div><div class="sra">›</div></div>';
+    +'<div class="srow" onclick="VaultUI.showSecret()"><div class="sri">🔑</div><div class="srf"><div class="srt">Vault Secret — 8-block Code</div><div class="srs">Recovery code dekho / copy karo</div></div><div class="sra">›</div></div>'
+    +'<div class="srow" onclick="V.storageCheck()"><div class="sri">📊</div><div class="srf"><div class="srt">Storage Check</div><div class="srs">Supabase buckets live test — reels upload sahi hai?</div></div><div class="sra">›</div></div>';
    if(drv)h+='<div class="srow" onclick="VaultUI.driveTest()"><div class="sri">🧪</div><div class="srf"><div class="srt">Test Backup Now</div><div class="srs">.vexa backup abhi Drive pe save karo</div></div><div class="sra">›</div></div>'
            +'<div class="srow" onclick="VexaVaultDrive.openFolder()"><div class="sri">📁</div><div class="srf"><div class="srt">Drive Folder Kholo (VEXA Backups)</div><div class="srs">Google Drive app me saved backup dekho</div></div><div class="sra">↗</div></div>';
    return h;
@@ -4561,6 +4701,20 @@ const Settings={
          }
        }catch(e){console.warn('sb clean fail:',folders[i],e.message)}
      }
+     /* ⚡REEL-FIX: guild reels bhi clean karo (account delete ke waqt) */
+     try{
+       var gs=V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket);
+       var gl=await gs.list('guilds/reels/'+uid,{limit:1000});
+       var gf=(gl.data||[]).map(function(f){return 'guilds/reels/'+uid+'/'+f.name});
+       if(gf.length){ await gs.remove(gf); console.log('Guild reels cleaned:',gf.length,'files') }
+     }catch(e){console.warn('guild reels clean fail:',e.message)}
+     /* ⚡POST-FIX: post images vexa-posts project (project-2) se bhi clean karo */
+     try{
+       var ps=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket);
+       var pl=await ps.list('posts/'+uid,{limit:1000});
+       var pf=(pl.data||[]).map(function(f){return 'posts/'+uid+'/'+f.name});
+       if(pf.length){ await ps.remove(pf); console.log('Posts cleaned:',pf.length,'files') }
+     }catch(e){console.warn('posts clean fail:',e.message)}
    }catch(e){console.warn('cleanSupabase fail:',e.message)}
  },
  deleteAcct:async function(){
@@ -4725,6 +4879,8 @@ ATP.ready(function(){
    auth=firebase.auth();
    db=firebase.database();
    sb=supabase.createClient(CFG.supabase.url,CFG.supabase.anonKey);
+  /* ⚡REEL-FIX: guild storage client — reels videos vexa-chat-guild project (project-3) me */
+  try{ sgb=supabase.createClient(VEXA_STORAGE.guilds.url,VEXA_STORAGE.guilds.anonKey) }catch(e){ console.warn('guild storage init fail',e) }
    Themes.init();
    Fonts.init();
    Auth.initDobs();
@@ -4815,7 +4971,7 @@ const Policies={
   +'<div class="pol-sec"><div class="pol-t">2. Location — Koi Exact GPS Nahi</div>'
   +'<div class="pol-p">Local Scan feature ke liye hum <b>approximate ~2km area</b> ka coarse location use karte hain. Exact GPS location, ghar ka address ya live tracking <b>kabhi nahi</b> hota. Distance sirf 4 levels me dikhti hai (Bilkul paas / ~500m / ~1km / ~2km) — exact meters ya direction tool ke roop me nahi.</div></div>'
   +'<div class="pol-sec"><div class="pol-t">3. Photos, Videos aur Third-Party Services</div>'
-  +'<div class="pol-p">Aapke photos 3 alag Supabase Storage projects me save hote hain: <b>profile photos</b> (vexa-media), <b>post images</b> (vexa-posts) aur <b>group photos/media</b> (vexa-chat-guild). Sirf JPEG/PNG/WebP, max 200KB per image allowed hai.</div>'
+  +'<div class="pol-p">Aapke photos 3 alag Supabase Storage projects me save hote hain: <b>profile photos</b> (vexa-media), <b>post images</b> (vexa-posts) aur <b>group photos/media</b> (vexa-chat-guild). Reels ki videos <b>vexa-chat-guild</b> (guild project) me save hoti hain — max 2.8MB per reel. Sirf JPEG/PNG/WebP, max 200KB per image allowed hai.</div>'
   +'<div class="pol-p">Video messages ke liye aap apna <b>Google Drive</b> connect kar sakte ho — wo video aapke apne Drive me save hota hai, VEXA ke server pe nahi. VEXA sirf video ka link/metadata save karta hai. Aap Drive disconnect karke ye access revoke kar sakte ho.</div></div>'
   +'<div class="pol-sec"><div class="pol-t">4. Security aur Recovery</div>'
   +'<div class="pol-p">Recovery codes <b>hashed</b> form me store hote hain — koi bhi (staff bhi nahi) unhe padh sakta hai. Two-step verification (2FA) enable kar sakte ho, aur Settings → Security se <b>dusre devices ko remote logout</b> kar sakte ho. Recovery approval jaise sensitive steps sirf trusted server-side process se hote hain.</div></div>'
