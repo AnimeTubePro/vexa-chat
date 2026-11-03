@@ -473,6 +473,15 @@
       ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
       ".write": "auth != null"
     },
+    /* ── ⚡v2.8.2-R5: PAID PROMOTION — user request bhejta hai (ads ke badle),
+       sirf owner/admin/moderator review kar sakta hai ── */
+    "promotionRequests": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      "$rid": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))",
+        ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator')))"
+      }
+    },
 
     /* ── ⚡UPGRADE v2.2: STAFF INDEX — Support page ka staff list ──
        staff khud apni entry likhta hai (login pe auto-sync);
@@ -497,6 +506,10 @@
     /* ── ⚡UPGRADE v2.2: APP CONFIG — support email (staff panel se set hota hai) ── */
     "config": {
       "support": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
+      },
+      "promotion": {
         ".read": "auth != null",
         ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
       }

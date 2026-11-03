@@ -1099,8 +1099,7 @@ const V={
    if(sc==='support')Support.load();
    if(sc==='privacy')Policies.renderPage('privacy');
    if(sc==='terms')Policies.renderPage('terms');
-   /* ⚡ADS: sidebar + feed ad zones (sirf home/posts — ads.js khud check karta hai) */
-   try{if(window.VexaAds)VexaAds.onScreen(sc)}catch(e){}
+   /* ⚡ADS-REMOVED (v2.8.2-R5): ads poore hata diye — ab sirf Paid Promotion (Promo module) */
  },
  openProfile:function(uid){if(!uid){V.toast('warning','Profile load nahi ho payi');return}V.go('profile');Profile.render(uid)},
  ava:function(u,sz){
@@ -2462,9 +2461,12 @@ const Profile={
       +(links?'<div class="slinks">'+links+'</div>':'')
       +(own?'<div class="puid"><span>🆔 UID <span class="sm mut">(recovery)</span></span><span class="mono">'+V.esc(uid)+'</span><a onclick="V.copy(\''+uid+'\',\'UID copied\')">📋</a></div>':'')
       +'</div>'
-      +'<div class="ptabs"><div class="ptb act">📸 Posts</div></div>'
-      +'<div id="pGrid"></div></div>';
+      +'<div class="ptabs"><div class="ptb act" id="ptbPosts" onclick="Profile.ptab(\'posts\',this)">📸 Posts</div><div class="ptb" id="ptbReels" onclick="Profile.ptab(\'reels\',this)">🎬 Reels</div></div>'
+      +'<div id="pGrid"></div><div id="pReelGrid" class="hidden"></div></div>';
      if(rid!==Profile._rr)return;
+     var _pg=V.g('pGrid'),_rg=V.g('pReelGrid');
+     if(_pg)_pg.dataset.uid=uid;
+     if(_rg)_rg.dataset.uid=uid;
      Posts.grid(uid);
      /* ⚡BACKGROUND: presence + photo — paint ko block nahi karte */
      this._bg(uid,own,u,rid);
@@ -2504,6 +2506,22 @@ const Profile={
        }
      }
    }catch(e){}
+ },
+ /* ⚡PROFILE-TABS (user request): Posts | Reels switch — Instagram-style */
+ ptab:function(t,el){
+   document.querySelectorAll('#profC .ptb').forEach(function(x){x.classList.remove('act')});
+   if(el)el.classList.add('act');
+   var pg=V.g('pGrid'),rg=V.g('pReelGrid');
+   if(!pg||!rg)return;
+   var uid=(pg.dataset&&pg.dataset.uid)||(rg.dataset&&rg.dataset.uid)||V.uid;
+   if(t==='reels'){
+     pg.classList.add('hidden');
+     rg.classList.remove('hidden');
+     Reels.grid(uid);
+   }else{
+     rg.classList.add('hidden');
+     pg.classList.remove('hidden');
+   }
  },
  designPicker:function(){
    var cur=(me.settings&&me.settings.profileDesign)||'modern';
@@ -2712,7 +2730,7 @@ const Posts={
      w.innerHTML='';
      cards.forEach(function(html){w.insertAdjacentHTML('beforeend',html)});
      /* ⚡ADS: mid-post inline ads (har 6 posts) + top-of-feed unit */
-     try{if(window.VexaAds)VexaAds.onFeedRendered(w)}catch(e){}
+     /* ⚡ADS-REMOVED (v2.8.2-R5): inline feed ads hata diye — Paid Promotion se replace */
      if(!cards.length)w.innerHTML='<div class="empo"><div class="ei">🔒</div><div class="et">No posts to show</div></div>';
    }catch(e){
      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Feed load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
@@ -2749,6 +2767,7 @@ const Posts={
      imgs+='<img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)" onclick="Posts.view(this.src)">';
    }
    return '<div class="pcard" id="pc-'+id+'">'
+    +(p.promoted&&(!p.promotedUntil||p.promotedUntil>Date.now())?'<div style="padding:6px 2px 0"><span class="pbadge">🚀 Promoted</span></div>':'')
     +'<div class="phd">'+V.ava(a,'md')+'<div class="pinfo"><div class="pnm" onclick="V.openProfile(\''+p.userId+'\')">'+V.nameB(a)+'</div><div class="ptm">@'+V.esc(a.username||'')+' · '+V.timeAgo(p.createdAt)+' · '+pic+'</div></div><button class="bico" onclick="Posts.opts(\''+id+'\',\''+p.userId+'\')">⋮</button></div>'
     +(p.caption?'<div class="pcap">'+V.htg(V.esc(p.caption))+'</div>':'')
     +(p.song&&p.song.ext?'<div class="psong" onclick="Posts.songPlay(this,\''+id+'\',\''+p.userId+'\',\''+p.song.ext+'\')"><span class="psb">▶</span><span class="pst2">🎵 '+V.esc(p.song.name||'Original audio')+'</span><span class="peq" aria-hidden="true"><i></i><i></i><i></i></span></div>':'')
@@ -2876,7 +2895,7 @@ const Posts={
  opts:function(id,owner){
    var own=(owner===V.uid);
    var h=own?
-    '<div class="rrow" onclick="Posts.editCap(\''+id+'\')">✏️ Edit caption</div><div class="rrow" style="color:var(--dn)" onclick="Posts.del(\''+id+'\')">🗑️ Delete</div>':
+    '<div class="rrow" onclick="Posts.editCap(\''+id+'\')">✏️ Edit caption</div><div class="rrow" onclick="Promo.offer(\'post\',\''+id+'\')">🚀 Paid Promotion</div><div class="rrow" style="color:var(--dn)" onclick="Posts.del(\''+id+'\')">🗑️ Delete</div>':
     '<div class="rrow" style="color:var(--dn)" onclick="Posts.report(\''+id+'\')">🚩 Report</div>';
    V.mOpen('Post options',h);
  },
@@ -3153,7 +3172,7 @@ const Posts={
      if(b){b.disabled=false;b.textContent='🎬 Reel post karo'}
    }
   },
-  tabGrid:function(uid){this.grid(uid)},
+  tabGrid:function(uid){Profile.ptab('posts',V.g('ptbPosts'));this.grid(uid)},
  grid:async function(uid){
    var g=V.g('pGrid');if(!g)return;
    g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
@@ -3163,10 +3182,15 @@ const Posts={
      var arr=[];
      s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
      arr.reverse();
+     /* ⚡PROFILE-GRID (user request): like/comment counts users index me nahi hote —
+        posts/<pid> parallel reads (max 24) → Instagram-style overlay */
+     var full=await Promise.all(arr.map(function(a){return db.ref('posts/'+a.id).get().catch(function(){return null})}));
+     var vis=await Promise.all(full.map(function(x,i){var r=(x&&x.val())||arr[i].val;return Privacy.canViewPost(r).catch(function(){return true})}));
      var cells='';
      for(var i=0;i<arr.length;i++){
-       var p=arr[i].val,pid=arr[i].id;
-       if(p.privacy==='onlyme'&&uid!==V.uid)continue;
+       var p=arr[i].val,pid=arr[i].id,r=(full[i]&&full[i].val())||p;
+       if(!vis[i])continue;
+       if((r.privacy||p.privacy)==='onlyme'&&uid!==V.uid)continue;
        var ph=[];
        if(p.postUrl)ph.push(p.postUrl);
        if(p.photoRefs&&p.photoRefs.length)ph=ph.concat(p.photoRefs);
@@ -3174,10 +3198,27 @@ const Posts={
        var fbUrl='';
        try{fbUrl=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket).getPublicUrl('posts/'+uid+'/'+pid+'_0.jpg').data.publicUrl;}catch(e){}
        var src=V.esc(ph[0]);
-       cells+='<div class="pgv"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)" onclick="Posts.view(this.src)">'+(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
+       var lc=r.likeCount||(r.likes?Object.keys(r.likes).length:0)||0;
+       var cc=r.commentCount||0;
+       var prB=(r.promoted&&(!r.promotedUntil||r.promotedUntil>Date.now()))?'<span class="pbadge">🚀 Promoted</span>':'';
+       cells+='<div class="pgv" onclick="Posts.openPost(\''+pid+'\')"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)">'
+        +'<span class="pov"><span>❤️ '+lc+'</span><span>💬 '+cc+'</span></span>'
+        +prB+(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
      }
      g.innerHTML=cells?'<div class="pgrid2">'+cells+'</div>':'<div class="empo"><div class="ei">📷</div><div class="et">No visible posts</div></div>';
    }catch(e){g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
+ },
+ /* ⚡OPEN-POST (user request): profile grid tap → full post card (like/comment/save/share live) */
+ openPost:async function(pid){
+   var s=await db.ref('posts/'+pid).get().catch(function(){return null});
+   if(!s||!s.exists())return V.toast('error','Post nahi mila');
+   var p=s.val();
+   try{
+     var can=await Privacy.canViewPost(p);
+     if(!can)return V.mOpen('🔒 Private','<div class="empo"><div class="ei">🔒</div><div class="et">Ye post private hai</div></div>');
+   }catch(e){}
+   var card=await Posts.card(pid,p);
+   V.mOpen('📸 Post',card);
  }
 };
 
@@ -3217,6 +3258,37 @@ const Reels={
      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
    }
  },
+ /* ⚡PROFILE-REELS (user request): profile me user ke reels — ❤️/💬 counts overlay,
+    tap → Reels viewer. users/<uid>/reels index + reels/<rid> counts. */
+ grid:async function(uid){
+   var g=V.g('pReelGrid');if(!g)return;
+   g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
+   try{
+     var s=await db.ref('users/'+uid+'/reels').limitToLast(24).get();
+     if(!s.exists()){g.innerHTML='<div class="empo"><div class="ei">🎬</div><div class="et">No reels yet</div><div class="ex">Feed ke 🎬 tab me ✏️ se reel banao</div></div>';return}
+     var arr=[];
+     s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
+     arr.reverse();
+     /* ⚡PERF: counts users index me nahi hote — reels/<rid> parallel reads (max 24) */
+     var full=await Promise.all(arr.map(function(a){return db.ref('reels/'+a.id).get().catch(function(){return null})}));
+     var cells='';
+     for(var i=0;i<arr.length;i++){
+       var rid=arr[i].id,base=arr[i].val||{},r=(full[i]&&full[i].val())||base;
+       if((r.privacy||base.privacy)==='onlyme'&&uid!==V.uid)continue;
+       var th=r.thumbUrl?'<img src="'+V.esc(r.thumbUrl)+'" loading="lazy">':'<div class="rgph">🎬</div>';
+       var lc=r.likeCount||0,cc=r.commentCount||0;
+       var prB=(r.promoted&&(!r.promotedUntil||r.promotedUntil>Date.now()))?'<span class="pbadge">🚀</span>':'';
+       cells+='<div class="rgv" onclick="Reels.open(\''+rid+'\')">'+th
+        +'<span class="r play">▶</span>'
+        +'<span class="rmeta">❤️ '+lc+' · 💬 '+cc+'</span>'
+        +prB+(r.duration?'<span class="rdur">'+r.duration+'s</span>':'')
+        +'</div>';
+     }
+     g.innerHTML=cells?'<div class="rgrid">'+cells+'</div>':'<div class="empo"><div class="ei">🎬</div><div class="et">No reels to show</div></div>';
+   }catch(e){
+     g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+   }
+ },
  /* ═══ 🎬 INSTA-STYLE REEL VIEWER — full-screen vertical snap, auto-play,
     double-tap like ❤️, mute, progress bar, action rail (user spec) ═══ */
  open:function(rid){
@@ -3243,7 +3315,7 @@ const Reels={
       +'<span class="rvab" data-rl="'+rid+'" onclick="Reels.like(\''+rid+'\',this)"><span class="pi">🤍</span><b class="lc">'+(p.likeCount||0)+'</b></span>'
       +'<span class="rvab" onclick="Reels.comments(\''+rid+'\')"><span class="pi">💬</span><b>'+(p.commentCount||0)+'</b></span>'
       +'<span class="rvab" onclick="Reels.share(\''+rid+'\')"><span class="pi">↗️</span><b>Share</b></span>'
-      +(p.userId===V.uid?'<span class="rvab" onclick="Reels.del(\''+rid+'\')"><span class="pi">🗑️</span></span>':'')
+      +(p.userId===V.uid?'<span class="rvab" onclick="Promo.offer(\'reel\',\''+rid+'\')"><span class="pi">🚀</span></span><span class="rvab" onclick="Reels.del(\''+rid+'\')"><span class="pi">🗑️</span></span>':'')
       +'</div>'
       +'<div class="rv-meta">'
       +'<div class="rvu" onclick="V.openProfile(\''+p.userId+'\')">@'+V.esc(p.uname||'user')+'</div>'
@@ -4865,7 +4937,7 @@ const Settings={
     ['bak','☁️','Backup & Drive','Google Drive · Vault · .vexa file · storage check'],
     ['sec','🛡️','Privacy & Security','Privacy center · blocked · devices · login code'],
     ['legal','📜','Legal & Support','Privacy policy · terms · police · support'],
-    ['app','📱','App & Info','Version · ATP links · reload'+(_staff?' · 🛠️ staff version control':'')],
+    ['app','📱','App & Info','Version · ATP links · reload · logout'],
     ['dng','⚠️','Danger Zone','Delete account — saara data remove']
    ];
    var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote+'<div class="shub">';
@@ -4958,6 +5030,8 @@ const Settings={
    /* 📜 LEGAL & SUPPORT */
    else if(id==='legal'){
      h+='<div class="stit">📜 Legal & Support</div>'
+      +g('GUIDE',
+         '<div class="srow" onclick="GuideBook.open()"><div class="sri">📖</div><div class="srf"><div class="srt">Guide Book</div><div class="srs">Puri app ki Hinglish guide — posts, reels, songs, backup, promotion</div></div><div class="sra">›</div></div>')
       +g('LEGAL & SUPPORT',
          '<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
@@ -4966,22 +5040,20 @@ const Settings={
    }
    /* 📱 APP & INFO */
    else if(id==='app'){
-     var staffBlock='';
-     try{
-       var _rl=me.role||'user';
-       if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
-         staffBlock=g('🛠️ STAFF — VERSION CONTROL',
-          '<div class="srow" onclick="Ver.adminPrompt()"><div class="sri">📢</div><div class="srf"><div class="srt">Set Latest Version</div><div class="srs">Version + note + APK link — Firebase me</div></div><div class="sra">›</div></div>'
-         +'<div class="srow" onclick="Ver.apkPrompt()"><div class="sri">🔗</div><div class="srf"><div class="srt">APK Download Link Update</div><div class="srs">Firebase se — SABKO yahi link milega</div></div><div class="sra">›</div></div>'
-         +'<div class="srow" onclick="Ver.recheck()"><div class="sri">🔄</div><div class="srf"><div class="srt">Check Update Now</div><div class="srs">Abhi ka version check karo</div></div><div class="sra">›</div></div>');
-       }
-     }catch(e){}
+     /* ⚡STAFF-REMOVED (user request): staff version-control block Settings se hataya —
+        Ver.* tools ab owner/admin/mod panels me hain. */
      h+='<div class="stit">📱 App & Info</div>'
       +g('APP',
          '<div class="srow"><div class="sri">📱</div><div class="srf"><div class="srt">App Version</div><div class="srs">v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)</div></div></div>'
         +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>')
-      +staffBlock;
+      +g('LOGOUT',
+         '<div class="srow" onclick="Auth.logout()"><div class="sri">🚪</div><div class="srf"><div class="srt">Logout</div><div class="srs">'+V.esc((me&&me.username)?('@'+me.username+' — account safe rahega'):'Account se bahar aao')+'</div></div><div class="sra" style="color:var(--wn)">⏏</div></div>')
+      +(_staff
+        ?g('🚀 PROMOTION REQUESTS (STAFF)',
+           '<div class="srow" onclick="Promo.requests()"><div class="sri">🚀</div><div class="srf"><div class="srt">Paid Promotion Review</div><div class="srs">Users ke promotion requests — approve/reject</div></div><div class="sra">›</div></div>'
+          +'<div class="srow" onclick="Promo.setPlans()"><div class="sri">💰</div><div class="srf"><div class="srt">Promotion Plans & UPI Set</div><div class="srs">Price + UPI — users ko dikhega</div></div><div class="sra">›</div></div>')
+        :'');
    }
    /* ⚠️ DANGER ZONE */
    else if(id==='dng'){
@@ -5770,6 +5842,236 @@ const Support={
 };
 window.Support=Support;
 window.VEXA_SUPPORT=VEXA_SUPPORT;
+
+/* ════════════════════════════════════════════════════════════════════
+   📖 GUIDE BOOK (v2.8.2-R5 — user request "guild book")
+   Puri app ki Hinglish guide — chapter-wise. Settings → Legal & Support
+   me entry. Chips se chapter switch.
+   ════════════════════════════════════════════════════════════════════ */
+const GuideBook={
+ ch:'start',
+ CH:[
+  ['start','🚀 Shuruat'],
+  ['posts','📝 Posts'],
+  ['reels','🎬 Reels'],
+  ['songs','🎵 Songs'],
+  ['chat','💬 Chat & Calls'],
+  ['friends','👥 Friends'],
+  ['backup','☁️ Backup'],
+  ['promo','🚀 Promotion'],
+  ['safety','🛡️ Safety']
+ ],
+ P:{
+  start:[
+   ['Account banana','Signup → email + password + DOB → verify email. Login ke baad profile auto-ban jati hai.'],
+   ['Profile setup','Settings → Profile → Edit Profile se naam, username, bio, photo change karo. Username 30 din me ek baar badal sakte ho.'],
+   ['Profile style','24 Profile Themes + 4 designs (Modern/Classic/Italic/Insta) — Settings → Profile se choose karo. Sabko dikhega.'],
+   ['Fonts','3 alag font slots — Main UI, Chat, Profile. Settings → Look & Fonts me.'],
+   ['Quick tools','Right side FAB (floating buttons) se Search, Notifications, Music, Settings turant khul jate hain.']
+  ],
+  posts:[
+   ['Post banana','Feed me ✏️ (ya ➕) tap karo → 1-4 photos choose karo → caption likho (hashtags #) → Post.'],
+   ['Privacy','Har post pe privacy set hoti hai: 🌍 Everyone / 👥 Followers / 🔒 Only me. Baad me ⋮ → Edit caption se badal sakte ho.'],
+   ['Like & Comment','❤️ like karo, 💬 comments me baat karo. Comment pe bhi like hota hai. Like karne se owner ko notification jata hai.'],
+   ['Save & Share','🔖 Save — apni collection. ↗️ Share — link copy/bhejo.'],
+   ['Delete','Apna post ⋮ → Delete. Dusre ke post pe 🚩 Report.']
+  ],
+  reels:[
+   ['Reel banana','Feed me 🎬 tab → ✏️ → video choose karo (MP4/WebM, max 2.8MB, ≤90 sec) → caption → Post.'],
+   ['Insta-style viewer','Reel kholo → full-screen vertical swipe (upar/neeche), double-tap ❤️ like, mute/unmute, progress bar.'],
+   ['Likes & comments','Rail se ❤️ like, 💬 comments, ↗️ share. Reel delete apna hi kar sakte ho.'],
+   ['Kahan store hota hai','Reels videos vexa-chat-guild (project-3) Supabase bucket me — isliye upload ke liye wahan policies ON chahiye.']
+  ],
+  songs:[
+   ['Apna music','Site ka built-in music HATA diya gaya hai. Music player me sirf AAPKE songs chalte hain.'],
+   ['Song add karo','FAB → 🎵 My Music → Local → apni file choose karo → playlist me save hota hai (next load pe bhi).'],
+   ['Post me song','Post banate waqt 🎵 Attach Song — Instagram jaisa: post ke saath song chip dikhega, tap karke bajao.']
+  ],
+  chat:[
+   ['Chat kholo','Kisi ke profile pe 💬 Message — ya Friends list se. Realtime text chat.'],
+   ['Media','Chat me photo, camera, voice note, location bhejo. Chat lock bhi hai.'],
+   ['Calls','📞 Voice call, 🎥 Video call — profile se ya chat header se. Missed calls ki history bhi.'],
+   ['Group chat','Guild feed ke alawa group chat me members sab saath baat karte hain.']
+  ],
+  friends:[
+   ['Follow','Profile pe Follow → request jayegi → accept hone pe followers/following.'],
+   ['Requests','Profile → 📨 Requests — accept/reject. Accept ALL bhi hai.'],
+   ['Block/Restrict','Profile ⋮ → Block (kuch nahi dekh payega) ya Restrict. Settings → Privacy me lists manage karo.'],
+   ['Profile grid','Profile pe 📸 Posts aur 🎬 Reels tabs — har cell pe ❤️/💬 counts, tap karke kholo.']
+  ],
+  backup:[
+   ['Drive connect','Settings → Backup & Drive → Connect Google Drive (ek baar) — green 🟢 status hamesha dikhega.'],
+   ['Vault','Recovery Vault banao → backups Drive ke "VEXA Backups" folder me .vexa files ke roop me.'],
+   ['.vexa file','Download Recovery File — UID + codes ek encrypted file me. Khoyi to Vault Secret (8-block code) se wapas.'],
+   ['Storage check','Settings → Backup & Drive → Storage Check — teeno Supabase buckets live test.']
+  ],
+  promo:[
+   ['Paid promotion kya hai','Ads hata diye gaye hain. Ab growth ke liye apne post/reel ko PROMOTE karwao — sirf admin/owner ke through.'],
+   ['Request kaise','Apne post/reel pe ⋮ (ya reel viewer) → 🚀 Paid Promotion → plan choose (Basic/Standard/Premium) → request bhejo.'],
+   ['Payment','UPI details request ke baad dikhti hain. Payment ke baad admin/owner approve karega → post pe 🚀 Promoted badge aur feed me zyada reach.'],
+   ['Approve kaun karega','Sirf Owner/Admin. Settings → App & Info → Promotion Requests (staff-only).']
+  ],
+  safety:[
+   ['Report','Post/comment/user pe 🚩 Report — staff review karta hai. Warning → Mute → Ban ladder hai.'],
+   ['Impersonation mat karo','Fake staff/VIP ban = permanent ban.'],
+   ['Recovery codes','Kisi ko mat do. Codes = account ka key. Staff kabhi codes NAHI mangega.'],
+   ['Privacy','Settings → Privacy Center — profile lock, online status, who-can-message.']
+  ]
+ },
+ open:function(ch){
+   this.ch=ch||'start';
+   this.draw();
+ },
+ tab:function(k){
+   this.ch=k;
+   var pc=document.getElementById('gbChips');
+   if(!pc)return this.open(k);
+   this.draw();
+ },
+ draw:function(){
+   var chips='';
+   for(var i=0;i<this.CH.length;i++)chips+='<button type="button" class="gbchip'+(this.CH[i][0]===this.ch?' sel':'')+'" onclick="GuideBook.tab(\''+this.CH[i][0]+'\')">'+this.CH[i][1]+'</button>';
+   var ps=this.P[this.ch]||[];
+   var body='';
+   for(var j=0;j<ps.length;j++)body+='<div class="gbrow"><div class="gbt">'+V.esc(ps[j][0])+'</div><div class="gbx">'+V.esc(ps[j][1])+'</div></div>';
+   var titles={start:'🚀 Shuruat — Pehla Kadam',posts:'📝 Posts ki Guide',reels:'🎬 Reels ki Guide',songs:'🎵 Music & Songs',chat:'💬 Chat & Calls',friends:'👥 Friends & Privacy',backup:'☁️ Backup & Drive',promo:'🚀 Paid Promotion',safety:'🛡️ Safety & Rules'};
+   V.mOpen('📖 VEXA Guide Book',
+    '<div class="gbchips" id="gbChips">'+chips+'</div>'
+   +'<div class="gbtitle">'+(titles[this.ch]||'')+'</div>'
+   +'<div class="gblist">'+body+'</div>'
+   +'<div class="snote mt8">Koi cheez samajh na aaye to 🆘 Support se staff se baat karo!</div>');
+ }
+};
+window.GuideBook=GuideBook;
+
+/* ════════════════════════════════════════════════════════════════════
+   🚀 PAID PROMOTION (v2.8.2-R5 — user request: "ads ko pura hato eske
+   badle user admin or owner se paid promotion kara sakta hai")
+   - User: apne post/reel pe 🚀 Paid Promotion → plan → request submit
+   - RTDB: promotionRequests/<id> {type,targetId,userId,plan,price,days,status}
+   - Staff (owner/admin/mod): Settings → App & Info → Promotion Review
+   - Approve → posts/<pid>/promoted:true + promotedUntil → 🚀 badge + reach
+   - Plans/UPI: config/promotion node (owner set karega)
+   ════════════════════════════════════════════════════════════════════ */
+const Promo={
+ DEF:{enabled:true,basic:'99',std:'249',pro:'499',days3:3,days7:7,days15:15,upi:'',note:'Payment UPI karne ke baad request bhejo — admin/owner approve karega (24h me).'},
+ _cfg:null,
+ cfg:async function(){
+   if(this._cfg)return this._cfg;
+   try{
+     var s=await db.ref('config/promotion').get();
+     if(s&&s.exists())this._cfg=Object.assign({},this.DEF,s.val()||{});
+     else this._cfg=Object.assign({},this.DEF);
+   }catch(e){this._cfg=Object.assign({},this.DEF)}
+   return this._cfg;
+ },
+ offer:async function(type,targetId){
+   if(!V.uid)return V.toast('warning','Pehle login karo');
+   var c=await this.cfg();
+   var upiLine=c.upi?'<div class="snote" style="color:var(--ac)">💳 UPI: <b>'+V.esc(c.upi)+'</b> — payment ke baad hi request approve hogi</div>':'<div class="snote">💳 UPI abhi set nahi hui — request bhejne ke baad staff se payment detail lo.</div>';
+   var h='<div class="snote mb8">🚀 Apni reach badhao — promote karwao! Badge 🚀 + feed me zyada log tak.</div>'+upiLine
+    +'<div class="promplans">'
+    +'<div class="prompl sel" data-p="basic" onclick="Promo._pick(this)"><div class="ppn">⭐ Basic — '+c.days3+' din</div><div class="ppp">₹'+V.esc(c.basic)+'</div><div class="ppd">Feed badge 🚀</div></div>'
+    +'<div class="prompl" data-p="std" onclick="Promo._pick(this)"><div class="ppn">🌟 Standard — '+c.days7+' din</div><div class="ppp">₹'+V.esc(c.std)+'</div><div class="ppd">Badge + notifications me highlight</div></div>'
+    +'<div class="prompl" data-p="pro" onclick="Promo._pick(this)"><div class="ppn">💎 Premium — '+c.days15+' din</div><div class="ppp">₹'+V.esc(c.pro)+'</div><div class="ppd">Badge + top reach boost</div></div>'
+    +'</div>'
+    +'<div class="fld"><textarea class="txta" id="promoNote" placeholder="Note (optional) — payment ref, kya promote karna hai..." maxlength="200"></textarea></div>'
+    +'<div class="snote">'+V.esc(c.note||'')+'</div>';
+   this._type=type;this._target=targetId;
+   V.mOpen('🚀 Paid Promotion',h,'<button class="btn bg bbk" onclick="V.mClose()">Cancel</button><button class="btn bp" onclick="Promo.submit()">🚀 Request Bhejo</button>');
+ },
+ _pick:function(el){
+   var ls=document.querySelectorAll('.prompl');
+   for(var i=0;i<ls.length;i++)ls[i].classList.remove('sel');
+   if(el)el.classList.add('sel');
+ },
+ submit:async function(){
+   var sel=document.querySelector('.prompl.sel');
+   var plan=(sel&&sel.dataset.p)||'basic';
+   var c=await this.cfg();
+   var price=plan==='std'?c.std:(plan==='pro'?c.pro:c.basic);
+   var days=plan==='std'?c.days7:(plan==='pro'?c.days15:c.days3);
+   try{
+     await db.ref('promotionRequests').push({
+       type:this._type||'post',targetId:this._target||'',
+       userId:V.uid,userName:(me&&me.displayName)||'User',username:(me&&me.username)||'',
+       plan:plan,price:price,days:days,
+       note:(V.g('promoNote')&&V.g('promoNote').value.trim().slice(0,200))||'',
+       status:'pending',createdAt:Date.now()
+     });
+     V.mClose();
+     V.toast('success','🚀 Promotion request bhej di gayi! Admin/owner approve karega — notification me update milega');
+   }catch(e){V.toast('error','Request fail: '+(e.message||e))}
+ },
+ isStaff:function(){
+   try{return !!(me&&['owner','admin','moderator'].indexOf(me.role||'user')>-1)}catch(e){return false}
+ },
+ requests:async function(){
+   if(!this.isStaff())return V.toast('error','Sirf Owner/Admin/Moderator');
+   V.mOpen('🚀 Promotion Requests','<div id="promoL"><div class="spn" style="margin:18px auto"></div></div>');
+   var box=V.g('promoL');if(!box)return;
+   try{
+     var s=await db.ref('promotionRequests').limitToLast(60).get();
+     if(!s.exists()){box.innerHTML='<div class="empo"><div class="ei">📭</div><div class="et">Koi request nahi</div></div>';return}
+     var arr=[];
+     s.forEach(function(x){arr.push({id:x.key,val:x.val()})});
+     arr.sort(function(a,b){return (b.val.createdAt||0)-(a.val.createdAt||0)});
+     var h='';
+     for(var i=0;i<arr.length;i++){
+       var r=arr[i].val,id=arr[i].id;
+       var st=r.status||'pending';
+       var stc={pending:'⏳',approved:'✅',rejected:'❌'}[st]||'⏳';
+       h+='<div class="promrow"><div class="prmain">'
+        +'<div class="prt">'+stc+' '+V.esc(r.userName||'User')+' — '+(r.type==='reel'?'🎬 Reel':'📝 Post')+' · ₹'+V.esc(r.price)+' · '+V.esc(r.days)+'d</div>'
+        +'<div class="prs sm mut">'+V.esc(r.plan)+' plan · '+(r.note?('📝 '+V.esc(r.note)+' · '):'')+V.timeAgo(r.createdAt)+'</div>'
+        +(st==='pending'?'<div class="practs"><button class="btn bp bsm" onclick="Promo.act(\''+id+'\',\'approved\')">✅ Approve</button><button class="btn bds2 bsm" onclick="Promo.act(\''+id+'\',\'rejected\')">❌ Reject</button></div>':'')
+        +'</div></div>';
+     }
+     box.innerHTML=h;
+   }catch(e){box.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
+ },
+ act:async function(id,status){
+   try{
+     var s=await db.ref('promotionRequests/'+id).get();
+     if(!s.exists())return V.toast('error','Request nahi mili');
+     var r=s.val();
+     if((r.status||'pending')!=='pending')return V.toast('warning','Ye request already '+r.status+' hai');
+     await db.ref('promotionRequests/'+id).update({status:status,reviewedBy:V.uid,reviewedAt:Date.now()});
+     if(status==='approved'&&r.targetId){
+       var until=Date.now()+(parseInt(r.days,10)||3)*86400000;
+       var path=(r.type==='reel')?'reels/'+r.targetId:'posts/'+r.targetId;
+       await db.ref(path).update({promoted:true,promotedUntil:until});
+     }
+     try{await db.ref('users/'+r.userId+'/notifications').push({type:'promo_'+status,from:V.uid,fromName:'VEXA Staff',promoId:id,plan:r.plan,status:status,read:false,at:Date.now()})}catch(e){}
+     V.toast('success',status==='approved'?'🚀 Promoted ON — badge laga diya':'❌ Request reject ho gayi');
+     this.requests();
+   }catch(e){V.toast('error','Action fail: '+(e.message||e))}
+ },
+ setPlans:async function(){
+   if(!this.isStaff())return V.toast('error','Sirf Owner/Admin/Moderator');
+   var c=await this.cfg();
+   V.mOpen('💰 Promotion Plans & UPI',
+    '<div class="fld"><label class="lbl">Basic price (₹, '+(c.days3||3)+' din)</label><input class="inp" id="plB" value="'+V.esc(c.basic)+'"></div>'
+   +'<div class="fld"><label class="lbl">Standard price (₹, '+(c.days7||7)+' din)</label><input class="inp" id="plS" value="'+V.esc(c.std)+'"></div>'
+   +'<div class="fld"><label class="lbl">Premium price (₹, '+(c.days15||15)+' din)</label><input class="inp" id="plP" value="'+V.esc(c.pro)+'"></div>'
+   +'<div class="fld"><label class="lbl">UPI ID (users ko dikhega)</label><input class="inp" id="plU" value="'+V.esc(c.upi||'')+'" placeholder="yourname@upi"></div>'
+   +'<div class="fld"><label class="lbl">Note (users ko dikhega)</label><input class="inp" id="plN" value="'+V.esc(c.note||'')+'" maxlength="150"></div>',
+    '<button class="btn bg bbk" onclick="V.mClose()">Cancel</button><button class="btn bp" onclick="Promo.savePlans()">Save</button>');
+ },
+ savePlans:async function(){
+   try{
+     await db.ref('config/promotion').set({
+       enabled:true,
+       basic:(V.g('plB').value.trim()||'99'),std:(V.g('plS').value.trim()||'249'),pro:(V.g('plP').value.trim()||'499'),
+       days3:3,days7:7,days15:15,
+       upi:V.g('plU').value.trim(),note:V.g('plN').value.trim()
+     });
+     this._cfg=null;
+     V.mClose();V.toast('success','💰 Plans saved — ab users ko ye dikhenge');
+   }catch(e){V.toast('error','Save fail: '+(e.message||e))}
+ }
+};
+window.Promo=Promo;
 
 /* ═══════════════════════════════════════════════════════════
    🆘 HELP SHIM (v2.3 — bug fix)
