@@ -225,6 +225,15 @@ const ATP={
   var bar=document.getElementById('loadBar'),pct=document.getElementById('loadPct'),sp=document.getElementById('splash');
   if(!sp)return;
   var self=this,t0=performance.now(),DUR=(this.cfg.loadingSeconds||2)*1000;
+  /* ⚡SPLASH-FIX: rotating Hinglish status messages (error text ko chhod kar) */
+  var MSGS=['🎬 Studio boot ho raha hai…','🔐 Security check…','☁️ Cloud connect…','🎨 UI tayyar ho raha…','🎵 Sounds load…','⚡ Almost ready…'];
+  var mi=0;
+  self._msgT=setInterval(function(){
+   var tx=document.getElementById('splashTx'),s3=document.getElementById('splash');
+   if(!tx||!s3||s3.classList.contains('fade')){clearInterval(self._msgT);return}
+   if((tx.textContent||'').indexOf('⚠️')===0)return; /* error messages preserve */
+   tx.textContent=MSGS[mi++%MSGS.length];
+  },650);
   (function tick(){
    var s2=document.getElementById('splash');
    if(!s2)return;
@@ -236,6 +245,7 @@ const ATP={
     if(bar)bar.style.width='100%';
     if(pct)pct.textContent='100% ✓';
     self.loaderDone=true;
+    try{clearInterval(self._msgT)}catch(e){}
     if(self._fadeQ){var s=document.getElementById('splash');if(s)s.classList.add('fade')}
    }
   })();
@@ -341,11 +351,13 @@ const ATP={
 ATP.init();
 
 /* ═══ 🎵 MUSIC v4 — ⚡Lazy detect (boot pe 36 probes NAHI) ═══ */
+/* ═══ 🎵 MUSIC PLAYER v3 — sirf USER ke apne songs.
+   Site ka built-in music (hindi/english folder mp3s) user ke kehne par
+   HATAYA GAYA — ab panel me sirf device se add kiye gaye songs. ═══ */
 const Music={
- lists:{hindi:[],english:[]},
  local:[],
- kind:'hindi',idx:0,playing:false,audio:null,_url:null,_err:0,_ready:false,_started:false,_folderDone:false,
- KEY:'vexaMusic2',
+ idx:0,playing:false,audio:null,_url:null,_err:0,_ready:false,_started:false,
+ KEY:'vexaMusic3',
  idb:function(){
   var self=this;
   if(this._dbp)return this._dbp;
@@ -405,7 +417,6 @@ const Music={
   try{saved=JSON.parse(localStorage.getItem(M.KEY)||'{}')}catch(e){}
   M.audio.volume=(typeof saved.vol==='number')?saved.vol:0.8;
   var vol=document.getElementById('mpVol');if(vol)vol.value=Math.round(M.audio.volume*100);
-  if(saved.kind==='hindi'||saved.kind==='english'||saved.kind==='local')M.kind=saved.kind;
   if(typeof saved.idx==='number'&&saved.idx>=0)M.idx=saved.idx;
   M.audio.addEventListener('ended',function(){M.next()});
   M.audio.addEventListener('play',function(){M.playing=true;M.refresh()});
@@ -417,107 +428,36 @@ const Music={
   mb.addEventListener('click',function(e){
    e.stopPropagation();
    var p=document.getElementById('musicPanel');if(p)p.classList.toggle('open');
-   M.detectAll(); /* ⚡ first open pe folder detect */
    M.refresh();
   });
   document.addEventListener('click',function(e){
    var p=document.getElementById('musicPanel');
    if(p&&p.classList.contains('open')&&!e.target.closest('.music-wrap'))p.classList.remove('open');
   });
-  var hi=document.getElementById('mpHindi');
-  if(hi)hi.addEventListener('click',function(){M.toggleKind('hindi')});
-  var en=document.getElementById('mpEnglish');
-  if(en)en.addEventListener('click',function(){M.toggleKind('english')});
   if(vol)vol.addEventListener('input',function(){M.audio.volume=vol.value/100;M.save()});
   var fi=document.getElementById('mpFile');
   if(fi)fi.addEventListener('change',function(){M.addLocal(fi);fi.value=''});
-  /* ⚡BOOT: sirf IndexedDB (instant) — folder probes panel kholne pe */
+  /* ⚡BOOT: IndexedDB se user songs (instant) */
   M.idbAll().then(function(list){
    M.local=list||[];
    M._ready=true;
-   M.paint();M.refresh();
-  });
- },
- /* ⚡Lazy folder detect — ek hi baar */
- detectAll:function(){
-  var M=this;
-  if(M._folderDone)return Promise.resolve();
-  M._folderDone=true;
-  return Promise.all([M.detect('hindi'),M.detect('english')]).then(function(r){
-   M.lists.hindi=r[0]||[];M.lists.english=r[1]||[];
-   var pl=M.playlist();
-   if(M.idx>=pl.length)M.idx=0;
-   M.paint();M.refresh();
-   if(pl.length&&!M._started){
+   M.refresh();
+   if(M.local.length&&!M._started&&saved.auto){
     document.addEventListener('pointerdown',function(){
      if(!M._started){M._started=true;M.playCurrent()}
     },{once:true});
    }
   });
  },
- playlist:function(){
-  if(this.kind==='local')return this.local;
-  return this.lists[this.kind]||[];
- },
+ /* compat no-ops — purane calls safe rahein */
+ detectAll:function(){return Promise.resolve()},
+ tab:function(){},
+ playlist:function(){return this.local},
  curSrc:function(){
-  var pl=this.playlist();
+  var pl=this.local;
   if(!pl.length)return null;
   var i=((this.idx%pl.length)+pl.length)%pl.length;
-  if(this.kind==='local')return {type:'local',item:pl[i],i:i};
-  return {type:'folder',url:pl[i],i:i};
- },
- toggleKind:function(k){
-  if(!this.audio)return;
-  if(k===this.kind){
-   if(this.playing){this.audio.pause()}
-   else if(this.curSrc()){this.audio.play().catch(function(){})}
-   else{this.playCurrent()}
-   this.refresh();return;
-  }
-  this.kind=k;this.idx=0;this.save();this.paint();this.playCurrent();
- },
- paint:function(){
-  var k=this.kind;
-  document.querySelectorAll('.mp-tab').forEach(function(t){t.classList.toggle('sel',t.dataset.mt===(k==='local'?'local':'folder'))});
-  var sf=document.getElementById('secFolder'),sl=document.getElementById('secLocal');
-  if(sf)sf.classList.toggle('hidden',k==='local');
-  if(sl)sl.classList.toggle('hidden',k!=='local');
- },
- tab:function(t){
-  var sf=document.getElementById('secFolder'),sl=document.getElementById('secLocal');
-  if(t==='local'){
-   if(sf)sf.classList.add('hidden');
-   if(sl)sl.classList.remove('hidden');
-   document.querySelectorAll('.mp-tab').forEach(function(x){x.classList.toggle('sel',x.dataset.mt==='local')});
-  }else{
-   if(sf)sf.classList.remove('hidden');
-   if(sl)sl.classList.add('hidden');
-   document.querySelectorAll('.mp-tab').forEach(function(x){x.classList.toggle('sel',x.dataset.mt==='folder')});
-  }
- },
- detect:function(kind){
-  var names=[kind];
-  for(var i=1;i<=8;i++)names.push(kind+i);
-  var self=this;
-  return Promise.all(names.map(function(n){return self.probe(n)})).then(function(r){
-   return r.filter(Boolean);
-  });
- },
- probe:function(base){
-  return new Promise(function(res){
-   var exts=['mp3','ogg','wav','m4a'];
-   var i=0;
-   (function next(){
-    if(i>=exts.length)return res(null);
-    var a=document.createElement('audio');
-    var done=false;
-    var t=setTimeout(function(){if(done)return;done=true;a.src='';res(null)},900); /* ⚡1.5s→0.9s */
-    a.preload='metadata';
-    a.addEventListener('loadedmetadata',function(){if(done)return;done=true;clearTimeout(t);res(base+'.'+exts[i])},{once:true});
-    a.addEventListener('error',function(){if(done)return;done=true;clearTimeout(t);i++;next()},{once:true});
-    a.src=base+'.'+exts[i];
-   })();
-  });
+  return {type:'local',item:pl[i],i:i};
  },
  pickLocal:function(){
   var fi=document.getElementById('mpFile');
@@ -544,7 +484,7 @@ const Music={
  playLocal:function(id){
   var i=this.local.findIndex(function(s){return s.id===id});
   if(i<0)return;
-  this.kind='local';this.idx=i;this.save();this.paint();
+  this.idx=i;this.save();
   this.playCurrent();
  },
  delLocal:function(id,ev){
@@ -562,16 +502,12 @@ const Music={
   if(!M.audio)return;
   var cur=M.curSrc();
   if(!cur){
-   V.toast('info','🎵 Koi song nahi — Local tab me ➕ se add karo');
+   V.toast('info','🎵 Koi song nahi — ➕ se apne songs add karo');
    return;
   }
   if(M._url&&M._url.indexOf('blob:')===0){try{URL.revokeObjectURL(M._url)}catch(e){}M._url=null}
-  if(cur.type==='local'){
-   M._url=URL.createObjectURL(cur.item.blob);
-   M.audio.src=M._url;
-  }else{
-   M.audio.src=cur.url;
-  }
+  M._url=URL.createObjectURL(cur.item.blob);
+  M.audio.src=M._url;
   M._lastSrc=true;M._err=0;
   M.audio.play().catch(function(){});
   M.save();M.refresh();
@@ -586,15 +522,7 @@ const Music={
  next:function(){
   if(!this.audio)return;
   var pl=this.playlist();
-  if(!pl.length){
-   if(this.kind==='hindi'&&this.lists.english.length)this.kind='english';
-   else if(this.kind==='english'&&this.local.length)this.kind='local';
-   else if(this.kind==='local'&&this.lists.hindi.length)this.kind='hindi';
-   else return;
-   this.idx=0;this.save();this.paint();
-   pl=this.playlist();
-   if(!pl.length)return;
-  }
+  if(!pl.length)return;
   this.idx=(this.idx+1)%pl.length;
   this.playCurrent();
  },
@@ -609,10 +537,10 @@ const Music={
   if(!this.audio)return;
   this.audio.pause();
   try{this.audio.currentTime=0}catch(e){}
-  this.playing=false;this.refresh();
+  this.playing=false;this._started=false;this.save();this.refresh();
  },
  save:function(){
-  try{localStorage.setItem(this.KEY,JSON.stringify({vol:this.audio.volume,kind:this.kind,idx:this.idx}))}catch(e){}
+  try{localStorage.setItem(this.KEY,JSON.stringify({vol:this.audio.volume,idx:this.idx,auto:this._started}))}catch(e){}
  },
  refresh:function(){
   var cur=this.curSrc();
@@ -621,22 +549,15 @@ const Music={
    if(!this._ready){
     now.innerHTML='⏳ Songs check ho rahe hain…';
    }else if(cur){
-    var name=(cur.type==='local')?cur.item.name:cur.url.split('/').pop().replace(/\.[^.]+$/,'');
-    var ic=this.kind==='hindi'?'🎬':this.kind==='english'?'🌍':'📁';
-    now.innerHTML=ic+' <b>'+V.esc(name)+'</b><br><small>'+(this.playing?'▶ Playing':'⏸ Paused')+' · '+this.kind.toUpperCase()+'</small>';
+    now.innerHTML='🎵 <b>'+V.esc(cur.item.name)+'</b><br><small>'+(this.playing?'▶ Playing':'⏸ Paused')+' · MY SONGS</small>';
    }else{
-    now.innerHTML='🎵 Koi song nahi<br><small>Folder me daalo ya Local ➕ se add karo</small>';
+    now.innerHTML='🎵 Koi song nahi<br><small>➕ se apne songs add karo</small>';
    }
   }
   var pp=document.getElementById('mpPlay');
   if(pp)pp.textContent=this.playing?'⏸':'▶';
   var mb=document.getElementById('musicBtn');
   if(mb)mb.classList.toggle('playing',this.playing);
-  var hi=document.getElementById('mpHindi'),en=document.getElementById('mpEnglish');
-  if(hi)hi.classList.toggle('active',this.kind==='hindi');
-  if(en)en.classList.toggle('active',this.kind==='english');
-  var cnt=document.getElementById('mpCount');
-  if(cnt)cnt.textContent='Hindi: '+this.lists.hindi.length+' • English: '+this.lists.english.length+(this.kind==='local'?' • ▶ LOCAL':'');
   var lc=document.getElementById('mpLocCount');
   if(lc)lc.textContent='Local: '+this.local.length+' song(s)';
   var list=document.getElementById('mpList');
@@ -658,40 +579,247 @@ const Music={
  }
 };
 
-/* ═══ 🔊 SFX ═══ */
+/* ═══ 🔊 SFX v2 — 56 UI + 54 NOTIFICATION sounds (WebAudio synth — koi mp3 file NAHI) ═══
+   Har sound chhota recipe hai: s=[[f1,f2,dur,at,(type),(vol)],...] frequency sweeps,
+   n=[[dur,at,vol],...] noise bursts. User Settings → 🔊 Sounds se apna UI +
+   Notification sound choose kar sakta hai (preview ke saath).                    ═══ */
 const SFX={
- ctx:null,vol:.4,on:true,KEY:'vexaSfx',
- init:function(){try{this.on=localStorage.getItem(this.KEY)!=='0'}catch(e){}},
+ ctx:null,on:true,vol:.55,KEY:'vexaSfx',KUI:'vexaSfxUi',KNF:'vexaSfxNotif',
+ uiSound:'Tap Pop',nfSound:'Classic Ding',_nbuf:null,
+ /* ── 🎛️ UI SOUNDS (56) ── */
+ UI:{
+  'Tap Pop':{w:'triangle',s:[[420,180,.09,0]]},
+  'Soft Click':{w:'sine',v:.6,s:[[640,520,.05,0]]},
+  'Deep Click':{w:'sine',s:[[240,110,.1,0]]},
+  'Bubble':{w:'sine',s:[[320,760,.1,0],[760,1180,.08,.07]]},
+  'Water Drop':{w:'sine',s:[[900,300,.16,0]]},
+  'Drip':{w:'sine',s:[[1300,600,.09,0],[600,1000,.07,.08]]},
+  'Ping':{w:'sine',v:.7,s:[[1568,1540,.18,0]]},
+  'Blip':{w:'square',v:.4,s:[[880,870,.05,0]]},
+  'Beep Up':{w:'triangle',s:[[523,1047,.12,0]]},
+  'Beep Down':{w:'triangle',s:[[1047,523,.12,0]]},
+  'Chirp':{w:'sine',v:.6,s:[[1200,2400,.08,0],[2400,1200,.08,.09]]},
+  'Tweet':{w:'sine',v:.5,s:[[2000,2600,.06,0],[1800,2400,.06,.08],[2200,3000,.06,.16]]},
+  'Coin':{w:'square',v:.5,s:[[988,985,.07,0],[1319,1310,.18,.07]]},
+  'Laser':{w:'sawtooth',v:.35,s:[[1800,200,.2,0]]},
+  'Zap':{w:'square',v:.4,s:[[300,900,.05,0],[900,100,.12,.05]]},
+  'Whoosh':{w:'sine',v:.4,s:[[200,900,.22,0]]},
+  'Swoosh Up':{w:'triangle',v:.5,s:[[300,1600,.18,0]]},
+  'Swoosh Down':{w:'triangle',v:.5,s:[[1600,300,.18,0]]},
+  'Shimmer':{w:'sine',v:.35,s:[[2093,3136,.3,0]]},
+  'Sparkle':{w:'sine',v:.4,s:[[1568,1560,.07,0],[2093,2085,.07,.05],[2637,2630,.07,.1],[3136,3130,.09,.15]]},
+  'Magic Wand':{w:'triangle',v:.4,s:[[600,1800,.25,0],[1800,2400,.15,.22]]},
+  'Glass Tap':{w:'sine',v:.5,s:[[2200,2100,.06,0]]},
+  'Glass Ding':{w:'sine',v:.4,s:[[2093,2050,.4,0]]},
+  'Wood Tap':{w:'triangle',v:.7,s:[[180,140,.06,0]]},
+  'Knob':{w:'square',v:.5,s:[[150,90,.05,0],[150,90,.05,.06]]},
+  'Switch On':{w:'square',v:.45,s:[[400,800,.06,0]]},
+  'Switch Off':{w:'square',v:.45,s:[[800,300,.06,0]]},
+  'Pluck':{w:'triangle',v:.7,s:[[523,500,.12,0]]},
+  'Strum':{w:'triangle',v:.45,s:[[330,328,.14,0],[415,413,.14,.03],[494,492,.14,.06],[659,655,.14,.09]]},
+  'Harp Note':{w:'sine',v:.5,s:[[784,780,.35,0]]},
+  'Marimba Hit':{w:'sine',v:.7,s:[[659,640,.14,0]]},
+  'Kalimba':{w:'sine',v:.6,s:[[1175,1150,.2,0]]},
+  'Music Box':{w:'sine',v:.5,s:[[1047,1040,.3,0],[1319,1310,.3,.12]]},
+  'Bell Small':{w:'sine',v:.5,s:[[3136,3100,.2,0],[1568,1540,.35,0]]},
+  'Bell Big':{w:'sine',v:.6,s:[[784,770,.5,0],[392,385,.8,0]]},
+  'Chime Warm':{w:'sine',v:.45,s:[[523,520,.4,0],[659,655,.4,.1],[784,780,.45,.2]]},
+  'Gong':{w:'sine',v:.7,s:[[392,380,.9,0],[588,560,.7,.05],[196,190,1.2,0]]},
+  'Kick Drum':{w:'sine',v:.9,s:[[150,45,.18,0]]},
+  'Snare':{n:[[.12,0,.5]]},
+  'Hi-Hat':{n:[[.04,0,.35]]},
+  'Tom Roll':{w:'sine',v:.6,s:[[220,180,.1,0],[200,160,.1,.1],[180,140,.12,.2]]},
+  'Boing':{w:'sine',v:.6,s:[[400,80,.3,0],[80,300,.2,.28]]},
+  'Spring':{w:'triangle',v:.4,s:[[300,900,.08,0],[900,300,.08,.08],[300,900,.06,.16]]},
+  'Bonk':{w:'square',v:.5,s:[[200,80,.15,0]]},
+  'Slide Up':{w:'sine',v:.5,s:[[300,1200,.25,0]]},
+  'Slide Down':{w:'sine',v:.5,s:[[1200,300,.25,0]]},
+  'Ratchet':{w:'square',v:.3,s:[[500,490,.03,0],[500,490,.03,.04],[500,490,.03,.08],[500,490,.03,.12],[500,490,.03,.16],[500,490,.03,.2],[500,490,.03,.24],[500,485,.05,.28]]},
+  'Shutter':{s:[[200,100,.05,.04]],n:[[.03,0,.5],[.03,.1,.5]]},
+  'Unlock':{w:'triangle',v:.5,s:[[600,900,.07,0],[900,1200,.07,.07]]},
+  'Lock Thud':{w:'sine',v:.7,s:[[180,90,.15,0]],n:[[.05,.02,.3]]},
+  'Send Swoosh':{w:'triangle',v:.5,s:[[500,1500,.18,0]]},
+  'Like Pop':{w:'sine',v:.6,s:[[500,900,.07,0],[900,1400,.09,.06]]},
+  'Heartbeat':{w:'sine',v:.9,s:[[70,60,.1,0],[90,70,.12,.18]]},
+  'Radio Tune':{w:'sawtooth',v:.25,s:[[800,790,.05,0],[600,595,.05,.07],[1000,995,.05,.14],[700,690,.06,.21]]},
+  'Retro Blip':{w:'square',v:.4,s:[[660,655,.06,0],[880,875,.06,.07]]},
+  'Pixel Jump':{w:'square',v:.4,s:[[330,990,.14,0]]},
+  'Confirm':{w:'triangle',v:.5,s:[[523,523,.08,0],[784,784,.14,.09]]},
+  'Delete Thud':{w:'sine',v:.6,s:[[300,70,.2,0]],n:[[.04,0,.3]]}
+ },
+ /* ── 🔔 NOTIFICATION SOUNDS (54) ── */
+ NOTIF:{
+  'Classic Ding':{w:'sine',v:.6,s:[[830,825,.5,0],[1245,1240,.4,0]]},
+  'Double Ding':{w:'sine',v:.55,s:[[830,825,.3,0],[830,825,.4,.35]]},
+  'Triple Chime':{w:'sine',v:.5,s:[[659,655,.25,0],[784,780,.25,.22],[1047,1040,.45,.44]]},
+  'Bright Alert':{w:'square',v:.4,s:[[1319,1310,.09,0],[1319,1310,.09,.14]]},
+  'Soft Bell':{w:'sine',v:.45,s:[[1047,1040,.6,0]]},
+  'Church Bell':{w:'sine',v:.5,s:[[587,580,.9,.8],[494,488,.7,0],[392,385,.9,0]]},
+  'Doorbell':{w:'sine',v:.6,s:[[659,655,.4,0],[523,520,.5,.4]]},
+  'Doorbell 2':{w:'sine',v:.6,s:[[784,780,.35,0],[659,655,.5,.35]]},
+  'Big Ben':{w:'sine',v:.5,s:[[523,520,.8,0],[392,388,.8,1],[329,325,.9,2]]},
+  'Cuckoo':{w:'sine',v:.7,s:[[811,799,.18,0],[644,634,.22,.22]]},
+  'Music Box Dance':{w:'sine',v:.5,s:[[1047,1040,.25,0],[1175,1170,.25,.18],[1568,1560,.3,.36],[1319,1310,.35,.54]]},
+  'Carousel':{w:'sine',v:.4,s:[[523,520,.15,0],[659,655,.15,.15],[784,780,.15,.3],[1047,1040,.25,.45],[784,780,.2,.6]]},
+  'Harp Gliss':{w:'sine',v:.4,s:[[523,520,.08,0],[659,655,.08,.05],[784,780,.08,.1],[880,875,.08,.15],[1047,1040,.08,.2],[1175,1170,.08,.25],[1319,1310,.08,.3],[1568,1560,.15,.35]]},
+  'Glock Run':{w:'sine',v:.5,s:[[1047,1040,.12,0],[1319,1310,.12,.1],[1568,1560,.12,.2],[2093,2085,.2,.3]]},
+  'Xylo Riff':{w:'sine',v:.6,s:[[784,780,.1,0],[659,655,.1,.1],[523,520,.1,.2],[659,655,.1,.3],[784,780,.15,.4]]},
+  'Marimba Riff':{w:'sine',v:.6,s:[[523,520,.12,0],[523,520,.12,.14],[659,655,.12,.28],[784,780,.2,.42]]},
+  'Kalimba Lullaby':{w:'sine',v:.5,s:[[1175,1170,.2,0],[988,985,.2,.2],[784,780,.3,.4]]},
+  'Wind Chime':{w:'sine',v:.35,s:[[1568,1560,.4,0],[1976,1970,.4,.25],[2637,2630,.4,.5],[2093,2085,.5,.8]]},
+  'Rain Drops':{w:'sine',v:.4,s:[[1400,900,.1,0],[1300,850,.1,.25],[1500,950,.1,.5]]},
+  'Morning Birds':{w:'sine',v:.35,s:[[2400,3200,.07,0],[2000,2800,.07,.12],[2600,3400,.07,.24],[2200,3000,.07,.4]]},
+  'Cricket Night':{w:'sine',v:.25,s:[[4200,4150,.04,0],[4200,4150,.04,.09],[4200,4150,.04,.18],[4200,4150,.04,.27],[4200,4150,.04,.36],[4200,4150,.06,.45]]},
+  'Zen Gong':{w:'sine',v:.6,s:[[294,290,.9,0],[147,144,1.4,0]]},
+  'Om Bell':{w:'sine',v:.55,s:[[864,855,.5,0],[432,428,1.2,0]]},
+  'Temple Bell':{w:'sine',v:.5,s:[[523,518,.6,0],[262,258,.9,0],[262,258,.9,1]]},
+  'Flute Call':{w:'sine',v:.5,s:[[698,700,.3,0],[880,884,.4,.32]]},
+  'Whistle Alert':{w:'sine',v:.5,s:[[2093,2085,.15,0],[2093,2085,.15,.25]]},
+  'Train Horn':{w:'sawtooth',v:.35,s:[[311,308,.6,0],[370,366,.6,0]]},
+  'Ship Horn':{w:'sawtooth',v:.4,s:[[131,128,.9,0],[98,96,.9,0]]},
+  'Siren':{w:'sine',v:.45,s:[[600,1200,.4,0],[1200,600,.4,.4],[600,1200,.4,.8]]},
+  'Police Siren':{w:'square',v:.3,s:[[700,900,.18,0],[900,700,.18,.18],[700,900,.18,.36],[900,700,.18,.54],[700,900,.18,.72],[900,700,.2,.9]]},
+  'Alarm Clock':{w:'square',v:.45,s:[[1047,1040,.08,0],[1047,1040,.08,.12],[1047,1040,.08,.24],[1047,1040,.12,.36]]},
+  'Emergency Beep':{w:'square',v:.5,s:[[880,875,.12,0],[880,875,.12,.2],[880,875,.12,.4]]},
+  'Radar Ping':{w:'sine',v:.5,s:[[1200,1190,.5,0]]},
+  'Sonar Deep':{w:'sine',v:.6,s:[[440,435,.7,0]]},
+  'Morse Beep':{w:'sine',v:.45,s:[[1000,995,.06,0],[1000,995,.06,.12],[1000,995,.06,.24]]},
+  'Teletype':{w:'square',v:.3,s:[[1200,1195,.03,0],[1200,1195,.03,.07],[1200,1195,.03,.14],[1200,1195,.03,.21],[1200,1195,.03,.28],[1200,1195,.03,.35],[1200,1195,.03,.42],[1200,1195,.05,.49]]},
+  'Typewriter Ding':{w:'sine',v:.5,s:[[1835,1800,.35,0]],n:[[.02,0,.4]]},
+  'Retro 8-bit':{w:'square',v:.4,s:[[523,520,.08,0],[659,655,.08,.09],[784,780,.08,.18],[1047,1040,.14,.27]]},
+  'Arcade Powerup':{w:'square',v:.35,s:[[392,784,.35,0],[523,1047,.35,.1]]},
+  'Level Up':{w:'square',v:.4,s:[[523,520,.1,0],[659,655,.1,.1],[784,780,.1,.2],[1047,1040,.1,.3],[1319,1310,.2,.4]]},
+  'Game Over':{w:'square',v:.4,s:[[523,520,.15,0],[494,490,.15,.18],[392,388,.15,.36],[262,258,.4,.54]]},
+  'Coin Combo':{w:'square',v:.4,s:[[988,985,.06,0],[1319,1310,.2,.07],[988,985,.06,.3],[1319,1310,.25,.37]]},
+  'Jump Tune':{w:'square',v:.4,s:[[660,1320,.18,0]]},
+  'Secret Tune':{w:'triangle',v:.45,s:[[587,583,.12,0],[831,827,.12,.12],[1109,1100,.12,.24],[831,827,.2,.36]]},
+  'Victory Fanfare':{w:'triangle',v:.5,s:[[523,520,.18,0],[523,520,.18,.2],[523,520,.18,.4],[659,655,.18,.6],[784,780,.6,.8]]},
+  'Triumph Horn':{w:'sawtooth',v:.35,s:[[262,258,.5,0],[330,326,.5,.3],[392,388,.8,.6]]},
+  'Royal Announce':{w:'sawtooth',v:.35,s:[[392,388,.4,0],[523,518,.7,.45]]},
+  'Drum Roll':{n:[[.05,0,.4],[.05,.05,.4],[.05,.1,.4],[.05,.15,.4],[.05,.2,.4],[.05,.25,.4],[.05,.3,.4],[.05,.35,.4],[.05,.4,.4],[.09,.45,.5]]},
+  'Heartbeat Alert':{w:'sine',v:.8,s:[[75,65,.12,0],[85,75,.14,.2],[75,65,.12,.55],[85,75,.14,.75]]},
+  'UFO Warp':{w:'sine',v:.35,s:[[100,2000,.6,0]]},
+  'Teleport':{v:.3,s:[[1500,200,.4,0],[2000,300,.4,.05,0]],w:'square'},
+  'Crystal Alert':{w:'sine',v:.4,s:[[2093,2085,.3,0],[2637,2630,.3,.2],[3136,3130,.4,.4]]},
+  'Ocean Wave':{n:[[.8,0,.3]]},
+  'Fire Crackle':{n:[[.04,0,.3],[.05,.09,.3],[.03,.2,.3],[.06,.31,.3],[.04,.43,.3],[.05,.55,.3],[.03,.68,.3],[.07,.8,.3]]}
+ },
+ lists:function(kind){return Object.keys(kind==='nf'?this.NOTIF:this.UI)},
+ init:function(){
+  try{
+   this.on=localStorage.getItem(this.KEY)!=='0';
+   var a=localStorage.getItem(this.KUI);if(a&&this.UI[a])this.uiSound=a;
+   var b=localStorage.getItem(this.KNF);if(b&&this.NOTIF[b])this.nfSound=b;
+   var v=parseFloat(localStorage.getItem('vexaSfxVol'));if(!isNaN(v)&&v>=0&&v<=1)this.vol=v;
+  }catch(e){}
+ },
  ensure:function(){
   if(!this.ctx){try{this.ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}
   if(this.ctx.state==='suspended')this.ctx.resume();
   return this.ctx;
  },
- tone:function(f1,f2,dur,vol,type){
-  if(!this.on)return;
-  var c=this.ensure();if(!c)return;
+ noiseBuf:function(c){
+  if(this._nbuf)return this._nbuf;
+  try{var b=c.createBuffer(1,c.sampleRate,c.sampleRate),d=b.getChannelData(0);
+   for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+   this._nbuf=b;return b;
+  }catch(e){return null}
+ },
+ _osc:function(c,t,f1,f2,dur,type,vol){
   try{
-   var t=c.currentTime,o=c.createOscillator(),g=c.createGain();
-   o.type=type||'triangle';
-   o.frequency.setValueAtTime(f1,t);
-   o.frequency.exponentialRampToValueAtTime(Math.max(1,f2),t+dur);
-   g.gain.setValueAtTime(vol*this.vol,t);
-   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-   o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur);
+   var o=c.createOscillator(),g=c.createGain();
+   o.type=type||'sine';
+   o.frequency.setValueAtTime(Math.max(1,f1||440),t);
+   if(f2&&Math.abs(f2-f1)>1)o.frequency.exponentialRampToValueAtTime(Math.max(1,f2),t+Math.max(.01,dur));
+   var v=Math.max(.0001,(vol||1)*(this.vol||.55));
+   g.gain.setValueAtTime(v,t);
+   g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.02,dur));
+   o.connect(g);g.connect(c.destination);
+   o.start(t);o.stop(t+dur+.03);
   }catch(e){}
  },
- click:function(){this.tone(520,180,.1,.09)},
- hover:function(){this.tone(900,1200,.05,.03,'sine')},
- ok:function(){this.tone(600,950,.12,.07,'sine')},
- err:function(){this.tone(300,120,.18,.08,'sawtooth')},
+ _noise:function(c,t,dur,vol){
+  try{
+   var b=this.noiseBuf(c);if(!b)return;
+   var s=c.createBufferSource(),g=c.createGain(),f=c.createBiquadFilter();
+   s.buffer=b;f.type='highpass';f.frequency.value=900;
+   var v=Math.max(.0001,(vol||.5)*(this.vol||.55));
+   g.gain.setValueAtTime(v,t);
+   g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.02,dur));
+   s.connect(f);f.connect(g);g.connect(c.destination);
+   s.start(t);s.stop(t+dur+.03);
+  }catch(e){}
+ },
+ play:function(name,bank){
+  if(!this.on)return;
+  var B=bank==='nf'?this.NOTIF:this.UI,r=B[name];
+  if(!r)return;
+  var c=this.ensure();if(!c)return;
+  var bv=r.v||1,steps=r.s||[],ns=r.n||[],i,st;
+  for(i=0;i<steps.length;i++){
+   st=steps[i];
+   this._osc(c,c.currentTime+(st[3]||0),st[0],(st[1]===undefined?st[0]:st[1]),st[2],st[4]||r.w||'sine',(st[5]!==undefined?st[5]:1)*bv);
+  }
+  for(i=0;i<ns.length;i++){
+   var nt=ns[i];
+   this._noise(c,c.currentTime+(nt[1]||0),nt[0],(nt[2]!==undefined?nt[2]:.5)*bv);
+  }
+ },
+ click:function(){this.play(this.uiSound)},
+ hover:function(){if(!this.on)return;var c=this.ensure();if(c)this._osc(c,c.currentTime,900,1200,.05,'sine',.2)},
+ ok:function(){this.play('Confirm')},
+ err:function(){this.play('Delete Thud')},
+ notify:function(){this.play(this.nfSound,'nf')},
+ setUi:function(n){this.uiSound=n;try{localStorage.setItem(this.KUI,n)}catch(e){}},
+ setNf:function(n){this.nfSound=n;try{localStorage.setItem(this.KNF,n)}catch(e){}},
+ volSet:function(v){this.vol=Math.max(0,Math.min(1,v));try{localStorage.setItem('vexaSfxVol',String(this.vol))}catch(e){}},
  toggle:function(){
   this.on=!this.on;
   try{localStorage.setItem(this.KEY,this.on?'1':'0')}catch(e){}
-  try{V.toast('info',this.on?'🔊 Sound ON':'🔇 Sound OFF')}catch(e){}
+  try{V.toast('info',this.on?'🔊 Sounds ON':'🔇 Sounds OFF')}catch(e){}
+  if(this.on)this.play(this.uiSound);
+ },
+ /* 🔊 SOUND PICKER — 56 UI / 54 notification, search + preview */
+ picker:function(kind){
+  kind=(kind==='nf'||kind==='notif')?'nf':'ui';
+  var cur=kind==='nf'?this.nfSound:this.uiSound;
+  var B=kind==='nf'?this.NOTIF:this.UI,names=Object.keys(B);
+  var h='<div class="snote mb8">'+(kind==='nf'
+    ?'🔔 <b>Notification sound</b> — naye message/notification par bajega'
+    :'🔊 <b>UI sound</b> — buttons/taps par bajega')+'</div>'
+   +'<input class="inp mb8" placeholder="🔍 Sound search..." oninput="SFX.pfilter(this.value)">'
+   +'<div class="sndgrid" id="sndGrid">';
+  for(var i=0;i<names.length;i++){
+   var n=names[i];
+   h+='<div class="sndc'+(n===cur?' sel':'')+'" data-n="'+V.esc(n)+'" onclick="SFX.pick(\''+kind+'\',this.dataset.n)">'
+    +'<span class="sndp" onclick="event.stopPropagation();SFX.preview(\''+kind+'\',\''+V.esc(n)+'\',this)">▶</span>'
+    +'<span class="sndnm">'+V.esc(n)+'</span>'
+    +(n===cur?'<span class="sndon">✓</span>':'')
+    +'</div>';
+  }
+  h+='</div><div class="snote mt8">🎧 ▶ = preview · card tap = set</div>';
+  V.mOpen(kind==='nf'?('🔔 Notification Sounds ('+names.length+')'):('🔊 UI Sounds ('+names.length+')'),h);
+ },
+ pfilter:function(q){
+  q=(q||'').toLowerCase();
+  var cs=document.querySelectorAll('#sndGrid .sndc');
+  for(var i=0;i<cs.length;i++)cs[i].style.display=cs[i].dataset.n.toLowerCase().indexOf(q)>-1?'':'none';
+ },
+ preview:function(kind,name,el){
+  this.play(name,(kind==='nf'||kind==='notif')?'nf':'ui');
+  if(el){el.textContent='♪';setTimeout(function(){el.textContent='▶'},700)}
+ },
+ pick:function(kind,name){
+  kind=(kind==='nf'||kind==='notif')?'nf':'ui';
+  if(kind==='nf')this.setNf(name);else this.setUi(name);
+  var cs=document.querySelectorAll('#sndGrid .sndc');
+  for(var i=0;i<cs.length;i++)cs[i].classList.toggle('sel',cs[i].dataset.n===name);
+  this.play(name,kind==='nf'?'nf':'ui');
+  try{V.toast('success','🎵 Sound set: '+name,2200)}catch(e){}
  }
 };
 document.addEventListener('click',function(e){
- if(e.target.closest('a,button,.qt,.sgi,.qmi,.crow,.urow,.mpl,.thc,.fcard,.srow,.rrow,.timgc'))SFX.click();
+ if(e.target.closest('a,button,.qt,.sgi,.qmi,.crow,.urow,.mpl,.thc,.fcard,.srow,.rrow,.timgc,.sndc'))SFX.click();
 },true);
 document.addEventListener('mouseover',function(e){
  var b=e.target.closest('.btn,.bico,.qt,.qmi,.srow,.mpl');
@@ -1047,6 +1175,18 @@ const V={
    if(m==='video/3gpp')return '3gp';
    return 'mp4';
  },
+ /* ⚡SONG-FIX: post audio extension — mime/filename se */
+ audExt:function(m,name){
+   m=(m||'').toLowerCase();
+   if(m==='audio/mpeg'||m==='audio/mp3')return 'mp3';
+   if(m==='audio/mp4'||m==='audio/m4a'||m==='audio/x-m4a'||m==='audio/aac')return 'm4a';
+   if(m==='audio/ogg'||m==='application/ogg')return 'ogg';
+   if(m==='audio/wav'||m==='audio/x-wav'||m==='audio/wave')return 'wav';
+   if(m==='audio/webm')return 'weba';
+   if(m==='audio/flac'||m==='audio/x-flac')return 'flac';
+   var ex=(String(name||'').match(/\.(\w{2,5})$/)||[])[1];
+   return (ex&&/^(mp3|m4a|ogg|wav|flac|aac)$/i.test(ex))?ex.toLowerCase():'mp3';
+ },
  storErr:function(e){
    try{
      var m=((e&&(e.message||(e.error&&e.error.message)))||'')+'',mt,mm;
@@ -1056,10 +1196,35 @@ const V={
        return new Error('Storage bucket ne "'+mt+'" reject kiya (bucket ki Allowed MIME types list me nahi hai). Fix: Supabase Dashboard → Storage → bucket → Settings → Allowed MIME types me "'+mt+'" add karo YA field khaali chhodo (sab types allowed) → Save.');
      }
      if(/payload too large|size limit|exceeded the maximum/i.test(m))return new Error('File bucket ki size limit se badi hai — chhota file lo');
-     if(/row-level security|policy/i.test(m))return new Error('Storage policy ne block kiya — supabase-policies.sql ke policies project me chalao');
+     if(/row-level security|policy/i.test(m))return new Error('Storage policy ne upload block kiya ⚠️ — Fix: Settings → 📊 Storage Check kholo → "Fix SQL Copy" button se SQL copy karo → Supabase Dashboard → SQL Editor me paste karke RUN karo');
      if(/invalid api key|jwt/i.test(m))return new Error('Storage key invalid — bucket project ka publishable/anon key CFG/VEXA_STORAGE me sahi hai?');
      return (e instanceof Error)?e:new Error(m||'Storage fail');
    }catch(e2){ return new Error('Storage fail') }
+ },
+ /* ⚡POLICY-FIX: one-tap Fix SQL copy — user ko supabase-policies.sql dhundhna na pade
+    Project-2 (vexa-posts) ya Project-3 (vexa-chat-guild) ka SQL clipboard me */
+ fixSql:function(kind){
+   var sq='';
+   if(kind==='posts'){
+     sq="-- VEXA PROJECT-2 (qrrcyvtvwjzhsdklxluh) — vexa-posts bucket + policies\n"
+       +"-- SQL Editor me paste karke RUN karo. \"already exists\" aaye to pehle:\n"
+       +"-- drop policy \"<naam>\" on storage.objects;  phir dobara RUN.\n\n"
+       +"insert into storage.buckets (id, name, public)\nvalues ('vexa-posts', 'vexa-posts', true)\non conflict (id) do update set public = true;\n\n"
+       +"create policy \"vexa_posts_public_read\"\non storage.objects for select\nto anon, authenticated\nusing (bucket_id = 'vexa-posts');\n\n"
+       +"create policy \"vexa_posts_anon_insert\"\non storage.objects for insert\nto anon, authenticated\nwith check (bucket_id = 'vexa-posts' and (storage.foldername(name))[1] = 'posts');\n\n"
+       +"create policy \"vexa_posts_anon_update\"\non storage.objects for update\nto anon, authenticated\nusing (bucket_id = 'vexa-posts' and (storage.foldername(name))[1] = 'posts');\n\n"
+       +"create policy \"vexa_posts_anon_delete\"\non storage.objects for delete\nto anon, authenticated\nusing (bucket_id = 'vexa-posts' and (storage.foldername(name))[1] = 'posts');";
+   }else{
+     sq="-- VEXA PROJECT-3 (kjsfenhmlhgdlhqipqts) — vexa-chat-guild bucket + policies (REELS 🎬)\n"
+       +"-- SQL Editor me paste karke RUN karo. \"already exists\" aaye to pehle:\n"
+       +"-- drop policy \"<naam>\" on storage.objects;  phir dobara RUN.\n\n"
+       +"insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)\nvalues ('vexa-chat-guild', 'vexa-chat-guild', true, 3145728, null)\non conflict (id) do update set public = true, file_size_limit = 3145728, allowed_mime_types = null;\n\n"
+       +"create policy \"vexa_guild_public_read\"\non storage.objects for select\nto anon, authenticated\nusing (bucket_id = 'vexa-chat-guild');\n\n"
+       +"create policy \"vexa_guild_anon_insert\"\non storage.objects for insert\nto anon, authenticated\nwith check (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');\n\n"
+       +"create policy \"vexa_guild_anon_update\"\non storage.objects for update\nto anon, authenticated\nusing (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');\n\n"
+       +"create policy \"vexa_guild_anon_delete\"\non storage.objects for delete\nto anon, authenticated\nusing (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');";
+   }
+   V.copy(sq, kind==='posts'?'📋 Project-2 SQL copied — Supabase SQL Editor me RUN karo':'📋 Project-3 SQL copied — Supabase SQL Editor me RUN karo');
  },
  /* ⚡REEL-FIX: Storage Check — Supabase buckets live probe (Settings se)
     Reels "mime type video/mp4 is not supported" / "Bucket not found" ka
@@ -1095,7 +1260,10 @@ const V={
      h+='<div style="margin-bottom:10px">'+(r[1].ok?'✅':'❌')+' <b>'+V.esc(r[0])+'</b><br>'
        +'<span class="mut" style="font-size:11.5px">'+V.esc(r[1].msg)+'</span></div>';
    });
-   h+='</div><div class="snote mut" style="margin-top:6px">🎬 Reels ke liye <b>project-3 (kjsfenhmlhgdlhqipqts)</b> me bucket <b>vexa-chat-guild</b> hona zaroori hai — Public ON + Allowed MIME types me video/mp4 (ya field khaali). RLS policies ke liye database/supabase-policies.sql usi project ke SQL Editor me chalao.</div>';
+   h+='</div>'
+     +'<div class="fld" style="margin-top:10px"><button class="btn bg" style="width:100%" onclick="V.fixSql(\'guilds\')">📋 Project-3 (Reels/vexa-chat-guild) Fix SQL Copy</button></div>'
+     +'<div class="fld"><button class="btn bg" style="width:100%" onclick="V.fixSql(\'posts\')">📋 Project-2 (Posts/vexa-posts) Fix SQL Copy</button></div>'
+     +'<div class="snote mut" style="margin-top:8px">💡 <b>Fix SQL kaise use kare:</b> button dabao → SQL copy hoga → Supabase Dashboard me <b>usi project</b> ko kholo → <b>SQL Editor</b> → paste karke <b>RUN</b> → phir wapas app me aake dobara Storage Check chalao. ❌ hat ke ✅ aa jayega to reels/posts live ho jayenge.</div>';
    V.mOpen('📊 Storage Check', h, '<button class="btn bp" onclick="V.mClose()">Theek hai</button>');
  },
  /* 🎬REEL: video file upload (Supabase Storage — raw file, image compress nahi)
@@ -1332,13 +1500,22 @@ const Themes={
 };
 
 /* ================= FONTS ================= */
+/* ═══ 🔤 FONTS v2 — 3 ALAG font slots (user spec):
+   🖥️ Main UI ka font alag · 💬 Chat/Text ka alag · 👤 Profile ka alag ═══ */
 const Fonts={
+ SLOTS:{
+  ui  :{k:'vexaFontUi',  lbl:'Main UI',   icon:'🖥️',desc:'Pura app — buttons, settings, feed'},
+  chat:{k:'vexaFontChat',lbl:'Chat & Text',icon:'💬',desc:'Messages, comments, captions'},
+  prof:{k:'vexaFontProf',lbl:'Profile',   icon:'👤',desc:'Profile name, bio, hero card'}
+ },
+ _slot:'ui',
  featured:[
   {name:'Pacifico',tag:'Surf Script',desc:'A fun, bold brush script inspired by 1950s surf culture'},
   {name:'Cedarville Cursive',tag:'Handwriting',desc:'A simple, neat script modeled after everyday handwriting'},
   {name:'Bukhari Script',tag:'Logo Style',desc:'A thick, bold monoline script great for logos'},
-  {name:'Dancing Script',tag:'Cursive',desc:'A lively, informal cursive font with bouncing letters'},
-  {name:'Great Vibes',tag:'Elegant',desc:'A flowing, elegant formal script with refined connected strokes'}
+  {name:'Dancing Script',tag:'Cursive',desc:'A lively, informal cursive with bouncing letters'},
+  {name:'Great Vibes',tag:'Elegant',desc:'A flowing, elegant formal script with refined strokes'},
+  {name:'Caveat',tag:'Casual Note',desc:'Quick, friendly handwriting feel — chat ke liye best'}
  ],
  list:['Inter','Roboto','Open Sans','Lato','Poppins','Montserrat','Oswald','Raleway','Nunito','Work Sans','Rubik','Manrope','DM Sans','Plus Jakarta Sans','Outfit','Urbanist','Sora','Space Grotesk','Figtree','Lexend','Be Vietnam Pro','Archivo','Archivo Black','Barlow','Fira Sans','Source Sans 3','PT Sans','PT Serif','Ubuntu','Cabin','Titillium Web','Exo 2','Jost','Quicksand','Comfortaa','Josefin Sans','Dosis','Mukta','Hind','Heebo','Overpass','Chivo','Bitter','Roboto Slab','Roboto Mono','Zilla Slab','Arvo','Rokkitt','Playfair Display','Merriweather','Lora','Crimson Text','Libre Baskerville','EB Garamond','Cormorant','Spectral','Vollkorn','Alegreya','Source Serif 4','Noto Serif','Noto Sans','Bodoni Moda','DM Serif Display','Marcellus','Cinzel','Prata','Domine','Bree Serif','Kreon','Alfa Slab One','Ultra','Abril Fatface','Lobster','Pacifico','Dancing Script','Great Vibes','Cedarville Cursive','Bukhari Script','Satisfy','Courgette','Sacramento','Yellowtail','Kaushan Script','Cookie','Allura','Parisienne','Tangerine','Berkshire Swash','Leckerli One','Yesteryear','Grand Hotel','Italianno','Homemade Apple','Caveat','Shadows Into Light','Indie Flower','Patrick Hand','Handlee','Gochi Hand','Rock Salt','Architects Daughter','Coming Soon','Permanent Marker','Amatic SC','Bangers','Luckiest Guy','Comic Neue','Titan One','Shrikhand','Modak','Bungee','Rubik Glitch','Silkscreen','Pixelify Sans','Press Start 2P','VT323','Russo One','Black Ops One','Sigmar One','Staatliches','Anton','Days One','Oxanium','Chakra Petch','Rajdhani','Teko','Kanit','IBM Plex Sans','IBM Plex Mono','JetBrains Mono','Source Code Pro','Space Mono','Fira Code','Poiret One','Syncopate','Michroma','Zen Dots','Bubblegum Sans','DynaPuff','Concert One','Chewy','Baloo 2','Fredoka','Righteous','Lilita One','Paytone One','Gluten','Caprasimo','Nabla','Unbounded','Ma Shan Zheng','Zcool KuaiLe','Catamaran','Young Serif','Readex Pro','Cairo','Amiri','Changa','Lalezar','Mada','Sono','K2D','Mali','Pridi','Athiti','Pattaya','Sriracha','Mr Dafoe','Rochester','Water Brush','Whisper','Kalam','Lemon','Londrina Solid','Love Ya Like A Sister','Luxurious Script','Moon Dance','Nanum Brush Script','Nerko One','Oleo Script','Pirata One','Rowdies','Rye','Salsa','Sansita','Sarina','Schoolbell','Shantell Sans','Signika','Six Caps','Smooch','Special Elite','Style Script','Suez One','Syne','Tilt Neon','Train One','Trirong','Vampiro One','Varela Round','Vibur','Vina Sans','Wellfleet','Wendy One','Yaldevi','Yeon Sung','Yrsa'],
  loaded:{},
@@ -1350,39 +1527,71 @@ const Fonts={
    document.head.appendChild(l);
    this.loaded[f]=true;
  },
- apply:function(f){
+ get:function(slot){
+   var S=this.SLOTS[slot||'ui'];
+   try{var f=localStorage.getItem(S.k);if(f)return f}catch(e){}
+   if(me&&me.settings&&me.settings['font_'+(slot||'ui')])return me.settings['font_'+(slot||'ui')];
+   return (slot==='prof')?'Great Vibes':'Poppins';
+ },
+ apply:function(f,slot){
+   slot=slot||'ui';
    try{
      this.loadCss(f);
-     document.documentElement.style.setProperty('--fb',"'"+f+"',sans-serif");
-     document.documentElement.style.setProperty('--fc',"'"+f+"',sans-serif");
-     document.body.style.fontFamily="'"+f+"',sans-serif";
-     try{localStorage.setItem('vexaFont',f)}catch(e){}
-     if(me&&V.uid){try{db.ref('users/'+V.uid+'/settings/font').set(f)}catch(e){}}
+     var R=document.documentElement.style;
+     if(slot==='ui'){
+       R.setProperty('--fb',"'"+f+"',sans-serif");
+       R.setProperty('--fc',"'"+f+"',sans-serif");
+       document.body.style.fontFamily="'"+f+"',sans-serif";
+     }else if(slot==='chat'){
+       R.setProperty('--fchat',"'"+f+"',sans-serif");
+     }else{
+       R.setProperty('--fprof',"'"+f+"',sans-serif");
+     }
+     try{localStorage.setItem(this.SLOTS[slot].k,f)}catch(e){}
+     if(me&&V.uid){try{var up={};up['settings/font_'+slot]=f;db.ref('users/'+V.uid).update(up)}catch(e){}}
    }catch(e){}
  },
- open:function(){
-   var cur='Inter';try{cur=localStorage.getItem('vexaFont')||'Inter'}catch(e){}
-   var h='<div class="snote mb8">🌐 Font <b>PURA APP</b> pe lagega!</div>';
-   h+='<div class="stit" style="margin-top:0">✍️ Popular Cursive Fonts</div><div class="fgrid">';
+ open:function(slot){
+   slot=slot||'ui';this._slot=slot;
+   var cur=this.get(slot);
+   var tabs=['ui','chat','prof'].map(function(s){
+     return '<div class="ftab'+(s===slot?' sel':'')+'" onclick="Fonts.open(\''+s+'\')">'+Fonts.SLOTS[s].icon+' '+Fonts.SLOTS[s].lbl+'</div>';
+   }).join('');
+   var h='<div class="ftabs">'+tabs+'</div>'
+    +'<div class="snote mb8">'+this.SLOTS[slot].icon+' <b>'+this.SLOTS[slot].lbl+'</b> — '+this.SLOTS[slot].desc+'</div>'
+    +'<div class="stit" style="margin-top:0">✍️ Popular Cursive Fonts</div><div class="fgrid">';
    this.featured.forEach(function(f){
-     h+='<div class="fcard'+(f.name===cur?' sel':'')+'" data-f="'+f.name+'" onclick="Fonts.pick(\''+f.name+'\')">'
+     h+='<div class="fcard'+(f.name===cur?' sel':'')+'" data-f="'+f.name+'" onclick="Fonts.pick(\''+f.name+'\',\''+slot+'\')">'
       +'<div class="fs" style="font-family:\''+f.name+'\'">'+f.name+'</div>'
       +'<div class="fn hl">'+f.tag+'</div>'
       +'<div class="fn" style="white-space:normal;line-height:1.3">'+f.desc+'</div></div>';
    });
-   h+='</div><div class="stit">🔤 All Fonts — Global</div>'
+   h+='</div><div class="stit">🔤 All Fonts — '+this.SLOTS[slot].lbl+'</div>'
     +'<input class="inp mb8" placeholder="Search fonts..." oninput="Fonts.filter(this.value)"><div class="fgrid" id="fgrid">';
    this.list.forEach(function(f){
-     h+='<div class="fcard'+(f===cur?' sel':'')+'" data-f="'+f+'" onclick="Fonts.pick(\''+f+'\')"><div class="fs" style="font-family:\''+f+'\'">'+f+'</div><div class="fn">'+f+'</div></div>';
+     h+='<div class="fcard'+(f===cur?' sel':'')+'" data-f="'+f+'" onclick="Fonts.pick(\''+f+'\',\''+slot+'\')"><div class="fs" style="font-family:\''+f+'\'">'+f+'</div><div class="fn">'+f+'</div></div>';
    });
    h+='</div>';
-   V.mOpen('🔤 App Fonts — Global',h);
-   this.loadCss('Pacifico');this.loadCss('Cedarville Cursive');this.loadCss('Bukhari Script');this.loadCss('Dancing Script');this.loadCss('Great Vibes');
-   for(var i=0;i<48&&i<this.list.length;i++)this.loadCss(this.list[i]);
+   V.mOpen('🔤 '+this.SLOTS[slot].lbl+' Font',h);
+   var i;
+   for(i=0;i<this.featured.length;i++)this.loadCss(this.featured[i].name);
+   for(i=0;i<48&&i<this.list.length;i++)this.loadCss(this.list[i]);
  },
- filter:function(q){q=q.toLowerCase();document.querySelectorAll('#fgrid .fcard').forEach(function(c){c.style.display=c.dataset.f.toLowerCase().indexOf(q)>-1?'':'none'})},
- pick:function(f){this.apply(f);V.mClose();V.toast('success','Font: '+f)},
- init:function(){var f='Inter';try{f=localStorage.getItem('vexaFont')||'Inter'}catch(e){}this.apply(f)}
+ filter:function(q){
+   q=(q||'').toLowerCase();
+   var cs=document.querySelectorAll('#fgrid .fcard');
+   for(var i=0;i<cs.length;i++)cs[i].style.display=cs[i].dataset.f.toLowerCase().indexOf(q)>-1?'':'none';
+ },
+ pick:function(f,slot){
+   slot=slot||this._slot||'ui';
+   this.apply(f,slot);
+   V.mClose();V.toast('success','🔤 '+this.SLOTS[slot].lbl+' font: '+f);
+ },
+ init:function(){
+   this.apply(this.get('ui'),'ui');
+   this.apply(this.get('chat'),'chat');
+   this.apply(this.get('prof'),'prof');
+ }
 };
 
 /* ================= PRESENCE / BADGES ================= */
@@ -1406,7 +1615,7 @@ const Presence={
  }
 };
 const Badges={
- _on:false, /* ⚡FIX: re-login pe listener stack NAHI */
+ _on:false,_pc:0,_pn:-1, /* ⚡FIX: re-login pe listener stack NAHI · ⚡SOUND: prev counts */
  start:function(){
    if(this._on)return;
    this._on=true;
@@ -1414,11 +1623,22 @@ const Badges={
      var u=0;
      s.forEach(function(c){var un=c.val()&&c.val().unread&&c.val().unread[V.uid];if(typeof un==='number')u+=un});
      var e=V.g('bChatM');if(e){e.textContent=u;e.classList.toggle('hidden',!u)}
+     /* ⚡SOUND-FIX: naya message aaya → user ka chosen notification sound */
+     try{if(Badges._pc>=0&&u>Badges._pc)SFX.notify();Badges._pc=u}catch(e){}
    },function(){});
    db.ref('users/'+V.uid+'/notifications').orderByChild('read').equalTo(false).on('value',function(s){
      var n=s.exists()?s.numChildren():0;
      var e=V.g('bNotifTop');if(e){e.textContent=n;e.classList.toggle('hidden',!n)}
+     /* ⚡SOUND-FIX: nayi notification → chosen sound (pehli load pe nahi) */
+     try{if(Badges._pn>=0&&n>Badges._pn)SFX.notify();Badges._pn=n}catch(e){}
    },function(){});
+   /* ⚡DRIVE-FIX: pehli user interaction par silent Drive re-connect
+      (pehle connect kar chuka ho to bina consent ke token refresh) */
+   try{
+     if(typeof VexaVaultDrive!=='undefined'){
+       document.addEventListener('pointerdown',function(){try{VexaVaultDrive.silentFix()}catch(e){}},{once:true});
+     }
+   }catch(e){}
  }
 };
 
@@ -2135,6 +2355,34 @@ const Follow={
 };
 
 /* ================= PROFILE — ⚡INSTANT paint, bg photo ================= */
+/* ═══ 🎨 PROFILE THEMES v1 — 24 gradient themes (user spec: profile ka style upgrade) ═══ */
+const PThemes=[
+ ['Aurora','linear-gradient(140deg,#0f2027,#2c5364)'],
+ ['Sunset Blaze','linear-gradient(140deg,#ff512f,#dd2476)'],
+ ['Purple Night','linear-gradient(140deg,#41295a,#2f0743)'],
+ ['Ocean Deep','linear-gradient(140deg,#2193b0,#6dd5ed)'],
+ ['Royal Gold','linear-gradient(140deg,#1f1c2c,#928dab)'],
+ ['Neon City','linear-gradient(140deg,#20002c,#cbb4d4)'],
+ ['Emerald','linear-gradient(140deg,#134e5e,#71b280)'],
+ ['Candy Pop','linear-gradient(140deg,#f953c6,#b91d73)'],
+ ['Midnight','linear-gradient(140deg,#232526,#414345)'],
+ ['Fire Opal','linear-gradient(140deg,#ff9966,#ff5e62)'],
+ ['Cyber Teal','linear-gradient(140deg,#0f3443,#34e89e)'],
+ ['Rose Dawn','linear-gradient(140deg,#ee9ca7,#ffdde1)'],
+ ['Deep Space','linear-gradient(140deg,#000428,#004e92)'],
+ ['Cotton Sky','linear-gradient(140deg,#50a7c2,#eec663)'],
+ ['Lava Lamp','linear-gradient(140deg,#870000,#190a05)'],
+ ['Mint Fresh','linear-gradient(140deg,#43cea2,#185a9d)'],
+ ['Violet Fog','linear-gradient(140deg,#673ab7,#512da8)'],
+ ['Peach Glow','linear-gradient(140deg,#ffecd2,#fcb69f)'],
+ ['Steel Blue','linear-gradient(140deg,#1c92d2,#f2fcfe)'],
+ ['Cocoa','linear-gradient(140deg,#3c3b3f,#605c3c)'],
+ ['Bulgarian Rose','linear-gradient(140deg,#cc9b47,#bd3c57)'],
+ ['North Miracle','linear-gradient(140deg,#00c6ff,#0072ff)'],
+ ['YouTube Red','linear-gradient(140deg,#8e0e00,#1f1c18)'],
+ ['Instagram','linear-gradient(140deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)']
+];
+
 const Profile={
  _rr:0,
  _avaCache:{}, /* ⚡autoAvatar cache — repeat views instant */
@@ -2195,9 +2443,10 @@ const Profile={
      var devCount=0;
      try{devCount=u.devices?Object.keys(u.devices).length:0}catch(e){}
      var pfd=own?((u.settings&&u.settings.profileDesign)||'modern'):'modern';
+     var pth=0;try{pth=parseInt((u.settings&&u.settings.profileTheme)||0,10)||0;if(isNaN(pth))pth=0;pth=((pth%PThemes.length)+PThemes.length)%PThemes.length}catch(e){}
      /* ⚡INSTANT PAINT — koi blocking await nahi */
      c.innerHTML='<div class="pgc pfd-'+pfd+'">'
-      +'<div class="pfh">'
+      +'<div class="pfh pth-'+pth+'">'
       +'<div class="pava-ring" id="pAvaRing">'+avaImg+'</div>'
       +'<div class="pnm-big">'+V.nameB(u)+'</div>'
       +'<div class="puname">@'+V.esc(u.username||'')+'</div>'
@@ -2213,12 +2462,9 @@ const Profile={
       +(links?'<div class="slinks">'+links+'</div>':'')
       +(own?'<div class="puid"><span>🆔 UID <span class="sm mut">(recovery)</span></span><span class="mono">'+V.esc(uid)+'</span><a onclick="V.copy(\''+uid+'\',\'UID copied\')">📋</a></div>':'')
       +'</div>'
-      +'<div class="ptabs"><div class="ptb act" id="ptbPosts" onclick="Profile.ptab(\'posts\',this)">📸 Posts</div><div class="ptb" id="ptbReels" onclick="Profile.ptab(\'reels\',this)">🎬 Reels</div></div>'
-      +'<div id="pGrid"></div><div id="pReelGrid" class="hidden"></div></div>';
+      +'<div class="ptabs"><div class="ptb act">📸 Posts</div></div>'
+      +'<div id="pGrid"></div></div>';
      if(rid!==Profile._rr)return;
-     var _pg=V.g('pGrid'),_rg=V.g('pReelGrid');
-     if(_pg)_pg.dataset.uid=uid;
-     if(_rg)_rg.dataset.uid=uid;
      Posts.grid(uid);
      /* ⚡BACKGROUND: presence + photo — paint ko block nahi karte */
      this._bg(uid,own,u,rid);
@@ -2259,22 +2505,6 @@ const Profile={
      }
    }catch(e){}
  },
- /* ⚡PROFILE-TABS (user request): Posts | Reels switch — Instagram-style */
- ptab:function(t,el){
-   document.querySelectorAll('#profC .ptb').forEach(function(x){x.classList.remove('act')});
-   if(el)el.classList.add('act');
-   var pg=V.g('pGrid'),rg=V.g('pReelGrid');
-   if(!pg||!rg)return;
-   var uid=(pg&&pg.dataset&&pg.dataset.uid)||(rg&&rg.dataset&&rg.dataset.uid)||V.uid;
-   if(t==='reels'){
-     pg.classList.add('hidden');
-     rg.classList.remove('hidden');
-     Reels.grid(uid);
-   }else{
-     rg.classList.add('hidden');
-     pg.classList.remove('hidden');
-   }
- },
  designPicker:function(){
    var cur=(me.settings&&me.settings.profileDesign)||'modern';
    var opts=[['modern','🚀 Modern','Big gradient card, square avatar — DEFAULT'],['classic','👑 Classic','Centered ring avatar'],['italic','✒️ Italic','Elegant serif italic'],['insta','📸 Insta Line','Minimal thin top line']];
@@ -2291,6 +2521,26 @@ const Profile={
    try{db.ref('users/'+V.uid+'/settings/profileDesign').set(d)}catch(e){}
    if(me.settings)me.settings.profileDesign=d;else me.settings={profileDesign:d};
    V.mClose();V.toast('success','Design: '+d+' ✅');
+   Profile.render(V.uid);
+ },
+ /* ═══ 🎨 PROFILE THEMES — 24 gradient styles, sabko dikhega (settings me save) ═══ */
+ themes:function(){
+   var cur=0;try{cur=parseInt((me.settings&&me.settings.profileTheme)||0,10)||0}catch(e){}
+   var h='<div class="snote mb8">🎨 Profile hero ka gradient theme — <b>'+PThemes.length+' styles</b>. Sabko tumhara profile naye theme me dikhega.</div><div class="pthgrid">';
+   for(var i=0;i<PThemes.length;i++){
+     h+='<div class="pthc'+(i===cur?' sel':'')+'" onclick="Profile.setTheme('+i+')">'
+      +'<div class="pthprev" style="background:'+PThemes[i][1]+'"><span class="pthava">'+V.esc(((me&&me.displayName)||'V').charAt(0).toUpperCase())+'</span></div>'
+      +'<div class="pthnm">'+(i===cur?'✓ ':'')+V.esc(PThemes[i][0])+'</div>'
+      +'</div>';
+   }
+   h+='</div>';
+   V.mOpen('🎨 Profile Themes ('+PThemes.length+')',h);
+ },
+ setTheme:function(i){
+   i=((parseInt(i,10)||0)%PThemes.length+PThemes.length)%PThemes.length;
+   try{db.ref('users/'+V.uid+'/settings/profileTheme').set(i)}catch(e){}
+   if(me.settings)me.settings.profileTheme=i;else me.settings={profileTheme:i};
+   V.mClose();V.toast('success','🎨 Theme: '+PThemes[i][0]);
    Profile.render(V.uid);
  },
  tabGrid:function(uid){Posts.grid(uid)},
@@ -2445,7 +2695,7 @@ Auth.checkEditUname=function(){
 
 /* ================= POSTS — ⚡parallel ================= */
 const Posts={
- photos:[],limit:12,
+ photos:[],_song:null,limit:12,
  load:async function(){
    var w=V.g('feedW');if(!w)return;
    w.innerHTML='<div class="skel" style="height:220px;margin-bottom:15px"></div><div class="skel" style="height:220px;margin-bottom:15px"></div>';
@@ -2501,6 +2751,7 @@ const Posts={
    return '<div class="pcard" id="pc-'+id+'">'
     +'<div class="phd">'+V.ava(a,'md')+'<div class="pinfo"><div class="pnm" onclick="V.openProfile(\''+p.userId+'\')">'+V.nameB(a)+'</div><div class="ptm">@'+V.esc(a.username||'')+' · '+V.timeAgo(p.createdAt)+' · '+pic+'</div></div><button class="bico" onclick="Posts.opts(\''+id+'\',\''+p.userId+'\')">⋮</button></div>'
     +(p.caption?'<div class="pcap">'+V.htg(V.esc(p.caption))+'</div>':'')
+    +(p.song&&p.song.ext?'<div class="psong" onclick="Posts.songPlay(this,\''+id+'\',\''+p.userId+'\',\''+p.song.ext+'\')"><span class="psb">▶</span><span class="pst2">🎵 '+V.esc(p.song.name||'Original audio')+'</span><span class="peq" aria-hidden="true"><i></i><i></i><i></i></span></div>':'')
     +'<div class="pph n'+Math.max(ph.length,1)+'">'+imgs+'</div>'
     +'<div class="pacts">'
     +'<span class="pab'+(lk?' lk':'')+'" onclick="Posts.like(\''+id+'\',this)"><span class="pi">'+(lk?'❤️':'🤍')+'</span><span class="lc" onclick="event.stopPropagation();Posts.showLikers(\''+id+'\')" style="cursor:pointer">'+(lc||'')+'</span></span>'
@@ -2562,6 +2813,66 @@ const Posts={
    else V.copy(url,'Link copied');
  },
  view:function(u){V.mOpen('Photo','<img src="'+u+'" style="width:100%;border-radius:10px">')},
+ /* ═══ 🎵 POST SONG (Insta-style) — post ke saath audio attach karo ═══ */
+ _songAud:null,
+ songRowPaint:function(){
+   var t=V.g('cmpSongT'),s=V.g('cmpSongS');
+   if(!t)return;
+   if(this._song){t.textContent='🎵 '+this._song.name;s.textContent=(this._song.size/1048576).toFixed(2)+'MB — publish par upload hoga'}
+   else{t.textContent='🎵 Add Song';s.textContent='Insta jaisa — post ke saath audio chuno'}
+ },
+ songPick:function(){
+   var self=this;
+   var lib='';
+   var loc=(window.Music&&Music.local)||[];
+   if(loc.length){
+     lib='<div class="stit" style="margin:0 0 8px">📁 Meri Library — '+loc.length+' song(s)</div><div class="sndgrid">';
+     for(var i=0;i<Math.min(loc.length,30);i++){
+       var s=loc[i];
+       lib+='<div class="sndc" onclick="Posts.songLib('+s.id+')"><span class="sndp">🎵</span><span class="sndnm">'+V.esc(String(s.name||'song').replace(/\.[^.]+$/,''))+'</span></div>';
+     }
+     lib+='</div><div class="snote mt8">Library = 🎵 Music Player me add kiye gaye songs</div>';
+   }else{
+     lib='<div class="snote mb8">📭 Library khaali — 🎵 Music Player me songs add karo, ya niche upload karo</div>';
+   }
+   var h='<div class="stit" style="margin-top:0">🎵 Post Song — Insta style</div>'
+    +(this._song?'<div class="snote">✅ Selected: <b>'+V.esc(this._song.name)+'</b> <a onclick="Posts.songRemove()">❌ Hatao</a></div>':'')
+    +lib
+    +'<div class="stit">⬆️ Naya audio upload (max 2.8MB)</div>'
+    +'<button type="button" class="btn bp bbk" onclick="document.getElementById(\'psFile\').click()">🎵 Audio file chuno</button>'
+    +'<input type="file" id="psFile" accept="audio/*" class="hidden" onchange="Posts.songFile(this)">';
+   V.mOpen('🎵 Add Song',h);
+ },
+ songLib:function(id){
+   var s=(window.Music&&Music.local||[]).find(function(x){return x.id===id});
+   if(!s)return V.toast('error','Song library me nahi mila');
+   this._song={name:String(s.name||'song').replace(/\.[^.]+$/,''),blob:s.blob,size:(s.blob&&s.blob.size)||0};
+   V.mClose();this.songRowPaint();V.toast('success','🎵 Song selected: '+this._song.name);
+ },
+ songFile:function(inp){
+   var f=inp.files&&inp.files[0];
+   if(!f)return;
+   if(f.size>this.RMB){V.toast('error','Audio 2.8MB se bada hai — chhota clip lo');inp.value='';return}
+   this._song={name:f.name.replace(/\.[^.]+$/,''),blob:f,size:f.size};
+   inp.value='';
+   V.mClose();this.songRowPaint();V.toast('success','🎵 Song selected: '+this._song.name);
+ },
+ songRemove:function(){this._song=null;this.songRowPaint();V.mClose();V.toast('info','Song hata diya')},
+ songPlay:function(el,pid,uid,ext){
+   var A=this._songAud;
+   if(A&&!A.paused&&el._playing){A.pause();el.classList.remove('on');el.querySelector('.psb').textContent='▶';el._playing=false;return}
+   if(A)A.pause();
+   try{
+     if(!el._url){el._url=V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket).getPublicUrl('guilds/songs/'+uid+'/'+pid+'.'+ext).data.publicUrl}
+     if(!this._songAud)this._songAud=new Audio();
+     A=this._songAud;
+     if(A.src!==el._url)A.src=el._url;
+     A.play().catch(function(){V.toast('warning','▶ Tap again',1600)});
+     el.classList.add('on');el.querySelector('.psb').textContent='⏸';el._playing=true;
+     var done=function(){el.classList.remove('on');var b=el.querySelector('.psb');if(b)b.textContent='▶';el._playing=false};
+     A.onended=done;A.onerror=done;
+   }catch(e){V.toast('error','Song play fail')}
+ },
  opts:function(id,owner){
    var own=(owner===V.uid);
    var h=own?
@@ -2587,6 +2898,10 @@ const Posts={
    if(!o||o.val()!==V.uid)return V.toast('error','Sirf apna post delete kar sakte ho');
    if(!confirm('Delete this post?'))return;
    try{
+     /* ⚡SONG-FIX: post song file bhi guild bucket se remove */
+     var sg=null;
+     try{sg=(await db.ref('posts/'+id+'/song').get()).val()}catch(e){}
+     if(sg&&sg.ext){try{await V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket).remove(['guilds/songs/'+o.val()+'/'+id+'.'+sg.ext])}catch(e){}}
      await db.ref('posts/'+id).remove();
      await db.ref('likes/'+id).remove();
      await db.ref('users/'+V.uid+'/posts/'+id).remove();
@@ -2652,10 +2967,11 @@ const Posts={
    db.ref('posts/'+pid+'/commentCount').transaction(function(n){return Math.max(0,(n||1)-1)});
  },
  compose:function(){
-   this.photos=[];
+   this.photos=[];this._song=null;
    V.mOpen('Create Post',
     '<div class="pgrid" id="cmpG"><div class="pgadd" onclick="Posts.pick()"><span style="font-size:23px">＋</span>Add photo</div></div>'
     +'<div class="uprog hidden" id="cmpP"><div class="ubar" id="cmpB"></div></div>'
+    +'<div class="songrow" id="cmpSong" onclick="Posts.songPick()" role="button" tabindex="0"><span class="sri">🎵</span><div class="srf"><div class="srt" id="cmpSongT">🎵 Add Song</div><div class="srs" id="cmpSongS">Insta jaisa — post ke saath audio chuno</div></div><span class="sra">›</span></div>'
     +'<div class="fld"><textarea class="txta" id="cmpC" placeholder="Write a caption... use #hashtags" maxlength="500"></textarea><div class="ccount"><span id="cmpCc">0</span>/500</div></div>'
     +'<div class="fld"><label class="flbl">Privacy</label><div class="seg" id="cmpPr"><div class="sgi sel" data-v="everyone">🌍 Everyone</div><div class="sgi" data-v="followers">👥 Followers</div><div class="sgi" data-v="onlyme">🔒 Only Me</div></div></div>',
     '<button class="btn bg" onclick="Posts.draft()">Draft</button><button class="btn bp" id="cmpGo" onclick="Posts.publish()">Post</button>');
@@ -2697,12 +3013,23 @@ const Posts={
    try{
      var pid=db.ref('posts').push().key;
      var urls=[];
+     var songMeta=null;
      for(var i=0;i<this.photos.length;i++){
        V.g('cmpB').style.width=Math.round((i+1)/this.photos.length*100)+'%';
        /* ⚡POST-FIX: post images ab vexa-posts project (project-2) me — user spec */
        urls.push(await V.uploadPhoto(this.photos[i],'posts/'+V.uid+'/'+pid+'_'+i+'.jpg','posts'));
      }
+     /* ⚡SONG-FIX: post song guild bucket me upload (audio — mime null wala bucket) */
+     if(this._song&&this._song.blob){
+       V.g('cmpB').style.width='90%';
+       var sext=V.audExt(this._song.blob.type,this._song.name);
+       try{
+         await V.uploadVideo(this._song.blob,'guilds/songs/'+V.uid+'/'+pid+'.'+sext,null,'guilds');
+         songMeta={name:(this._song.name||'Song').slice(0,80),ext:sext,size:this._song.size||0};
+       }catch(se){console.warn('song upload fail',se)}
+     }
      var postData={userId:V.uid,title:cap.slice(0,60),caption:cap,photoRefs:urls,postUrl:urls[0]||'',privacy:pr,hashtags:(cap.match(/#[\w]+/g)||[]).map(function(h){return h.toLowerCase()}),createdAt:firebase.database.ServerValue.TIMESTAMP,commentCount:0,likeCount:0};
+     if(songMeta)postData.song=songMeta;
      await db.ref('posts/'+pid).set(postData);
      await db.ref('users/'+V.uid+'/posts/'+pid).set({
        title:postData.title,
@@ -2710,10 +3037,11 @@ const Posts={
        privacy:pr,
        postUrl:postData.postUrl,
        photoRefs:urls,
+       song:songMeta||null,
        createdAt:firebase.database.ServerValue.TIMESTAMP
      });
      db.ref('users/'+V.uid+'/postCount').transaction(function(n){return (n||0)+1});
-     V.mClose();V.toast('success','Post published! 🎉');Posts.load();
+     V.mClose();V.toast('success','Post published! 🎉'+(songMeta?' 🎵':''));this._song=null;Posts.load();
    }catch(e){
      V.toast('error','Post failed: '+(e.message||'error'),6000);
      b.disabled=false;b.textContent='Post';
@@ -2825,7 +3153,7 @@ const Posts={
      if(b){b.disabled=false;b.textContent='🎬 Reel post karo'}
    }
   },
-  tabGrid:function(uid){Profile.ptab('posts',V.g('ptbPosts'));this.grid(uid)},
+  tabGrid:function(uid){this.grid(uid)},
  grid:async function(uid){
    var g=V.g('pGrid');if(!g)return;
    g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
@@ -2835,15 +3163,10 @@ const Posts={
      var arr=[];
      s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
      arr.reverse();
-     /* ⚡PROFILE-GRID (user request): like/comment counts users index me nahi hote —
-        posts/<pid> parallel reads (max 24) → Instagram-style overlay */
-     var full=await Promise.all(arr.map(function(a){return db.ref('posts/'+a.id).get().catch(function(){return null})}));
-     var vis=await Promise.all(full.map(function(x,i){var r=(x&&x.val())||arr[i].val;return Privacy.canViewPost(r).catch(function(){return true})}));
      var cells='';
      for(var i=0;i<arr.length;i++){
-       var p=arr[i].val,pid=arr[i].id,r=(full[i]&&full[i].val())||p;
-       if(!vis[i])continue;
-       if((r.privacy||p.privacy)==='onlyme'&&uid!==V.uid)continue;
+       var p=arr[i].val,pid=arr[i].id;
+       if(p.privacy==='onlyme'&&uid!==V.uid)continue;
        var ph=[];
        if(p.postUrl)ph.push(p.postUrl);
        if(p.photoRefs&&p.photoRefs.length)ph=ph.concat(p.photoRefs);
@@ -2851,33 +3174,17 @@ const Posts={
        var fbUrl='';
        try{fbUrl=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket).getPublicUrl('posts/'+uid+'/'+pid+'_0.jpg').data.publicUrl;}catch(e){}
        var src=V.esc(ph[0]);
-       var lc=r.likeCount||(r.likes?Object.keys(r.likes).length:0)||0;
-       var cc=r.commentCount||0;
-       cells+='<div class="pgv" onclick="Posts.openPost(\''+pid+'\')"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)">'
-        +'<span class="pov"><span>❤️ '+lc+'</span><span>💬 '+cc+'</span></span>'
-        +(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
+       cells+='<div class="pgv"><img src="'+src+'" loading="lazy" data-fb="'+V.esc(fbUrl)+'" onerror="Posts.imgFallback(this)" onclick="Posts.view(this.src)">'+(ph.length>1?'<span class="pgc2">1/'+ph.length+'</span>':'')+'</div>';
      }
      g.innerHTML=cells?'<div class="pgrid2">'+cells+'</div>':'<div class="empo"><div class="ei">📷</div><div class="et">No visible posts</div></div>';
    }catch(e){g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
- },
- /* ⚡OPEN-POST (user request): profile grid tap → full post card (like/comment/save/share live) */
- openPost:async function(pid){
-   var s=await db.ref('posts/'+pid).get().catch(function(){return null});
-   if(!s||!s.exists())return V.toast('error','Post nahi mila');
-   var p=s.val();
-   try{
-     var can=await Privacy.canViewPost(p);
-     if(!can)return V.mOpen('🔒 Private','<div class="empo"><div class="ei">🔒</div><div class="et">Ye post private hai</div></div>');
-   }catch(e){}
-   var card=await Posts.card(pid,p);
-   V.mOpen('📸 Post',card);
  }
 };
 
 /* ═══ 🎬 REELS FEED — alag database node (`reels/`) + alag storage folder,
    jaise user ne kaha: "reel ke liye alag group/guild wala data base" ═══ */
 const Reels={
- _ids:[],
+ _ids:[],_data:[],_io:null,_key:null,
  load:async function(){
    var w=V.g('reelW');if(!w)return;
    w.innerHTML='<div class="skel" style="height:110px;margin-bottom:10px"></div><div class="skel" style="height:110px;margin-bottom:10px"></div><div class="skel" style="height:110px"></div>';
@@ -2890,12 +3197,17 @@ const Reels={
      var vis=await Promise.all(arr.map(function(a){return Privacy.canViewPost(a.val)}));
      var shown=arr.filter(function(a,i){return vis[i]});
      this._ids=shown.map(function(a){return a.id});
+     /* ⚡INSTA-REEL: full-screen viewer ke liye data + usernames store */
+     var uns=await Promise.all(shown.map(function(a){return db.ref('users/'+a.val.userId+'/username').get().catch(function(){return null})}));
+     for(var u2=0;u2<shown.length;u2++)shown[u2].uname=(uns[u2]&&uns[u2].val())||'';
+     this._data=shown;
      var cells='';
      for(var i=0;i<shown.length;i++){
        var rid=shown[i].id,p=shown[i].val;
        var th=p.thumbUrl?'<img src="'+V.esc(p.thumbUrl)+'" loading="lazy">':'<div class="rgph">🎬</div>';
        cells+='<div class="rgv" onclick="Reels.open(\''+rid+'\')">'+th
         +'<span class="r play">▶</span>'
+        +'<span class="ruser">@'+V.esc(shown[i].uname||'user')+'</span>'
         +'<span class="rmeta">❤️ '+(p.likeCount||0)+' · 💬 '+(p.commentCount||0)+'</span>'
         +(p.duration?'<span class="rdur">'+p.duration+'s</span>':'')
         +'</div>';
@@ -2905,37 +3217,117 @@ const Reels={
      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
    }
  },
- /* ⚡PROFILE-REELS (user request): profile me user ke reels — ❤️/💬 counts overlay,
-    tap → Reels.open (like/comment ke saath). users/<uid>/reels index + reels/<rid> counts. */
- grid:async function(uid){
-   var g=V.g('pReelGrid');if(!g)return;
-   g.innerHTML='<div class="skel" style="height:100px;margin:10px"></div>';
-   try{
-     var s=await db.ref('users/'+uid+'/reels').limitToLast(24).get();
-     if(!s.exists()){g.innerHTML='<div class="empo"><div class="ei">🎬</div><div class="et">No reels yet</div><div class="ex">Posts tab → 🎬 Reels → ✏️ se banao</div></div>';return}
-     var arr=[];
-     s.forEach(function(c){arr.push({id:c.key,val:c.val()})});
-     arr.reverse();
-     /* ⚡PERF: counts users index me nahi hote — reels/<rid> parallel reads (max 24) */
-     var full=await Promise.all(arr.map(function(a){return db.ref('reels/'+a.id).get().catch(function(){return null})}));
-     var cells='';
-     for(var i=0;i<arr.length;i++){
-       var rid=arr[i].id,base=arr[i].val||{},r=(full[i]&&full[i].val())||base;
-       if((r.privacy||base.privacy)==='onlyme'&&uid!==V.uid)continue;
-       var th=r.thumbUrl?'<img src="'+V.esc(r.thumbUrl)+'" loading="lazy">':'<div class="rgph">🎬</div>';
-       var lc=r.likeCount||0,cc=r.commentCount||0;
-       cells+='<div class="rgv" onclick="Reels.open(\''+rid+'\')">'+th
-        +'<span class="r play">▶</span>'
-        +'<span class="rmeta">❤️ '+lc+' · 💬 '+cc+'</span>'
-        +(r.duration?'<span class="rdur">'+r.duration+'s</span>':'')
-        +'</div>';
-     }
-     g.innerHTML=cells?'<div class="rgrid">'+cells+'</div>':'<div class="empo"><div class="ei">🎬</div><div class="et">No reels to show</div></div>';
-   }catch(e){
-     g.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Reels load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
-   }
+ /* ═══ 🎬 INSTA-STYLE REEL VIEWER — full-screen vertical snap, auto-play,
+    double-tap like ❤️, mute, progress bar, action rail (user spec) ═══ */
+ open:function(rid){
+   var D=this._data||[];
+   var start=-1;
+   for(var i=0;i<D.length;i++){if(D[i].id===rid){start=i;break}}
+   if(start<0)return this._openSingle(rid);
+   this._build(D,start);
  },
- open:async function(rid){
+ _build:function(D,start){
+   this.close();
+   var self=this;
+   var mute=false;
+   try{mute=localStorage.getItem('vexaReelMute')==='1'}catch(e){}
+   var cells='';
+   for(var i=0;i<D.length;i++){
+     var rid=D[i].id,p=D[i].val||{};
+     cells+='<div class="rv-cell" data-rid="'+rid+'">'
+      +'<video src="'+V.esc(p.videoUrl||'')+'" '+(p.thumbUrl?'poster="'+V.esc(p.thumbUrl)+'" ':'')+'loop playsinline preload="metadata" '+(mute?'muted':'')+'></video>'
+      +'<div class="rv-shade" aria-hidden="true"></div>'
+      +'<div class="rv-prog" aria-hidden="true"><i></i></div>'
+      +'<button type="button" class="rv-mute" aria-label="Mute">'+(mute?'🔇':'🔊')+'</button>'
+      +'<div class="rv-rail">'
+      +'<span class="rvab" data-rl="'+rid+'" onclick="Reels.like(\''+rid+'\',this)"><span class="pi">🤍</span><b class="lc">'+(p.likeCount||0)+'</b></span>'
+      +'<span class="rvab" onclick="Reels.comments(\''+rid+'\')"><span class="pi">💬</span><b>'+(p.commentCount||0)+'</b></span>'
+      +'<span class="rvab" onclick="Reels.share(\''+rid+'\')"><span class="pi">↗️</span><b>Share</b></span>'
+      +(p.userId===V.uid?'<span class="rvab" onclick="Reels.del(\''+rid+'\')"><span class="pi">🗑️</span></span>':'')
+      +'</div>'
+      +'<div class="rv-meta">'
+      +'<div class="rvu" onclick="V.openProfile(\''+p.userId+'\')">@'+V.esc(p.uname||'user')+'</div>'
+      +(p.caption?'<div class="rvcap">'+V.htg(V.esc(p.caption))+'</div>':'')
+      +'<div class="rvtm">'+V.timeAgo(p.createdAt)+(p.duration?' · '+p.duration+'s':'')+'</div>'
+      +'</div>'
+      +'<div class="rv-heart" aria-hidden="true">❤️</div>'
+      +'</div>';
+   }
+   var w=document.createElement('div');
+   w.id='rvw';
+   w.innerHTML='<div class="rv-top"><button type="button" class="rv-x" onclick="Reels.close()" aria-label="Close">✕</button><div class="rv-tt">🎬 Reels</div></div>'
+    +'<div class="rv-track" id="rvTrack">'+cells+'</div>';
+   document.body.appendChild(w);
+   document.body.classList.add('rvlock');
+   /* liked state — background sync */
+   D.forEach(function(d){
+     db.ref('reels/'+d.id+'/likes/'+V.uid).get().then(function(s){
+       var ab=w.querySelector('[data-rl="'+d.id+'"]');
+       if(ab&&s&&s.exists()){ab.classList.add('lk');var pi=ab.querySelector('.pi');if(pi)pi.textContent='❤️'}
+     }).catch(function(){});
+   });
+   var track=w.querySelector('#rvTrack');
+   var vids=w.querySelectorAll('.rv-cell video');
+   var IO=new IntersectionObserver(function(ents){
+     ents.forEach(function(en){
+       var v=en.target;
+       if(en.isIntersecting&&en.intersectionRatio>.6){v.play().catch(function(){})}
+       else{try{v.pause()}catch(e){}}
+     });
+   },{root:track,threshold:[0,.6,1]});
+   vids.forEach(function(v){IO.observe(v)});
+   this._io=IO;
+   for(var j=0;j<vids.length;j++){
+     (function(v){
+       var cell=v.closest('.rv-cell'),bar=cell.querySelector('.rv-prog i');
+       v.addEventListener('timeupdate',function(){try{if(v.duration)bar.style.width=(v.currentTime/v.duration*100)+'%'}catch(e){}});
+       var lt=0;
+       cell.addEventListener('click',function(e){
+         if(e.target.closest('.rv-rail,.rv-mute,.rvu,.rvcap a'))return;
+         var now=Date.now();
+         if(lt&&now-lt<330){
+           lt=0;
+           self._burst(cell);
+           var ab=cell.querySelector('[data-rl]');
+           if(ab&&!ab.classList.contains('lk'))ab.click();
+           return;
+         }
+         lt=now;
+         setTimeout(function(){
+           if(lt&&Date.now()-lt>=300){lt=0;if(v.paused)v.play().catch(function(){});else try{v.pause()}catch(e){}}
+         },330);
+       });
+     })(vids[j]);
+   }
+   var mutedAll=mute;
+   w.querySelectorAll('.rv-mute').forEach(function(b){
+     b.addEventListener('click',function(e){
+       e.stopPropagation();
+       mutedAll=!mutedAll;
+       vids.forEach(function(v){v.muted=mutedAll});
+       w.querySelectorAll('.rv-mute').forEach(function(x){x.textContent=mutedAll?'🔇':'🔊'});
+       try{localStorage.setItem('vexaReelMute',mutedAll?'1':'0')}catch(e){}
+     });
+   });
+   var target=track.children[start];
+   if(target)track.scrollTop=target.offsetTop;
+   this._key=function(e){if(e.key==='Escape')Reels.close()};
+   document.addEventListener('keydown',this._key);
+ },
+ _burst:function(cell){
+   var h=cell.querySelector('.rv-heart');
+   if(h){h.classList.remove('go');void h.offsetWidth;h.classList.add('go')}
+   try{SFX.play('Like Pop')}catch(e){}
+ },
+ close:function(){
+   var w=document.getElementById('rvw');
+   if(w){var vs=w.querySelectorAll('video');for(var i=0;i<vs.length;i++){try{vs[i].pause()}catch(e){}}w.remove()}
+   if(this._io){try{this._io.disconnect()}catch(e){}this._io=null}
+   if(this._key){try{document.removeEventListener('keydown',this._key)}catch(e){}this._key=null}
+   document.body.classList.remove('rvlock');
+ },
+ /* single reel (deep link / unknown id) — purana modal fallback */
+ _openSingle:async function(rid){
    var s=await db.ref('reels/'+rid).get().catch(function(){return null});
    if(!s||!s.exists())return V.toast('error','Reel nahi mila');
    var p=s.val();
@@ -2949,36 +3341,30 @@ const Reels={
     +'<div class="phd" style="padding:10px 2px 0">'+V.ava(a,'md')+'<div class="pinfo"><div class="pnm" onclick="V.openProfile(\''+p.userId+'\')">'+V.nameB(a)+'</div><div class="ptm">@'+V.esc(a.username||'')+' · '+V.timeAgo(p.createdAt)+(p.duration?' · '+p.duration+'s':'')+'</div></div></div>'
     +(p.caption?'<div class="pcap" style="padding:6px 2px 0">'+V.htg(V.esc(p.caption))+'</div>':'')
     +'<div class="pacts" style="padding:10px 2px">'
-    +'<span class="pab'+(liked?' lk':'')+'" onclick="Reels.like(\''+rid+'\',this)"><span class="pi">'+(liked?'❤️':'🤍')+'</span><span class="lc" id="rlc">'+(p.likeCount||0)+'</span></span>'
+    +'<span class="pab'+(liked?' lk':'')+'" data-rl="'+rid+'" onclick="Reels.like(\''+rid+'\',this)"><span class="pi">'+(liked?'❤️':'🤍')+'</span><span class="lc" id="rlc">'+(p.likeCount||0)+'</span></span>'
     +'<span class="pab" onclick="Reels.comments(\''+rid+'\')"><span class="pi">💬</span><span class="cc">'+(p.commentCount||0)+'</span></span>'
     +'<span class="pab" onclick="Reels.share(\''+rid+'\')"><span class="pi">↗️</span></span>'
     +(mine?'<span class="pab" onclick="Reels.del(\''+rid+'\')"><span class="pi">🗑️</span></span>':'')
-    +'</div>'
-    +'<div style="display:flex;gap:8px;padding:0 2px 4px">'
-    +'<button class="btn bg bsm" style="flex:1" onclick="Reels.nav(\''+rid+'\',-1)">⬆️ Prev</button>'
-    +'<button class="btn bg bsm" style="flex:1" onclick="Reels.nav(\''+rid+'\',1)">⬇️ Next</button>'
     +'</div>';
    V.mOpen('🎬 Reel', h);
- },
- nav:function(rid,dir){
-   var i=this._ids.indexOf(rid);
-   if(i<0)return;
-   var n=i+dir;
-   if(n<0)n=this._ids.length-1;
-   if(n>=this._ids.length)n=0;
-   this.open(this._ids[n]);
  },
  like:async function(rid,el){
    var r=db.ref('reels/'+rid+'/likes/'+V.uid);
    var ex=(await r.get()).exists();
    if(ex)await r.remove();else await r.set(true);
    db.ref('reels/'+rid+'/likeCount').transaction(function(n){return Math.max(0,(n||0)+(ex?-1:1))});
-   if(el){
-     el.classList.toggle('lk',!ex);
-     var ic=el.querySelector('.pi'),lc=el.querySelector('.lc');
+   var n=0;
+   try{n=(await db.ref('reels/'+rid+'/likeCount').get()).val()||0}catch(e){}
+   /* ⚡INSTA-REEL: saare like buttons (viewer rail + modal) ek saath update */
+   var abs=document.querySelectorAll('[data-rl="'+rid+'"]');
+   for(var i=0;i<abs.length;i++){
+     var ab=abs[i];
+     ab.classList.toggle('lk',!ex);
+     var ic=ab.querySelector('.pi'),lc=ab.querySelector('.lc');
      if(ic)ic.textContent=ex?'🤍':'❤️';
-     if(lc)lc.textContent=Math.max(0,(parseInt(lc.textContent)||0)+(ex?-1:1));
+     if(lc)lc.textContent=n;
    }
+   var rlc=V.g('rlc');if(rlc)rlc.textContent=n;
  },
  comments:async function(rid){
    V.mOpen('💬 Reel Comments','<div id="rcL" style="max-height:44vh;overflow-y:auto"><div class="spn" style="margin:18px auto"></div></div>'
@@ -3023,7 +3409,7 @@ const Reels={
    try{ await V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket).remove(['guilds/reels/'+V.uid+'/'+rid+'.'+ext,'guilds/reels/'+V.uid+'/'+rid+'_thumb.jpg']) }catch(e){}
    try{ await sb.storage.from(CFG.supabase.bucket).remove(['reels/'+V.uid+'/'+rid+'.mp4','reels/'+V.uid+'/'+rid+'_thumb.jpg']) }catch(e){}
    try{ await db.ref('reels/'+rid).remove(); await db.ref('reelComments/'+rid).remove(); await db.ref('users/'+V.uid+'/reels/'+rid).remove() }catch(e){}
-   V.mClose();V.toast('success','Reel deleted');this.load();
+   this.close();V.mClose();V.toast('success','Reel deleted');this.load();
  }
 };
 window.Reels=Reels;
@@ -4462,79 +4848,152 @@ const Settings={
            +'<div class="srow" onclick="Auth.checkVerification()"><div class="sri">🔄</div><div class="srf"><div class="srt">Verify ho gaya? Check karo</div><div class="srs">Email link click ke BAAD yahan tap karo</div></div><div class="sra">›</div></div>';
    }catch(e){return''}
  },
+ /* ═══ ⚙️ SETTINGS HUB v2 — categorized pages (user spec):
+    har cheez ALAG page me — Profile page, Backup page, Sounds page, Fonts...
+    Hub = bade tappable cards → page = rows + back button. ═══ */
  open:function(){
    try{Profile._rr++}catch(e){}
    V.go('profile');
    var pc=V.g('profC');if(!pc)return;
    var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
-   /* ⚡STAFF-REMOVED (user request): staff version-control block Settings se hataya —
-      Ver.* tools ab sirf owner.html/admin.html panels me hain. */
-   var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote
-    +this.catBar()
-    +'<div class="sgrp" data-cat="acct"><div class="sgrp-title">👤 ACCOUNT</div>'
-    +'<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
-    +this.verifRows()
-    +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="V.copy(\''+V.uid+'\',\'UID copied!\')"><div class="sri">🆔</div><div class="srf"><div class="srt">My UID</div><div class="srs mono">'+V.esc(V.uid||'')+'</div></div><div class="sra">📋</div></div>'
-    +(me.tempRecovery
-      ?'<div class="srow" style="border:1px solid var(--in);border-radius:14px;margin-top:6px" onclick="TempRec.status()"><div class="sri">🧡</div><div class="srf"><div class="srt">Temp Recovery Account — '+V.esc(me.tempUid||'')+'</div><div class="srs">Sirf admin/owner chat · Status / delete yahin</div></div><div class="sra">›</div></div>'
-      :'')
-    +'</div>'
-    +'<div class="sgrp" data-cat="sec"><div class="sgrp-title" style="color:var(--in)">🛡️ PRIVACY & SECURITY</div>'
-    +'<div class="srow" onclick="Privacy.open()"><div class="sri">🔒</div><div class="srf"><div class="srt">Privacy Center</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Privacy.restrictedOpen()"><div class="sri">🚧</div><div class="srf"><div class="srt">Restricted Users</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Privacy.blockedOpen()"><div class="sri">🚷</div><div class="srf"><div class="srt">Blocked Users</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Rec.downloadTxt()"><div class="sri">💾</div><div class="srf"><div class="srt">Download Recovery File (.vexa)</div><div class="srs">UID + codes ek .vexa file me — safe rakhna</div></div><div class="sra">⬇️</div></div>'
-    +'<div class="srow" onclick="Settings.devices()"><div class="sri">📱</div><div class="srf"><div class="srt">Registered Devices</div><div class="srs">Recovery inhi se</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Settings.helpChat()"><div class="sri">🆘</div><div class="srf"><div class="srt">Help Center Chat</div><div class="srs">Staff messages & credentials</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>'
-    +'</div>'
-    +'<div class="sgrp" data-cat="legal"><div class="sgrp-title" style="color:var(--ac)">📜 LEGAL & SUPPORT</div>'
-    +'<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="V.go(\'police\')"><div class="sri">👮</div><div class="srf"><div class="srt">Police — Rules & Reports</div><div class="srs">Community rules + report karo</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="V.go(\'support\')"><div class="sri">🆘</div><div class="srf"><div class="srt">Support</div><div class="srs">Recovery · Email · Staff chat</div></div><div class="sra">›</div></div>'
-    +'</div>'
-    +'<div class="sgrp" data-cat="bak"><div class="sgrp-title" style="color:var(--in)">☁️ GOOGLE DRIVE BACKUP</div>'
-    +this.driveRows()
-    +'</div>'
-    +'<div class="sgrp" data-cat="look"><div class="sgrp-title">🎨 CUSTOMIZATION</div>'
-    +'<div class="srow" onclick="ImgThemes.open()"><div class="sri">🖼️</div><div class="srf"><div class="srt">Image Themes</div><div class="srs">NTH / VTH — bg + colour</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Themes.open()"><div class="sri">🎨</div><div class="srf"><div class="srt">Themes</div><div class="srs">204 themes</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="Fonts.open()"><div class="sri">🔤</div><div class="srf"><div class="srt">App Fonts</div><div class="srs">Global — sab pe lagega</div></div><div class="sra">›</div></div>'
-    +'</div>'
-    +'<div class="sgrp" data-cat="app"><div class="sgrp-title">📱 APP & INFO</div>'
-    +'<div class="srow"><div class="sri">📱</div><div class="srf"><div class="srt">App Version</div><div class="srs">v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)</div></div></div>'
-    +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
-    +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>'
-    +'</div>'
-    +'<div class="sgrp" data-cat="dng"><div class="sgrp-title" style="color:var(--wn)">⚠️ DANGER ZONE</div>'
-    +(me.tempRecovery
-      ?'<div class="srow dng2" onclick="TempRec.deleteFlow()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Temporary Account</div><div class="srs">"delete" type + temp password — temp account remove</div></div><div class="sra">›</div></div>'
-      :'')
-    +'<div class="srow dng2" onclick="Settings.deleteAcct()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Account</div><div class="srs">Saara data Firebase + Supabase se remove</div></div><div class="sra">›</div></div>'
-    +'</div></div>';
+   var _staff=false;try{_staff=(me.role==='owner'||me.role==='admin'||me.role==='moderator')}catch(e){}
+   var cats=[
+    ['profile','👤','Profile','Edit profile · design · 24 themes · fonts · email/password'],
+    ['sounds','🔊','Sounds & Music','58 UI sounds · 54 notification sounds · volume'],
+    ['look','🎨','Look & Fonts','204 themes · image themes · 3 alag fonts (UI/Chat/Profile)'],
+    ['bak','☁️','Backup & Drive','Google Drive · Vault · .vexa file · storage check'],
+    ['sec','🛡️','Privacy & Security','Privacy center · blocked · devices · login code'],
+    ['legal','📜','Legal & Support','Privacy policy · terms · police · support'],
+    ['app','📱','App & Info','Version · ATP links · reload'+(_staff?' · 🛠️ staff version control':'')],
+    ['dng','⚠️','Danger Zone','Delete account — saara data remove']
+   ];
+   var h='<div class="pgc"><div class="stit">⚙️ Settings</div>'+lockNote+'<div class="shub">';
+   for(var i=0;i<cats.length;i++){
+     h+='<div class="shc" role="button" tabindex="0" onclick="Settings.page(\''+cats[i][0]+'\')">'
+      +'<span class="shi">'+cats[i][1]+'</span>'
+      +'<div class="shf"><div class="sht">'+cats[i][2]+'</div><div class="shs">'+cats[i][3]+'</div></div>'
+      +'<span class="sha">›</span></div>';
+   }
+   h+='</div>';
+   /* Drive mini status — hamesha dikhe (green/red) */
+   var drv=false;try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
+   h+='<div class="drvmini '+(drv?'on':'off')+'" role="button" tabindex="0" onclick="Settings.page(\'bak\')">'
+    +'<span class="drvdot"></span>Google Drive: <b>'+(drv?'CONNECTED 🟢':'NOT CONNECTED 🔴')+'</b>'
+    +'<span class="mut sm">'+(drv?'— backups safe hain':'— backup ke liye connect karo')+'</span></div>';
+   h+='</div>';
    pc.innerHTML=h;
  },
- /* ── ⭐ SETTINGS CATEGORIES — alag category chips UI (All/Account/Security/…) ── */
- catBar:function(){
-   var c=[['all','🗂️ All'],['acct','👤 Account'],['sec','🛡️ Security'],['bak','☁️ Backup'],['look','🎨 Look'],['legal','📜 Legal'],['app','📱 App'],['dng','⚠️ Danger']];
-   var h='<div class="scats" id="sCats">';
-   for(var i=0;i<c.length;i++)h+='<button type="button" class="scat'+(i?'':' sel')+'" data-c="'+c[i][0]+'" onclick="Settings.cat(\''+c[i][0]+'\',this)">'+c[i][1]+'</button>';
-   return h+'</div>';
- },
- cat:function(c,el){
-   var cs=document.querySelectorAll('#sCats .scat');
-   for(var i=0;i<cs.length;i++)cs[i].classList.toggle('sel',cs[i]===el);
-   var gs=document.querySelectorAll('#profC .sgrp');
-   for(var j=0;j<gs.length;j++){
-     var dc=gs[j].getAttribute('data-cat')||'';
-     gs[j].style.display=(c==='all'||dc===c)?'':'none';
+ /* ── sub-page renderer ── */
+ page:function(id){
+   try{Profile._rr++}catch(e){}
+   V.go('profile');
+   var pc=V.g('profC');if(!pc)return;
+   var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
+   var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
+   var h='<div class="pgc"><button type="button" class="sback" onclick="Settings.open()">← Settings</button>';
+   var g=function(title,rows){return '<div class="sgrp"><div class="sgrp-title">'+title+'</div>'+rows+'</div>'};
+   /* 👤 PROFILE */
+   if(id==='profile'){
+     h+='<div class="stit">👤 Profile</div>'+lockNote
+      +g('PROFILE',
+         '<div class="srow" onclick="Profile.edit()"><div class="sri">👤</div><div class="srf"><div class="srt">Edit Profile</div><div class="srs">Name, username, bio, photo</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Profile.designPicker()"><div class="sri">🖼️</div><div class="srf"><div class="srt">Profile Design</div><div class="srs">Modern, Classic, Italic, Insta</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Profile.themes()"><div class="sri">🎨</div><div class="srf"><div class="srt">Profile Themes — '+PThemes.length+' styles</div><div class="srs">Gradient hero card — sabko dikhega</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Fonts.open(\'prof\')"><div class="sri">🔤</div><div class="srf"><div class="srt">Profile Font</div><div class="srs">'+V.esc(Fonts.get('prof'))+' — profile ka apna font</div></div><div class="sra">›</div></div>')
+      +g('ACCOUNT',
+         '<div class="srow" onclick="Settings.email()"><div class="sri">📧</div><div class="srf"><div class="srt">Email</div><div class="srs">'+V.esc(me.email||'')+'</div></div><div class="sra">›</div></div>'
+        +this.verifRows()
+        +'<div class="srow" onclick="Settings.password()"><div class="sri">🔑</div><div class="srf"><div class="srt">Change Password</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="V.copy(\''+V.uid+'\',\'UID copied!\')"><div class="sri">🆔</div><div class="srf"><div class="srt">My UID</div><div class="srs mono">'+V.esc(V.uid||'')+'</div></div><div class="sra">📋</div></div>'
+        +(me.tempRecovery
+          ?'<div class="srow" style="border:1px solid var(--in);border-radius:14px;margin-top:6px" onclick="TempRec.status()"><div class="sri">🧡</div><div class="srf"><div class="srt">Temp Recovery Account — '+V.esc(me.tempUid||'')+'</div><div class="srs">Sirf admin/owner chat · Status / delete yahin</div></div><div class="sra">›</div></div>'
+          :''));
    }
+   /* 🔊 SOUNDS & MUSIC */
+   else if(id==='sounds'){
+     var uiN=0,nfN=0;try{uiN=Object.keys(SFX.UI).length;nfN=Object.keys(SFX.NOTIF).length}catch(e){}
+     h+='<div class="stit">🔊 Sounds & Music</div>'
+      +g('SOUND EFFECTS ('+(uiN+nfN)+' SOUNDS)',
+         '<div class="srow" onclick="SFX.toggle()"><div class="sri">'+(SFX.on?'🔊':'🔇')+'</div><div class="srf"><div class="srt">Sound Effects '+(SFX.on?'ON':'OFF')+'</div><div class="srs">Tap karke on/off karo</div></div><div class="sra">'+(SFX.on?'🟢':'🔴')+'</div></div>'
+        +'<div class="srow" onclick="SFX.picker(\'ui\')"><div class="sri">🎛️</div><div class="srf"><div class="srt">UI Sound — '+uiN+' options</div><div class="srs">Abhi: '+V.esc(SFX.uiSound)+' — buttons/taps par bajega</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="SFX.picker(\'notif\')"><div class="sri">🔔</div><div class="srf"><div class="srt">Notification Sound — '+nfN+' options</div><div class="srs">Abhi: '+V.esc(SFX.nfSound)+' — message/notification par bajega</div></div><div class="sra">›</div></div>'
+        +'<div class="srow"><div class="sri">🎚️</div><div class="srf"><div class="srt">Sound Volume</div><input type="range" min="5" max="100" value="'+Math.round((SFX.vol||.55)*100)+'" style="width:100%;accent-color:var(--ac)" oninput="SFX.volSet(this.value/100)" onchange="SFX.play(SFX.uiSound)"></div></div>'
+        +'<div class="srow" onclick="SFX.preview(\'ui\',SFX.uiSound);SFX.preview(\'nf\',SFX.nfSound)"><div class="sri">🎧</div><div class="srf"><div class="srt">Test Sounds</div><div class="srs">UI + notification sound sun lo</div></div><div class="sra">▶</div></div>')
+      +g('MUSIC PLAYER',
+         '<div class="srow" onclick="QFab.music()"><div class="sri">🎵</div><div class="srf"><div class="srt">Music Player kholo</div><div class="srs">Sirf AAPKE songs — site ka music hata diya gaya hai</div></div><div class="sra">›</div></div>');
+   }
+   /* 🎨 LOOK & FONTS */
+   else if(id==='look'){
+     h+='<div class="stit">🎨 Look & Fonts</div>'
+      +g('FONTS — 3 ALAG SLOTS',
+         '<div class="srow" onclick="Fonts.open(\'ui\')"><div class="sri">🖥️</div><div class="srf"><div class="srt">Main UI Font</div><div class="srs">'+V.esc(Fonts.get('ui'))+' — pura app</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Fonts.open(\'chat\')"><div class="sri">💬</div><div class="srf"><div class="srt">Chat & Text Font</div><div class="srs">'+V.esc(Fonts.get('chat'))+' — messages, comments</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Fonts.open(\'prof\')"><div class="sri">👤</div><div class="srf"><div class="srt">Profile Font</div><div class="srs">'+V.esc(Fonts.get('prof'))+' — profile card</div></div><div class="sra">›</div></div>')
+      +g('THEMES',
+         '<div class="srow" onclick="Themes.open()"><div class="sri">🎨</div><div class="srf"><div class="srt">Themes</div><div class="srs">204 colour themes</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="ImgThemes.open()"><div class="sri">🖼️</div><div class="srf"><div class="srt">Image Themes</div><div class="srs">NTH / VTH — bg + colour</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Profile.themes()"><div class="sri">🌈</div><div class="srf"><div class="srt">Profile Themes ('+PThemes.length+')</div><div class="srs">Profile hero gradient</div></div><div class="sra">›</div></div>');
+   }
+   /* ☁️ BACKUP & DRIVE */
+   else if(id==='bak'){
+     h+='<div class="stit">☁️ Backup & Drive</div>'
+      +g('GOOGLE DRIVE BACKUP',this.driveRows())
+      +g('RECOVERY FILE',
+         '<div class="srow" onclick="Rec.downloadTxt()"><div class="sri">💾</div><div class="srf"><div class="srt">Download Recovery File (.vexa)</div><div class="srs">UID + codes ek .vexa file me — safe rakhna</div></div><div class="sra">⬇️</div></div>');
+   }
+   /* 🛡️ PRIVACY & SECURITY */
+   else if(id==='sec'){
+     h+='<div class="stit">🛡️ Privacy & Security</div>'
+      +g('PRIVACY',
+         '<div class="srow" onclick="Privacy.open()"><div class="sri">🔒</div><div class="srf"><div class="srt">Privacy Center</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Privacy.restrictedOpen()"><div class="sri">🚧</div><div class="srf"><div class="srt">Restricted Users</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Privacy.blockedOpen()"><div class="sri">🚷</div><div class="srf"><div class="srt">Blocked Users</div></div><div class="sra">›</div></div>')
+      +g('SECURITY',
+         '<div class="srow" onclick="Settings.devices()"><div class="sri">📱</div><div class="srf"><div class="srt">Registered Devices</div><div class="srs">Recovery inhi se</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Settings.helpChat()"><div class="sri">🆘</div><div class="srf"><div class="srt">Help Center Chat</div><div class="srs">Staff messages & credentials</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>');
+   }
+   /* 📜 LEGAL & SUPPORT */
+   else if(id==='legal'){
+     h+='<div class="stit">📜 Legal & Support</div>'
+      +g('LEGAL & SUPPORT',
+         '<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="V.go(\'police\')"><div class="sri">👮</div><div class="srf"><div class="srt">Police — Rules & Reports</div><div class="srs">Community rules + report karo</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="V.go(\'support\')"><div class="sri">🆘</div><div class="srf"><div class="srt">Support</div><div class="srs">Recovery · Email · Staff chat</div></div><div class="sra">›</div></div>');
+   }
+   /* 📱 APP & INFO */
+   else if(id==='app'){
+     var staffBlock='';
+     try{
+       var _rl=me.role||'user';
+       if(_rl==='owner'||_rl==='admin'||_rl==='moderator'){
+         staffBlock=g('🛠️ STAFF — VERSION CONTROL',
+          '<div class="srow" onclick="Ver.adminPrompt()"><div class="sri">📢</div><div class="srf"><div class="srt">Set Latest Version</div><div class="srs">Version + note + APK link — Firebase me</div></div><div class="sra">›</div></div>'
+         +'<div class="srow" onclick="Ver.apkPrompt()"><div class="sri">🔗</div><div class="srf"><div class="srt">APK Download Link Update</div><div class="srs">Firebase se — SABKO yahi link milega</div></div><div class="sra">›</div></div>'
+         +'<div class="srow" onclick="Ver.recheck()"><div class="sri">🔄</div><div class="srf"><div class="srt">Check Update Now</div><div class="srs">Abhi ka version check karo</div></div><div class="sra">›</div></div>');
+       }
+     }catch(e){}
+     h+='<div class="stit">📱 App & Info</div>'
+      +g('APP',
+         '<div class="srow"><div class="sri">📱</div><div class="srf"><div class="srt">App Version</div><div class="srs">v'+V.esc(Ver.get())+' (Firebase: versionApp/latest)</div></div></div>'
+        +'<div class="srow" onclick="ATP.linksModal()"><div class="sri">🔗</div><div class="srf"><div class="srt">ATP Links — Web & App</div><div class="srs">APK link Firebase se aata hai</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="V.reloadApp()"><div class="sri">🔄</div><div class="srf"><div class="srt">Reload App</div><div class="srs">Pura app starting se khulega</div></div><div class="sra">›</div></div>')
+      +staffBlock;
+   }
+   /* ⚠️ DANGER ZONE */
+   else if(id==='dng'){
+     h+='<div class="stit">⚠️ Danger Zone</div>'
+      +g('DANGER ZONE',
+        (me.tempRecovery
+          ?'<div class="srow dng2" onclick="TempRec.deleteFlow()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Temporary Account</div><div class="srs">"delete" type + temp password — temp account remove</div></div><div class="sra">›</div></div>'
+          :'')
+       +'<div class="srow dng2" onclick="Settings.deleteAcct()"><div class="sri">🗑️</div><div class="srf"><div class="srt">Delete Account</div><div class="srs">Saara data Firebase + Supabase se remove</div></div><div class="sra">›</div></div>');
+   }
+   h+='</div>';
+   pc.innerHTML=h;
  },
  guardSensitive:async function(){
    var until=0;
@@ -4550,7 +5009,14 @@ const Settings={
     POPUP flow: page kahin nahi jata, chhota "Connect to Google" popup. ── */
  driveRows:function(){
    var drv=false; try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
-   var h='<div class="srow" onclick="Settings.driveToggle()"><div class="sri">'+(drv?'☁️':'🔗')+'</div><div class="srf"><div class="srt">'+(drv?'Google Drive Connected':'Connect Google Drive')+'</div><div class="srs">'+(drv?'Backup Drive ke "VEXA Backups" folder me — Drive app me dikhega':'Tap → Connect to Google popup → Allow → done')+'</div></div><div class="sra">'+(drv?'🟢':'›')+'</div></div>'
+   /* ⚡DRIVE-FIX: row hamesha status dikhaye — connected = GREEN, nahi = RED */
+   var h='<div class="srow drvstat '+(drv?'drv-on':'drv-off')+'" onclick="Settings.driveToggle()">'
+    +'<div class="sri">'+(drv?'☁️':'🔗')+'</div>'
+    +'<div class="srf"><div class="srt">Google Drive — '+(drv?'🟢 CONNECTED':'🔴 NOT CONNECTED')+'</div>'
+    +'<div class="srs">'+(drv
+      ?'Backup "VEXA Backups" folder me — app khulte hi silent re-connect (baar baar connect nahi karna padega)'
+      :'Tap → Connect popup → Allow. Connected hote hi row GREEN ho jayegi')+'</div></div>'
+    +'<div class="sra">'+(drv?'🟢':'🔴')+'</div></div>'
     +'<div class="srow" onclick="VaultUI.open()"><div class="sri">🗄️</div><div class="srf"><div class="srt">Recovery Vault</div><div class="srs">'+(drv?'Versions, integrity check, restore':'Vault banao — phir Drive backup on karo')+'</div></div><div class="sra">›</div></div>'
     +'<div class="srow" onclick="VaultUI.downloadBackup()"><div class="sri">⬇️</div><div class="srf"><div class="srt">Download Backup (.vexa)</div><div class="srs">Latest backup file phone me save karo</div></div><div class="sra">⬇️</div></div>'
     +'<div class="srow" onclick="VaultUI.showSecret()"><div class="sri">🔑</div><div class="srf"><div class="srt">Vault Secret — 8-block Code</div><div class="srs">Recovery code dekho / copy karo</div></div><div class="sra">›</div></div>'
@@ -4708,6 +5174,13 @@ const Settings={
        var gf=(gl.data||[]).map(function(f){return 'guilds/reels/'+uid+'/'+f.name});
        if(gf.length){ await gs.remove(gf); console.log('Guild reels cleaned:',gf.length,'files') }
      }catch(e){console.warn('guild reels clean fail:',e.message)}
+     /* ⚡SONG-FIX: post songs bhi clean karo */
+     try{
+       var gs2=V.sbFor('guilds').storage.from(VEXA_STORAGE.guilds.bucket);
+       var gl2=await gs2.list('guilds/songs/'+uid,{limit:1000});
+       var gf2=(gl2.data||[]).map(function(f){return 'guilds/songs/'+uid+'/'+f.name});
+       if(gf2.length){ await gs2.remove(gf2); console.log('Guild songs cleaned:',gf2.length,'files') }
+     }catch(e){console.warn('guild songs clean fail:',e.message)}
      /* ⚡POST-FIX: post images vexa-posts project (project-2) se bhi clean karo */
      try{
        var ps=V.sbFor('posts').storage.from(VEXA_STORAGE.posts.bucket);

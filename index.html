@@ -260,22 +260,12 @@ function VXtemp(){
       <div class="ava sm" id="topAva" style="cursor:pointer" onclick="V.openProfile(V.uid)" role="button" tabindex="0" aria-label="My profile"></div>
       <div class="topt" id="topTitle">ATP × VEXA</div>
       <div class="music-wrap">
+        <!-- ⚡v3: site ka built-in music HATAYA GAYA — sirf user ke apne songs -->
         <button type="button" class="bico" id="musicBtn" title="Music Player" aria-label="Music player">🎵</button>
         <div class="music-panel" id="musicPanel">
-          <div class="mp-title">🎵 Music Player</div>
+          <div class="mp-title">🎵 My Music</div>
           <div class="mp-now" id="mpNow">⏳ Songs check ho rahe hain…</div>
-          <div class="mp-tabs">
-            <div class="mp-tab sel" data-mt="folder" role="button" tabindex="0" onclick="Music.tab('folder')">🌐 Folder</div>
-            <div class="mp-tab" data-mt="local" role="button" tabindex="0" onclick="Music.tab('local')">📁 Local</div>
-          </div>
-          <div class="mp-sec" id="secFolder">
-            <div class="mp-btns">
-              <button type="button" class="mp-btn hindi" id="mpHindi"><span class="micn">🎬</span><span>Hindi</span></button>
-              <button type="button" class="mp-btn english" id="mpEnglish"><span class="micn">🌍</span><span>English</span></button>
-            </div>
-            <div class="mp-count" id="mpCount"></div>
-          </div>
-          <div class="mp-sec hidden" id="secLocal">
+          <div class="mp-sec" id="secLocal">
             <button type="button" class="mp-btn add" onclick="Music.pickLocal()">➕ Device se Songs Add karo</button>
             <input type="file" id="mpFile" accept="audio/*" multiple class="hidden">
             <div class="mp-list" id="mpList"></div>

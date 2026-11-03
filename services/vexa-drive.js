@@ -32,6 +32,11 @@ window.VEXA_GOOGLE = window.VEXA_GOOGLE || {
 const VexaVaultDrive = {
   /* TOKKEY v2: purana appdata-scope token invalid — clean re-consent force */
   TOKKEY     : 'vexaVaultDriveTok2',
+  /* ⚡PERSIST-FIX: token ab localStorage me expiry ke saath — app band/reload
+     karne par bhi Drive CONNECTED rahega (green), baar-baar connect nahi
+     karna padega. session wala key fallback rahega. */
+  LSK        : 'vexaVaultDriveLS',
+  WASON      : 'vexaVaultDriveWasOn',
   FOLDER_NAME: 'VEXA Backups',                               // Drive me DIKHEGA
   SCOPE      : 'https://www.googleapis.com/auth/drive.file',
   API        : 'https://www.googleapis.com/drive/v3',
@@ -40,10 +45,29 @@ const VexaVaultDrive = {
   FOLKEY     : 'vexaVaultFolderId',
   _folderId  : '',                                           // session cache
 
-  /* ── token state (session-only; no refresh token in this flow) ── */
-  token:function(){ try{ return sessionStorage.getItem(this.TOKKEY)||'' }catch(e){ return '' } },
-  setToken:function(t){ try{ sessionStorage.setItem(this.TOKKEY,t) }catch(e){} },
-  clearToken:function(){ try{ sessionStorage.removeItem(this.TOKKEY) }catch(e){} },
+  /* ── token state (LS persistent + session fallback; no refresh token) ── */
+  token:function(){
+    try{
+      var raw=localStorage.getItem(this.LSK);
+      if(raw){
+        var d=JSON.parse(raw);
+        if(d&&d.t&&d.exp&&Date.now()<d.exp-30000)return d.t;   /* 30s safety */
+        localStorage.removeItem(this.LSK);
+      }
+    }catch(e){}
+    try{ return sessionStorage.getItem(this.TOKKEY)||'' }catch(e){ return '' }
+  },
+  setToken:function(t,expMs){
+    try{
+      sessionStorage.setItem(this.TOKKEY,t);
+      localStorage.setItem(this.LSK,JSON.stringify({t:t,exp:expMs||(Date.now()+3300000)})); /* ~55min default */
+      localStorage.setItem(this.WASON,'1');
+    }catch(e){}
+  },
+  clearToken:function(){
+    try{ sessionStorage.removeItem(this.TOKKEY); localStorage.removeItem(this.LSK) }catch(e){}
+  },
+  wasOn:function(){ try{ return localStorage.getItem(this.WASON)==='1' }catch(e){ return false } },
   connected:function(){ return !!this.token() },
 
   /* ── visible folder: "VEXA Backups" My Drive me (drive.file) ───────────
@@ -122,8 +146,11 @@ const VexaVaultDrive = {
       scope     : this.SCOPE,
       callback  : function(resp){
         if (resp && resp.access_token){
-          self.setToken(resp.access_token);
-          try{ V.toast('success','🔗 Google Drive connected') }catch(e){}
+          /* ⚡PERSIST: expires_in (~1h) ke saath localStorage me save — reload par bhi green */
+          var exp=Date.now()+((resp.expires_in?parseInt(resp.expires_in,10):3600)-60)*1000;
+          self.setToken(resp.access_token,exp);
+          try{ V.toast('success','🟢 Google Drive connected — ab hamesha connected rahega') }catch(e){}
+          try{ SFX.ok() }catch(e){}
           self._notify();
         }else{
           var er=(resp&&resp.error)||'unknown';
@@ -139,7 +166,44 @@ const VexaVaultDrive = {
         try{ V.toast('error','⚠️ '+(m[t]||'Connect fail — dobara try karo'),6000) }catch(e){}
       }
     });
-    tc.requestAccessToken();
+    tc.requestAccessToken({prompt:''}); /* ⚡ already-consented users ko bina consent popup ke token */
+  },
+  /* ⚡SILENT RE-CONNECT: pehle kabhi connect kar chuke ho (wasOn) aur token expire
+     ho gaya → pehli user interaction par 1-tap silent refresh (consent skip hota hai).
+     Isse user ko baar-baar "Connect Google Drive" nahi dabana padta. */
+  silentFix:function(){
+    if(this.connected()||!this.wasOn())return;
+    var self=this;
+    var go=function(){
+      try{
+        if(window.google&&google.accounts&&google.accounts.oauth2){ self._popupSilent(); return }
+        var s=document.createElement('script');
+        s.src='https://accounts.google.com/gsi/client'; s.async=true;
+        s.onload=function(){ try{ self._popupSilent() }catch(e){} };
+        s.onerror=function(){};
+        document.head.appendChild(s);
+      }catch(e){}
+    };
+    setTimeout(go,1200); /* app boot settle hone do */
+  },
+  _popupSilent:function(){
+    var self=this;
+    try{
+      var tc=google.accounts.oauth2.initTokenClient({
+        client_id : (typeof VEXA_GOOGLE!=='undefined'&&VEXA_GOOGLE)?VEXA_GOOGLE.clientId:'',
+        scope     : this.SCOPE,
+        callback  : function(resp){
+          if(resp&&resp.access_token){
+            var exp=Date.now()+((resp.expires_in?parseInt(resp.expires_in,10):3600)-60)*1000;
+            self.setToken(resp.access_token,exp);
+            try{ V.toast('success','🟢 Drive auto-reconnected') }catch(e){}
+            self._notify();
+          }
+        },
+        error_callback:function(){}
+      });
+      tc.requestAccessToken({prompt:''});
+    }catch(e){}
   },
   /* UI refresh notify — Settings screen / open Vault modal turant update */
   _notify:function(){
@@ -203,6 +267,7 @@ const VexaVaultDrive = {
   disconnect:async function(){
     var tok = this.token();
     this.clearToken();
+    try{ localStorage.removeItem(this.WASON) }catch(e){}
     if (tok){
       try{ await fetch('https://accounts.google.com/o/oauth2/revoke?token='+encodeURIComponent(tok)) }catch(e){}
     }

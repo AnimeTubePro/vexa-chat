@@ -116,3 +116,46 @@ using (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds
 --    cleanup Cloud Function से service-key use करो (SUPABASE_SECRET_KEY_* env var)।
 -- 3. 200KB limit client-side enforce होती है (vexa-upgrade.js VexaStorage.validate) —
 --    server-side limit के लिए Edge Function wrapper चाहिए (v2.2 roadmap)।
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 🚨 QUICK FIX — "Storage policy ne block kiya" ERROR के लिए (PROJECT 3)
+-- App me ye error aa raha hai? → Supabase-3 (kjsfenhmlhgdlhqipqts) SQL Editor
+-- me SIRF ye block chalao — pehle purani policies drop, phir fresh banao.
+-- Ye block: bucket bhi banata/pakka karta hai + सारी policies fresh set karta hai.
+-- ═══════════════════════════════════════════════════════════════════════════
+drop policy if exists "vexa_guild_public_read"   on storage.objects;
+drop policy if exists "vexa_guild_anon_insert"   on storage.objects;
+drop policy if exists "vexa_guild_anon_update"   on storage.objects;
+drop policy if exists "vexa_guild_anon_delete"   on storage.objects;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('vexa-chat-guild', 'vexa-chat-guild', true, 3145728, null)
+on conflict (id) do update set public = true, file_size_limit = 3145728, allowed_mime_types = null;
+
+create policy "vexa_guild_public_read"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'vexa-chat-guild');
+
+create policy "vexa_guild_anon_insert"
+on storage.objects for insert
+to anon, authenticated
+with check (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');
+
+create policy "vexa_guild_anon_update"
+on storage.objects for update
+to anon, authenticated
+using (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');
+
+create policy "vexa_guild_anon_delete"
+on storage.objects for delete
+to anon, authenticated
+using (bucket_id = 'vexa-chat-guild' and (storage.foldername(name))[1] = 'guilds');
+-- ✅ Bas — ab app me reel upload try karo (Settings → 📊 Storage Check se verify)
+
+-- 🚨 QUICK FIX — PROJECT 2 (vexa-posts) ke liye same pattern:
+-- drop policy if exists "vexa_posts_public_read" on storage.objects;
+-- drop policy if exists "vexa_posts_anon_insert" on storage.objects;
+-- drop policy if exists "vexa_posts_anon_update" on storage.objects;
+-- drop policy if exists "vexa_posts_anon_delete" on storage.objects;
+-- (phir upar section [2] ke create policy statements RUN karo)
