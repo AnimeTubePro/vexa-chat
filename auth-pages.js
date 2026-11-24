@@ -158,13 +158,13 @@ const AX={
           return;
         }
       }catch(e){}
-      try{await this.db.ref('users/'+uid+'/securityEvents').push({type:'login',device:this.dev(),at:Date.now()})}catch(e){}
+      try{await this.db.ref('secData/'+uid+'/securityEvents').push({type:'login',device:this.dev(),at:Date.now()})}catch(e){}
       try{await this.db.ref('users/'+uid+'/lastLoginAt').set(Date.now())}catch(e){}
       try{
         var devId='dev_'+(await this.sha(this.dev()+navigator.userAgent)).slice(0,16);
-        var exD=await this.db.ref('users/'+uid+'/devices/'+devId).get();
+        var exD=await this.db.ref('devData/'+uid+'/devices/'+devId).get();
         if(!exD.exists()){
-          await this.db.ref('users/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+          await this.db.ref('devData/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
         }
       }catch(de){}
       try{await this.db.ref('users/'+uid).update({appVer:AX_VER,appVerAt:Date.now()})}catch(ave){}
@@ -325,9 +325,9 @@ const AX={
       try{await this.db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')})}catch(e){}
       try{
         var devId='dev_'+(await this.sha(this.dev()+navigator.userAgent)).slice(0,16);
-        await this.db.ref('users/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+        await this.db.ref('devData/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
       }catch(de){}
-      try{await this.db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:this.dev(),at:Date.now()})}catch(e){}
+      try{await this.db.ref('secData/'+uid+'/securityEvents').push({type:'signup',device:this.dev(),at:Date.now()})}catch(e){}
       try{await cred.user.sendEmailVerification()}catch(e){}
       /* codes screen dikhao (page ke andar hi) — ⚡v2.8.3: signup.html ids fallback */
       var mc=this.g('spMain')||this.g('scMain'),sc=this.g('spSec')||this.g('scSec');

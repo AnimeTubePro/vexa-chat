@@ -66,7 +66,7 @@ async function audit(action, actor, actorRole, targetType, targetId, detail) {
 }
 async function notify(uid, type, title, body) {
   try {
-    await db.ref('users/' + uid + '/notifications').push({ type, title, body, read: false, at: Date.now() });
+    await db.ref('notifs/' + uid + '/notifications').push({ type, title, body, read: false, at: Date.now() });
   } catch (e) { /* non-fatal */ }
 }
 async function notifyStaff(type, title, body, roles) {
@@ -113,10 +113,15 @@ async function runMigration(jobId) {
         const os = await db.ref('users/' + oldUid).get();
         if (os.exists()) {
           const o = os.val() || {};
-          const keep = ['displayName', 'bio', 'profilePhoto', 'dob', 'profileDesign'];
+          const keep = ['displayName', 'bio', 'profilePhoto', 'profileDesign'];
           const patch = {};
           keep.forEach(k => { if (o[k] !== undefined && o[k] !== null && o[k] !== '') patch[k] = o[k]; });
           if (o.settings && typeof o.settings === 'object') patch.settings = o.settings;
+          /* 🔒v3.1: email/dob ab secData/{uid}/account me — destination account node me copy */
+          try {
+            const accSnap = await db.ref('secData/' + oldUid + '/account').get();
+            if (accSnap.exists()) await db.ref('secData/' + newUid + '/account').update(accSnap.val() || {});
+          } catch (e) {}
           patch.migratedFrom = oldUid;
           patch.migratedAt = Date.now();
           /* don't clobber role/vip/verified of the temp account unless empty */
@@ -222,7 +227,7 @@ async function runMigration(jobId) {
     try {
       await admin.auth().updateUser(oldUid, { password: tmp, disabled: false });
       await db.ref('users/' + oldUid).update({ retired: false, disabled: false, restoredAt: Date.now(), restoredFor: newUid });
-      await db.ref('users/' + oldUid + '/helpChat').push({
+      await db.ref('helpChats/' + oldUid + '/helpChat').push({
         from: 'system', text: '♻️ ACCOUNT RESTORED — temp login:\n\n📧 Email: aapka registered email\n🔑 Temp Password: ' + tmp +
         '\n\n⚠️ Login ke turant baad Settings me password CHANGE kar lo. Ye message 1 baar dikhega.',
         at: Date.now()
@@ -309,7 +314,7 @@ exports.vexaBackend = functions.https.onRequest(async (req, res) => {
         'Old: @' + rec.oldUsername + ' → New: @' + rec.newUsername + ' · Admin Panel me verify karo',
         ['admin', 'moderator', 'owner']);
       try {
-        await db.ref('users/' + rec.newUid + '/securityEvents').push({ type: 'data_recovery_applied', oldUid, at: Date.now(), device: rec.device });
+        await db.ref('secData/' + rec.newUid + '/securityEvents').push({ type: 'data_recovery_applied', oldUid, at: Date.now(), device: rec.device });
       } catch (e) {}
       return json(res, 200, { ok: true, appId });
     }
@@ -418,7 +423,7 @@ exports.vexaBackend = functions.https.onRequest(async (req, res) => {
       });
       /* security event on the ORIGINAL account + staff notify */
       try {
-        await db.ref('users/' + origUid + '/securityEvents').push({ type: 'vault_recovery_request', by: uid, reqId, at: Date.now() });
+        await db.ref('secData/' + origUid + '/securityEvents').push({ type: 'vault_recovery_request', by: uid, reqId, at: Date.now() });
       } catch (e) {}
       await notifyStaff('vault_recovery', '🛡️ Vault Recovery Request',
         '@' + meU + ' → @' + origUsername + ' (' + mode + ') · Admin Panel me verify karo', ['admin', 'owner']);
@@ -509,16 +514,16 @@ exports.vexaBackend = functions.https.onRequest(async (req, res) => {
     if (action === 'revokeDevice') {
       const deviceId = String(body.deviceId || '');
       if (!/^dev_[a-f0-9]{16}$/.test(deviceId)) return json(res, 400, { error: 'Invalid deviceId' });
-      await db.ref('users/' + uid + '/devices/' + deviceId).update({ revoked: true, revokedAt: Date.now(), revokedBy: uid });
+      await db.ref('devData/' + uid + '/devices/' + deviceId).update({ revoked: true, revokedAt: Date.now(), revokedBy: uid });
       await admin.auth().revokeRefreshTokens(uid);
-      await db.ref('users/' + uid + '/securityEvents').push({ type: 'device_revoked', device: deviceId, at: Date.now() });
+      await db.ref('secData/' + uid + '/securityEvents').push({ type: 'device_revoked', device: deviceId, at: Date.now() });
       return json(res, 200, { ok: true, note: 'Tokens globally revoked' });
     }
 
     /* ────── 7) logoutAllOthers ────── */
     if (action === 'logoutAllOthers') {
       await admin.auth().revokeRefreshTokens(uid);
-      await db.ref('users/' + uid + '/securityEvents').push({ type: 'logout_all_others', at: Date.now() });
+      await db.ref('secData/' + uid + '/securityEvents').push({ type: 'logout_all_others', at: Date.now() });
       return json(res, 200, { ok: true });
     }
 
@@ -529,7 +534,7 @@ exports.vexaBackend = functions.https.onRequest(async (req, res) => {
       up['users/' + uid + '/recovery/mainCode'] = null;
       up['users/' + uid + '/recovery/secondaryCode'] = null;
       await db.ref().update(up);
-      await db.ref('users/' + uid + '/securityEvents').push({ type: 'legacy_secret_purge', at: Date.now() });
+      await db.ref('secData/' + uid + '/securityEvents').push({ type: 'legacy_secret_purge', at: Date.now() });
       await audit('legacy_purge', uid, 'user', 'recoveryPrivate', uid, 'self-service plaintext scrub');
       return json(res, 200, { ok: true });
     }

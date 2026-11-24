@@ -236,7 +236,7 @@ const VaultUI = {
     this._downloadFile(this._gen.filename, this._gen.file);
     /* 3) cache secret for this session (auto-updates) + state refresh */
     this.setSecret(m.secret);
-    try{ await db.ref('users/'+V.uid+'/securityEvents').push({type:'vault_created',backupId:m.backupId,at:Date.now(),device:V.dev()}) }catch(e){}
+    try{ await db.ref('secData/'+V.uid+'/securityEvents').push({type:'vault_created',backupId:m.backupId,at:Date.now(),device:V.dev()}) }catch(e){}
     await this.loadState();
 
     var h = '<div class="vv-step">STEP 3 / 3 — Done ✅</div>'
@@ -299,7 +299,7 @@ const VaultUI = {
       await db.ref().update(up);
       this._downloadFile(gen.filename, gen.file);
       await this.loadState();
-      try{ await db.ref('users/'+V.uid+'/securityEvents').push({type:'vault_backup',seq:seq,at:Date.now(),device:V.dev()}) }catch(e){}
+      try{ await db.ref('secData/'+V.uid+'/securityEvents').push({type:'vault_backup',seq:seq,at:Date.now(),device:V.dev()}) }catch(e){}
       V.mClose();
       V.toast('success', driveRes.ok
         ? '☁️ Backup v'+seq+' Drive me save ✅ — Drive app me "VEXA Backups" folder dekho'
@@ -654,7 +654,7 @@ const VaultUI = {
       await db.ref().update(up);
       this._downloadFile(this._gen.filename, this._gen.file);
       this.setSecret(m.secret);
-      try{ await db.ref('users/'+V.uid+'/securityEvents').push({type:'vault_created',backupId:m.backupId,at:Date.now(),device:V.dev(),via:'drive_connect'}) }catch(e){}
+      try{ await db.ref('secData/'+V.uid+'/securityEvents').push({type:'vault_created',backupId:m.backupId,at:Date.now(),device:V.dev(),via:'drive_connect'}) }catch(e){}
       await this.loadState();
       /* Drive connected hai → pehla backup turant upload bhi kar do */
       try{ await this.backupNow() }catch(e){}

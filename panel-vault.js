@@ -309,7 +309,7 @@ const PanelVault = {
     try{
       var us = await db.ref('users').get();
       us.forEach(function(u){ var v=u.val()||{};
-        if (v.role==='owner') db.ref('users/'+u.key+'/notifications').push({
+        if (v.role==='owner') db.ref('notifs/'+u.key+'/notifications').push({
           type:'security', title:'👑 Recovery Approval Pending',
           body:'Admin ne ek recovery request recommend ki hai — Owner Panel me 2FA approve karo.',
           read:false, at:Date.now() });
@@ -326,7 +326,7 @@ const PanelVault = {
       await db.ref('recoveryRequests/'+id).update({status:'rejected',rejectReason:why.slice(0,200),updatedAt:Date.now(),
         decidedBy:this.ROLE+':'+(myUid||'')});
       var r=this.STATE.reqs[id];
-      if (r && r.tempUid) await db.ref('users/'+r.tempUid+'/notifications').push({
+      if (r && r.tempUid) await db.ref('notifs/'+r.tempUid+'/notifications').push({
         type:'security',title:'❌ Recovery Request Rejected',
         body:'Reason: '+why.slice(0,150)+' — Help Center se dobara try karo.',read:false,at:Date.now()});
     }catch(e){ return this.toast('Fail: '+e.message,false) }
@@ -367,7 +367,7 @@ const PanelVault = {
         status: viaServer?'queued':'approved_local', checkpoint:'queued', checkpointIndex:0,
         createdAt:Date.now(), updatedAt:Date.now(), viaServer:viaServer };
       await db.ref().update(up);
-      if (r && r.tempUid) await db.ref('users/'+r.tempUid+'/notifications').push({
+      if (r && r.tempUid) await db.ref('notifs/'+r.tempUid+'/notifications').push({
         type:'security',title:'✅ Recovery Approved!',
         body:'Owner ne approve kiya. Migration start hoga — status Settings ▸ Recovery Vault me dekho.',
         read:false,at:Date.now()});

@@ -306,10 +306,10 @@ const VexaDrive={
      await db.ref('messages/'+cid+'/'+mid2).set(msg);
      var part={};part[V.uid]=true;part[ChatUI.peerUid]=true;
      await db.ref('chats/'+cid).update({participants:part,lastMessage:'🎬 Video',lastSender:V.uid,updatedAt:firebase.database.ServerValue.TIMESTAMP});
-     try{db.ref('users/'+V.uid+'/chats/'+cid).set({peer:ChatUI.peerUid,updatedAt:Date.now()})}catch(e){}
-     try{db.ref('users/'+ChatUI.peerUid+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
+     try{db.ref('chatIdx/'+V.uid+'/chats/'+cid).set({peer:ChatUI.peerUid,updatedAt:Date.now()})}catch(e){}
+     try{db.ref('chatIdx/'+ChatUI.peerUid+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
      db.ref('chats/'+cid+'/unread/'+ChatUI.peerUid).transaction(function(n){return (n||0)+1});
-     try{db.ref('users/'+ChatUI.peerUid+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:'🎬 Video message',read:false,at:Date.now()})}catch(e){}
+     try{db.ref('notifs/'+ChatUI.peerUid+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:'🎬 Video message',read:false,at:Date.now()})}catch(e){}
    }
    return true;
  },
@@ -489,8 +489,8 @@ const VexaSec={
    var w='<div class="spn" style="margin:18px auto"></div>';
    V.mOpen('📱 Devices & Sessions',w+'<button class="btn bds2 bbk" style="margin-top:12px" onclick="VexaSec.logoutAllOthers()">🚪 Logout all other devices</button>');
    try{
-     var dv=await db.ref('users/'+V.uid+'/devices').get().catch(function(){return null});
-     var ss=await db.ref('users/'+V.uid+'/sessions').get().catch(function(){return null});
+     var dv=await db.ref('devData/'+V.uid+'/devices').get().catch(function(){return null});
+     var ss=await db.ref('devData/'+V.uid+'/sessions').get().catch(function(){return null});
      var myDev=this.myDevId(),mySid=this.mySid();
      var h='';
      if(dv&&dv.exists()){
@@ -522,7 +522,7 @@ const VexaSec={
  revokeDevice:async function(devId){
    if(!confirm('Is device ko logout karna hai?'))return;
    try{
-     await db.ref('users/'+V.uid+'/devices/'+devId).update({revoked:true,revokedAt:Date.now(),revokedBy:V.uid});
+     await db.ref('devData/'+V.uid+'/devices/'+devId).update({revoked:true,revokedAt:Date.now(),revokedBy:V.uid});
      /* backend available → real token revoke (offline device bhi next login pe block) */
      if(VexaBackend.available()){try{await VexaBackend.call('revokeDevice',{deviceId:devId})}catch(e){console.warn('[remote-logout] backend:',e.message)}}
      V.toast('success','🚪 Device logged out remotely');
@@ -531,8 +531,8 @@ const VexaSec={
  },
  revokeSession:async function(sid){
    try{
-     await db.ref('users/'+V.uid+'/sessions/'+sid+'/revoked').set(true);
-     await db.ref('users/'+V.uid+'/sessions/'+sid+'/revokedAt').set(Date.now());
+     await db.ref('devData/'+V.uid+'/sessions/'+sid+'/revoked').set(true);
+     await db.ref('devData/'+V.uid+'/sessions/'+sid+'/revokedAt').set(Date.now());
      V.toast('success','Session revoked');
      this.devicesOpen();
    }catch(e){V.toast('error',V.friendErr(e))}
@@ -540,12 +540,12 @@ const VexaSec={
  logoutAllOthers:async function(){
    if(!confirm('SABHI dusre devices/sessions logout? (ye device active rahega)'))return;
    try{
-     var kickRef=db.ref('users/'+V.uid+'/security/kickAt');
+     var kickRef=db.ref('secData/'+V.uid+'/security/kickAt');
      await kickRef.set(Date.now());
      /* अपने device/session को exempt mark करो */
      var dId=this.myDevId(),sId=this.mySid();
-     if(dId)try{await db.ref('users/'+V.uid+'/devices/'+dId+'/kickExemptAt').set(Date.now())}catch(e){}
-     if(sId)try{await db.ref('users/'+V.uid+'/sessions/'+sId+'/kickExemptAt').set(Date.now())}catch(e){}
+     if(dId)try{await db.ref('devData/'+V.uid+'/devices/'+dId+'/kickExemptAt').set(Date.now())}catch(e){}
+     if(sId)try{await db.ref('devData/'+V.uid+'/sessions/'+sId+'/kickExemptAt').set(Date.now())}catch(e){}
      if(VexaBackend.available()){try{await VexaBackend.call('logoutAllOthers',{})}catch(e){console.warn('[kick] backend:',e.message)}}
      V.toast('success','🚪 Sab devices pe logout command bhej diya');
      V.mClose();
@@ -561,9 +561,9 @@ const VexaSec={
        if(!V.uid||!auth.currentUser)return;
        var dId=self.myDevId(),sId=self.mySid();
        var checks=[];
-       if(dId)checks.push(db.ref('users/'+V.uid+'/devices/'+dId).get());
-       if(sId)checks.push(db.ref('users/'+V.uid+'/sessions/'+sId).get());
-       checks.push(db.ref('users/'+V.uid+'/security/kickAt').get());
+       if(dId)checks.push(db.ref('devData/'+V.uid+'/devices/'+dId).get());
+       if(sId)checks.push(db.ref('devData/'+V.uid+'/sessions/'+sId).get());
+       checks.push(db.ref('secData/'+V.uid+'/security/kickAt').get());
        var rs=await Promise.all(checks);
        var kicked=false,reason='';
        rs.forEach(function(r){
@@ -580,8 +580,8 @@ const VexaSec={
        /* exempt check: khud ke exempt timestamp kickAt se naya ho to skip */
        if(kicked&&rs.length){
          try{
-           var ex1=dId?await db.ref('users/'+V.uid+'/devices/'+dId+'/kickExemptAt').get():null;
-           var ex2=sId?await db.ref('users/'+V.uid+'/sessions/'+sId+'/kickExemptAt').get():null;
+           var ex1=dId?await db.ref('devData/'+V.uid+'/devices/'+dId+'/kickExemptAt').get():null;
+           var ex2=sId?await db.ref('devData/'+V.uid+'/sessions/'+sId+'/kickExemptAt').get():null;
            var exMax=Math.max(ex1&&ex1.exists()?ex1.val():0,ex2&&ex2.exists()?ex2.val():0);
            var kick=0;rs.forEach(function(r){if(r&&r.key==='kickAt'&&r.exists())kick=r.val()});
            if(exMax>=kick)kicked=false;
@@ -605,7 +605,7 @@ const VexaSec={
    try{
      var dId='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
      this._myDevId=dId;
-     var r=db.ref('users/'+uid+'/devices/'+dId);
+     var r=db.ref('devData/'+uid+'/devices/'+dId);
      var ex=await r.get();
      if(ex.exists()){await r.update({lastActive:Date.now(),revoked:false})}
    }catch(e){}
@@ -652,7 +652,7 @@ const VexaSec={
      }
      /* अपने hi naye set ko overwrite — purane hashes हटो */
      await db.ref('recoveryCodes/'+V.uid).set(up);
-     await db.ref('users/'+V.uid+'/securityEvents').push({type:'recovery_codes_generated',device:V.dev(),at:Date.now()});
+     await db.ref('secData/'+V.uid+'/securityEvents').push({type:'recovery_codes_generated',device:V.dev(),at:Date.now()});
      var h='<div class="snote mb8">⚠️ YE CODES ABHI KE BAAD KABHI NAHI DIKHENGE — copy/download kar lo!</div><div class="rcgrid">';
      codes.forEach(function(c){h+='<div class="rccode mono">'+c+'</div>'});
      h+='</div><div class="snote">Login pe: Recovery Code Login → email + code → auto-login.</div>';
@@ -807,7 +807,7 @@ const VexaGroup={
    if(gd.members&&gd.members[targetUid])return V.toast('warning','Already a member');
    try{
      await db.ref('groupInvites/'+targetUid).push({gid:this.gid,name:gd.name||'Group',from:V.uid,fromName:me.displayName||'user',at:Date.now(),status:'pending'});
-     await db.ref('users/'+targetUid+'/notifications').push({type:'group_invite',title:'👥 Group Invite',body:(me.displayName||'Someone')+' ne '+gd.name+' me invite kiya',from:V.uid,gid:this.gid,read:false,at:Date.now()});
+     await db.ref('notifs/'+targetUid+'/notifications').push({type:'group_invite',title:'👥 Group Invite',body:(me.displayName||'Someone')+' ne '+gd.name+' me invite kiya',from:V.uid,gid:this.gid,read:false,at:Date.now()});
      V.mClose();V.toast('success','📨 Invite sent!');
    }catch(e){V.toast('error',V.friendErr(e))}
  },

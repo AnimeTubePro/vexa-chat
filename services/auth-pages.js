@@ -156,13 +156,13 @@ const AX={
           return;
         }
       }catch(e){}
-      try{await this.db.ref('users/'+uid+'/securityEvents').push({type:'login',device:this.dev(),at:Date.now()})}catch(e){}
+      try{await this.db.ref('secData/'+uid+'/securityEvents').push({type:'login',device:this.dev(),at:Date.now()})}catch(e){}
       try{await this.db.ref('users/'+uid+'/lastLoginAt').set(Date.now())}catch(e){}
       try{
         var devId='dev_'+(await this.sha(this.dev()+navigator.userAgent)).slice(0,16);
-        var exD=await this.db.ref('users/'+uid+'/devices/'+devId).get();
+        var exD=await this.db.ref('devData/'+uid+'/devices/'+devId).get();
         if(!exD.exists()){
-          await this.db.ref('users/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+          await this.db.ref('devData/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
         }
       }catch(de){}
       try{await this.db.ref('users/'+uid).update({appVer:AX_VER,appVerAt:Date.now()})}catch(ave){}
@@ -298,33 +298,40 @@ const AX={
       try{dh=await this.sha(dd+'/'+mm+'/'+yy)}catch(e){}
       try{
         await this.db.ref('users/'+uid).set({
-          username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,
+          username:u,displayName:name,
           profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,
           appVer:AX_VER,
           createdAt:firebase.database.ServerValue.TIMESTAMP,
-          recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed'},
           privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
           settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
-          followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,chats:{},
+          followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},archived:{},muted:{},followRequests:{},posts:{},postCount:0,
           usernameChangedAt:0
         });
       }catch(pe2){
         console.error('full profile fail, minimal try:',pe2);
         try{
-          await this.db.ref('users/'+uid).set({username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,appVer:AX_VER,createdAt:Date.now(),settings:{profileDesign:'modern'},recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed'},usernameChangedAt:0});
+          await this.db.ref('users/'+uid).set({username:u,displayName:name,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,appVer:AX_VER,createdAt:Date.now(),settings:{profileDesign:'modern'},usernameChangedAt:0});
         }catch(pe3){
           console.error('minimal profile bhi fail:',pe3);
           this.toast('warn','Profile partially saved — app me fix ho jayega',5000);
         }
       }
+      /* 🔒v3.1: private nodes ab users/{uid} se BAHAR — self/owner-only read */
+      try{await this.db.ref('secData/'+uid+'/account').set({email:em,dob:dd+'/'+mm+'/'+yy,emailVerified:false})}catch(e){}
+      try{await this.db.ref('vaultRecovery/'+uid).set({mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed'})}catch(e){}
+      try{this.db.ref('devData/'+uid+'/sessions').set({})}catch(e){}
+      try{this.db.ref('chatLocks/'+uid).set({})}catch(e){}
+      try{this.db.ref('secData/'+uid+'/security').set({})}catch(e){}
+      try{this.db.ref('notifs/'+uid).set({})}catch(e){}
+      try{this.db.ref('chatIdx/'+uid+'/chats').set({})}catch(e){}
       try{await this.db.ref('usernames/'+u).set(uid)}catch(e){console.warn('uname idx fail')}
       /* one-way hashes (recoveryCheck) — vault v1.0 pattern */
       try{await this.db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')})}catch(e){}
       try{
         var devId='dev_'+(await this.sha(this.dev()+navigator.userAgent)).slice(0,16);
-        await this.db.ref('users/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+        await this.db.ref('devData/'+uid+'/devices/'+devId).set({name:this.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
       }catch(de){}
-      try{await this.db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:this.dev(),at:Date.now()})}catch(e){}
+      try{await this.db.ref('secData/'+uid+'/securityEvents').push({type:'signup',device:this.dev(),at:Date.now()})}catch(e){}
       try{await cred.user.sendEmailVerification()}catch(e){}
       /* codes screen dikhao (page ke andar hi) */
       var mc=this.g('spMain'),sc=this.g('spSec');

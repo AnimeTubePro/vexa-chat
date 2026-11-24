@@ -197,7 +197,7 @@ const SP={
     else{upd[key]=null;upd[key+'At']=null;upd[key+'By']=null}
     try{
       await this.db.ref('users/'+uid).update(upd);
-      await this.db.ref('users/'+uid+'/notifications').push({type:'security',title:key==='banned'?(val?'🚫 Account Banned':'✅ Ban Removed'):(key==='vip'?'👑 VIP '+(val?'Enabled':'Removed'):'✔️ Verified '+(val?'✅':'Removed')),body:key+' → '+val,at:Date.now()});
+      await this.db.ref('notifs/'+uid+'/notifications').push({type:'security',title:key==='banned'?(val?'🚫 Account Banned':'✅ Ban Removed'):(key==='vip'?'👑 VIP '+(val?'Enabled':'Removed'):'✔️ Verified '+(val?'✅':'Removed')),body:key+' → '+val,at:Date.now()});
       this.toast('Updated: '+key+' = '+val,'ok');
       this.userSearch();
     }catch(e){this.toast('Fail: '+e.message,'err')}
@@ -296,7 +296,7 @@ const SP={
     try{
       await this.db.ref('supportTickets/'+id).update({reply:v,status:'answered',repliedAt:Date.now(),repliedBy:this.auth.currentUser.uid});
       var t=(await this.db.ref('supportTickets/'+id+'/uid').get()).val();
-      if(t)await this.db.ref('users/'+t+'/notifications').push({type:'security',title:'🛡️ Support reply',body:v.slice(0,120),at:Date.now()});
+      if(t)await this.db.ref('notifs/'+t+'/notifications').push({type:'security',title:'🛡️ Support reply',body:v.slice(0,120),at:Date.now()});
       this.toast('Reply bhej diya','ok');this.renderTickets();
     }catch(e){this.toast('Fail: '+e.message,'err')}
   },

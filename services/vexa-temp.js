@@ -334,11 +334,11 @@ const TempRec = {
       participants:part, lastMessage:'🧡 Temp recovery request', lastSender:tempUid,
       updatedAt:firebase.database.ServerValue.TIMESTAMP
     });
-    try{ await db.ref('users/'+tempUid+'/chats/'+cid).set({peer:staffUid,updatedAt:Date.now()}) }catch(e){}
-    try{ await db.ref('users/'+staffUid+'/chats/'+cid).set({peer:tempUid,updatedAt:Date.now()}) }catch(e){}
+    try{ await db.ref('chatIdx/'+tempUid+'/chats/'+cid).set({peer:staffUid,updatedAt:Date.now()}) }catch(e){}
+    try{ await db.ref('chatIdx/'+staffUid+'/chats/'+cid).set({peer:tempUid,updatedAt:Date.now()}) }catch(e){}
     db.ref('chats/'+cid+'/unread/'+staffUid).transaction(function(n){return (n||0)+1});
     try{
-      await db.ref('users/'+staffUid+'/notifications').push({
+      await db.ref('notifs/'+staffUid+'/notifications').push({
         type:'temp_recovery', title:'🧡 Temp Recovery Request',
         body:'@'+(profile.username||'')+' — .vexa 3-step verified. Accept karke credentials bhejo.',
         read:false, at:Date.now()
@@ -397,7 +397,7 @@ const TempRec = {
       /* DB cleanup pehle (auth user ke paas token abhi valid hai) */
       try{ await db.ref('users/'+cu.uid).remove() }catch(e){ console.warn('profile rm', e) }
       try{
-        var idx=await db.ref('users/'+cu.uid+'/chats').get();
+        var idx=await db.ref('chatIdx/'+cu.uid+'/chats').get();
         if (idx.exists()){
           idx.forEach(function(c){ try{ db.ref('chats/'+c.key+'/participants/'+cu.uid).remove() }catch(e){} });
         }

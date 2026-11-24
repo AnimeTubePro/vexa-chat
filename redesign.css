@@ -1,0 +1,185 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   VEXA CHAT v3.1 — REDESIGN LAYER (style.css ke BAAD load hota hai)
+   ─────────────────────────────────────────────────────────────────────────
+   • Naya animated loading screen (orbit ring + gradient orbs + shimmer bar)
+   • Global UI upgrade: glass cards, smooth transitions, modern chat bubbles
+   • Call / video call / screen-share ka naya glass UI
+   • 📎 Drive file/image/video message bubbles
+   • Sirf additive overrides — purane layout ko todta nahi
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1) KEYFRAMES ═══ */
+@keyframes vxSpin{to{transform:rotate(360deg)}}
+@keyframes vxPulse{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.35);opacity:0}}
+@keyframes vxFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-18px) scale(1.06)}}
+@keyframes vxShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes vxFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes vxPop{0%{transform:scale(.86);opacity:0}70%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+@keyframes vxGlow{0%,100%{filter:drop-shadow(0 0 6px rgba(124,92,255,.45))}50%{filter:drop-shadow(0 0 22px rgba(124,92,255,.9))}}
+@keyframes vxRing{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes vxBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* ═══ 2) SPLASH — naya animated loading screen ═══ */
+#splash{
+  background:radial-gradient(ellipse at 50% 35%,#181052 0%,#0a0430 45%,#04010f 100%)!important;
+  overflow:hidden;
+}
+#splash>*{position:relative;z-index:2}
+/* floating gradient orbs */
+.splash-orbs{position:absolute;inset:0;z-index:1;pointer-events:none}
+.splash-orbs .orb{position:absolute;border-radius:50%;filter:blur(46px);opacity:.5;animation:vxFloat 7s ease-in-out infinite}
+.splash-orbs .o1{width:220px;height:220px;left:8%;top:12%;background:radial-gradient(circle,#7c5cff,transparent 70%)}
+.splash-orbs .o2{width:260px;height:260px;right:6%;top:55%;background:radial-gradient(circle,#ff5ca8,transparent 70%);animation-delay:-2.4s}
+.splash-orbs .o3{width:180px;height:180px;left:42%;bottom:8%;background:radial-gradient(circle,#3ec6ff,transparent 70%);animation-delay:-4.8s}
+/* orbit ring + glow logo */
+.loader-logo{position:relative;animation:vxGlow 2.6s ease-in-out infinite}
+.loader-logo .logo-ring{
+  position:absolute;inset:-14px;border-radius:50%;
+  border:2px solid transparent;
+  border-top-color:#7c5cff;border-right-color:#ff5ca8;border-bottom-color:rgba(124,92,255,.25);
+  animation:vxRing 1.15s linear infinite;
+  -webkit-mask-image:linear-gradient(#000,#000);mask-image:linear-gradient(#000,#000);
+}
+.loader-logo::after{
+  content:'';position:absolute;inset:-14px;border-radius:50%;
+  border:2px solid rgba(124,92,255,.5);
+  animation:vxPulse 1.9s ease-out infinite;
+}
+.loader-logo svg.atptri-big{animation:vxBob 2.2s ease-in-out infinite}
+/* shimmer progress bar */
+.loader-bar{
+  height:8px!important;border-radius:99px!important;
+  background:rgba(255,255,255,.08)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 0 18px rgba(124,92,255,.35)!important;
+  overflow:hidden;
+}
+.loader-bar span{
+  background:linear-gradient(90deg,#7c5cff,#ff5ca8,#3ec6ff,#7c5cff)!important;
+  background-size:200% 100%;
+  animation:vxShimmer 1.6s linear infinite;
+  box-shadow:0 0 12px rgba(255,92,168,.7)!important;
+  transition:width .25s ease;
+}
+.loader-pct{color:#c9bfff!important;font-weight:600;animation:vxFadeUp .6s ease}
+.loader-title{animation:vxFadeUp .7s ease;text-shadow:0 0 26px rgba(124,92,255,.55)}
+.loader-sub{animation:vxFadeUp .9s ease}
+#splash.fade .loader-logo,#splash.fade .loader-title,#splash.fade .loader-sub,
+#splash.fade .loader-bar,#splash.fade .loader-pct,#splash.fade #splashTx{
+  transform:scale(.9);opacity:0;transition:all .45s ease;
+}
+
+/* ═══ 3) GLOBAL UI POLISH ═══ */
+button,.btn,.bico,.srow,.rrow,.sgi{transition:transform .18s cubic-bezier(.34,1.56,.64,1),background .18s ease,box-shadow .18s ease,opacity .18s ease}
+.btn{border-radius:14px!important;font-weight:600!important;letter-spacing:.01em}
+.btn:active{transform:scale(.96)}
+.btn.bp{box-shadow:0 6px 20px rgba(124,92,255,.35)}
+.btn.bp:hover{box-shadow:0 8px 28px rgba(124,92,255,.55);transform:translateY(-1px)}
+.bico{border-radius:12px}
+.bico:hover{background:rgba(124,92,255,.14);transform:translateY(-1px)}
+.bico:active{transform:scale(.9)}
+.srow:hover{background:rgba(124,92,255,.07)}
+.srow:active{transform:scale(.985)}
+.rrow{animation:vxFadeUp .22s ease}
+/* cards + modals */
+.mbox,.acard,.pcard,.scard{
+  border:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.45),0 0 0 1px rgba(124,92,255,.08) inset!important;
+  animation:vxPop .28s cubic-bezier(.34,1.4,.64,1);
+}
+.inp{border-radius:12px!important;transition:box-shadow .2s ease,border-color .2s ease}
+.inp:focus{box-shadow:0 0 0 3px rgba(124,92,255,.22)!important;border-color:#7c5cff!important}
+/* chat bubbles — soft gradient + pop-in */
+.mrow{animation:vxFadeUp .22s ease}
+.mrow .mbub{border-radius:18px!important}
+.mrow.me .mbub{background:linear-gradient(135deg,#6d4aff,#8f5cff)!important;box-shadow:0 4px 14px rgba(109,74,255,.35)}
+.mrow.them .mbub{background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.05))!important;border:1px solid rgba(255,255,255,.07)}
+/* composer */
+.cinp{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.csend{box-shadow:0 4px 14px rgba(124,92,255,.4)}
+.csend:active{transform:scale(.88)!important}
+/* scrollbars (webkit) */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(124,92,255,.35);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(124,92,255,.55)}
+::-webkit-scrollbar-track{background:transparent}
+/* avatars — subtle ring */
+.ava{box-shadow:0 0 0 2px rgba(124,92,255,.35)}
+
+/* ═══ 4) CALL / VIDEO / SCREEN-SHARE UI — glass redesign ═══ */
+#callO{
+  background:radial-gradient(ellipse at 50% 20%,#221448 0%,#120a2e 45%,#070218 100%)!important;
+}
+#callO.open{animation:vxFadeUp .3s ease}
+#callO .ctop{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#callO .cavw .ava{box-shadow:0 0 0 3px rgba(124,92,255,.55),0 0 34px rgba(124,92,255,.45)!important}
+#callO .cnm{font-weight:700!important;letter-spacing:.01em}
+#callO .cst{color:#c9bfff!important}
+#callO .ctmr{color:#8f83e8!important;font-variant-numeric:tabular-nums}
+.ccb{
+  width:62px;height:62px;font-size:24px;
+  background:rgba(255,255,255,.1)!important;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.14)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.ccb:hover{background:rgba(255,255,255,.18)!important}
+.ccb.end{background:linear-gradient(135deg,#ff3d6e,#e0245e)!important;border-color:rgba(255,61,110,.4)!important;box-shadow:0 8px 26px rgba(255,61,110,.4)!important}
+.ccb.acc{background:linear-gradient(135deg,#2ecc71,#27ae60)!important;border-color:rgba(46,204,113,.4)!important}
+.ccb.ss{
+  background:linear-gradient(135deg,#3ec6ff,#2f80ed)!important;
+  border-color:rgba(62,198,255,.4)!important;
+}
+.ccb.ss.on{background:linear-gradient(135deg,#ff9f43,#ee5253)!important}
+/* self video pip */
+#vslf.show{
+  border-radius:16px!important;border:1.5px solid rgba(124,92,255,.55)!important;
+  box-shadow:0 10px 34px rgba(0,0,0,.55)!important;
+}
+/* incoming ring pulse on avatar */
+#callO .cavw{position:relative}
+#callO.ringing .cavw::before{
+  content:'';position:absolute;inset:-10px;border-radius:50%;
+  border:2px solid rgba(124,92,255,.6);
+  animation:vxPulse 1.6s ease-out infinite;
+  pointer-events:none;
+}
+
+/* ═══ 5) 📎 DRIVE FILE / IMAGE / VIDEO BUBBLES ═══ */
+.mfile{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;padding:10px 12px;
+  min-width:180px;max-width:270px;
+  cursor:pointer;transition:transform .18s ease,background .18s ease;
+}
+.mfile:hover{background:rgba(124,92,255,.14);transform:translateY(-1px)}
+.mfile .fic{font-size:26px;flex:0 0 auto}
+.mfile .fmeta{min-width:0;flex:1}
+.mfile .fnm{font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mfile .fsz{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:2px}
+.mfile .fdl{
+  width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#7c5cff,#ff5ca8);
+  font-size:16px;box-shadow:0 4px 12px rgba(124,92,255,.4);
+}
+.mfile .mimg{
+  display:block;max-width:240px;max-height:280px;border-radius:12px;
+  cursor:zoom-in;background:rgba(0,0,0,.3);
+}
+.mrow.me .mfile .mimg{cursor:pointer}
+.mfile .mvid{
+  display:block;max-width:260px;border-radius:12px;background:rgba(0,0,0,.4);
+}
+.flbl{font-size:.72rem;color:rgba(255,255,255,.6);margin-top:4px}
+.mrow.me .flbl{color:rgba(255,255,255,.8)}
+/* Drive picker list (modal) */
+.gdlist{max-height:56vh;overflow-y:auto;padding:4px}
+.gdlist .rrow{display:flex;align-items:center;gap:8px}
+
+/* ═══ 6) MISC — reduced motion respect ═══ */
+@media (prefers-reduced-motion:reduce){
+  .splash-orbs .orb,.loader-logo .logo-ring,.loader-logo::after,
+  .loader-logo svg.atptri-big,.loader-bar span{animation:none!important}
+}

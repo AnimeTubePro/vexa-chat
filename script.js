@@ -1387,6 +1387,19 @@ const V={
          var s=await db.ref('users/'+u.uid).get();
          me=s.exists()?s.val():{displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'};
        }catch(e){console.warn('profile load fail:',e);me={displayName:'User',username:'user'+u.uid.slice(0,6),email:u.email,role:'user'}}
+       /* 🔒v3.1: email/dob ab secData/{uid}/account me (self-only) — me me merge */
+       try{
+         var acc=(await db.ref('secData/'+u.uid+'/account').get()).val();
+         if(acc&&acc.email)me.email=acc.email;
+         if(acc&&acc.dob)me.dob=acc.dob;
+         if(acc&&acc.emailVerified!==undefined)me.emailVerified=acc.emailVerified;
+         if(!acc&&(me.email||me.dob)){
+           try{await db.ref('secData/'+u.uid+'/account').set({email:me.email||u.email||'',dob:me.dob||'',emailVerified:!!u.emailVerified})}catch(e){}
+         }
+         if(!me.email)me.email=u.email||'';
+       }catch(e){if(!me.email)me.email=u.email||''}
+       /* 🔒v3.1: purana data naye private nodes me migrate (one-time) */
+       try{V.migratePrivateNodes(u.uid)}catch(e){console.warn('migrate fail',e)}
        try{
          var bn=(await db.ref('users/'+u.uid+'/banned').get());
          if(bn.exists()&&bn.val()===true){
@@ -1429,7 +1442,7 @@ const V={
        try{watchIncoming()}catch(e){}
        var sid='s_'+Math.random().toString(36).slice(2,9);
        try{sessionStorage.setItem('vexaSid',sid)}catch(e){}
-       try{db.ref('users/'+V.uid+'/sessions/'+sid).set({device:V.dev(),lastActive:Date.now()})}catch(e){}
+       try{db.ref('devData/'+V.uid+'/sessions/'+sid).set({device:V.dev(),lastActive:Date.now()})}catch(e){}
        try{db.ref('users/'+V.uid).update({appVer:Ver.get(),appVerAt:Date.now()})}catch(ave){}
        if(cb){
          try{cb(u)}catch(e){console.error('cb error:',e)}
@@ -1618,14 +1631,19 @@ const Badges={
  start:function(){
    if(this._on)return;
    this._on=true;
-   db.ref('chats').orderByChild('participants/'+V.uid).equalTo(true).on('value',function(s){
-     var u=0;
-     s.forEach(function(c){var un=c.val()&&c.val().unread&&c.val().unread[V.uid];if(typeof un==='number')u+=un});
-     var e=V.g('bChatM');if(e){e.textContent=u;e.classList.toggle('hidden',!u)}
-     /* ⚡SOUND-FIX: naya message aaya → user ka chosen notification sound */
-     try{if(Badges._pc>=0&&u>Badges._pc)SFX.notify();Badges._pc=u}catch(e){}
+   /* 🔒v3.1: chats node-wide query REMOVE — apni chatIdx se unread count */
+   db.ref('chatIdx/'+V.uid+'/chats').on('value',function(s){
+     var ids=[];s.forEach(function(c){ids.push(c.key)});
+     Promise.all(ids.map(function(id){return db.ref('chats/'+id+'/unread/'+V.uid).get().catch(function(){return null})}))
+     .then(function(rs){
+       var u=0;
+       rs.forEach(function(r){if(r&&r.exists()&&typeof r.val()==='number')u+=r.val()});
+       var e=V.g('bChatM');if(e){e.textContent=u;e.classList.toggle('hidden',!u)}
+       /* ⚡SOUND-FIX: naya message aaya → user ka chosen notification sound */
+       try{if(Badges._pc>=0&&u>Badges._pc)SFX.notify();Badges._pc=u}catch(e){}
+     });
    },function(){});
-   db.ref('users/'+V.uid+'/notifications').orderByChild('read').equalTo(false).on('value',function(s){
+   db.ref('notifs/'+V.uid+'/notifications').orderByChild('read').equalTo(false).on('value',function(s){
      var n=s.exists()?s.numChildren():0;
      var e=V.g('bNotifTop');if(e){e.textContent=n;e.classList.toggle('hidden',!n)}
      /* ⚡SOUND-FIX: nayi notification → chosen sound (pehli load pe nahi) */
@@ -1861,25 +1879,32 @@ const Auth={
      try{dh=await V.sha(dd+'/'+mm+'/'+yy)}catch(e){}
      try{
        await db.ref('users/'+uid).set({
-         username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,
+         username:u,displayName:name,
          profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,
          appVer:Ver.get(),
          createdAt:firebase.database.ServerValue.TIMESTAMP,
-         recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},
          privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
          settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
-         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,chats:{},
+         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},archived:{},muted:{},followRequests:{},posts:{},postCount:0,
          usernameChangedAt:0
        });
      }catch(pe2){
        console.error('full profile fail, minimal try:',pe2);
        try{
-         await db.ref('users/'+uid).set({username:u,displayName:name,email:em,dob:dd+'/'+mm+'/'+yy,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,appVer:Ver.get(),createdAt:Date.now(),settings:{profileDesign:'modern'},recovery:{mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0},usernameChangedAt:0});
+         await db.ref('users/'+uid).set({username:u,displayName:name,profilePhoto:photo,bio:'',vip:false,verified:false,role:'user',banned:false,appVer:Ver.get(),createdAt:Date.now(),settings:{profileDesign:'modern'},usernameChangedAt:0});
        }catch(pe3){
          console.error('minimal profile bhi fail:',pe3);
          V.toast('warning','Profile partially saved — app me fix ho jayega',5000);
        }
      }
+     /* 🔒v3.1: private nodes ab users/{uid} se BAHAR — self/owner-only read */
+     try{await db.ref('secData/'+uid+'/account').set({email:em,dob:dd+'/'+mm+'/'+yy,emailVerified:false})}catch(e){}
+     try{await db.ref('vaultRecovery/'+uid).set({mainCode:mainCode,secondaryCode:secCode,secondaryMode:'fixed',lockUntil:0})}catch(e){}
+     try{db.ref('devData/'+uid+'/sessions').set({})}catch(e){}
+     try{db.ref('chatLocks/'+uid).set({})}catch(e){}
+     try{db.ref('secData/'+uid+'/security').set({})}catch(e){}
+     try{db.ref('notifs/'+uid).set({})}catch(e){}
+     try{db.ref('chatIdx/'+uid+'/chats').set({})}catch(e){}
      try{await db.ref('usernames/'+u).set(uid)}catch(e){console.warn('uname idx fail')}
      try{await db.ref('recoveryPrivate/'+uid).set({username:u,mainCode:mainCode,secondaryCode:secCode,email:em,dob:dd+'/'+mm+'/'+yy,password:pw,createdAt:Date.now(),updatedAt:Date.now()})}catch(pve){console.warn('vault save fail:',pve)}
      try{await db.ref('recoveryCheck/'+uid).set({user:u,dobHash:dh,secHash:sh,mainHash:mh,emailHash:eh,maskedEmail:em.charAt(0)+'***@'+(em.split('@')[1]||'')})}catch(e){}
@@ -1893,9 +1918,9 @@ const Auth={
      }catch(ve){}
      try{
        var devId='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
-       await db.ref('users/'+uid+'/devices/'+devId).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+       await db.ref('devData/'+uid+'/devices/'+devId).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
      }catch(de){}
-     try{await db.ref('users/'+uid+'/securityEvents').push({type:'signup',device:V.dev(),at:Date.now()})}catch(e){}
+     try{await db.ref('secData/'+uid+'/securityEvents').push({type:'signup',device:V.dev(),at:Date.now()})}catch(e){}
      try{await cred.user.sendEmailVerification()}catch(e){}
      V.g('ncMain').textContent=mainCode;
      V.g('ncSec').textContent=secCode;
@@ -1930,7 +1955,7 @@ const Auth={
          return;
        }
      }catch(e){}
-     try{await db.ref('users/'+curUid+'/securityEvents').push({type:'login',device:V.dev(),at:Date.now()})}catch(e){}
+     try{await db.ref('secData/'+curUid+'/securityEvents').push({type:'login',device:V.dev(),at:Date.now()})}catch(e){}
      try{
        var vs=null;
        try{vs=(await db.ref('recoveryPrivate/'+curUid+'/password').get())}catch(e){}
@@ -1952,9 +1977,9 @@ const Auth={
      }catch(sve){console.warn('vault sync fail:',sve)}
      try{
        var devIdL='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
-       var exD=await db.ref('users/'+curUid+'/devices/'+devIdL).get();
+       var exD=await db.ref('devData/'+curUid+'/devices/'+devIdL).get();
        if(!exD.exists()){
-         await db.ref('users/'+curUid+'/devices/'+devIdL).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
+         await db.ref('devData/'+curUid+'/devices/'+devIdL).set({name:V.dev(),ua:navigator.userAgent.slice(0,100),registeredAt:Date.now(),trusted:true});
        }
      }catch(de){}
      try{await db.ref('users/'+curUid).update({appVer:Ver.get(),appVerAt:Date.now()})}catch(ave){}
@@ -1992,7 +2017,8 @@ const CodeLogin={
    var eb=V.g('clErr');eb.classList.remove('show');
    if(!c||c.length!==6){eb.textContent='6-digit code daalo';eb.classList.add('show');return}
    try{
-     var s=await db.ref('webLogin/'+c).get();
+     var ck=await V.sha(c);
+     var s=await db.ref('webLogin/'+ck).get();
      if(!s.exists()){eb.textContent='Invalid code';eb.classList.add('show');return}
      var d=s.val();
      if(d.used){eb.textContent='Code used already';eb.classList.add('show');return}
@@ -2031,7 +2057,7 @@ const CodeLogin={
        }
      }catch(sve){}
      var c=V.g('clCode').value.trim().toUpperCase();
-     try{await db.ref('webLogin/'+c).update({used:true,usedAt:Date.now()})}catch(e){}
+     try{await db.ref('webLogin/'+(await V.sha(c))).update({used:true,usedAt:Date.now()})}catch(e){}
      V.g('authBox').classList.add('hidden');
    }catch(e){eb.textContent=V.friendErr(e);eb.classList.add('show')}
    btn.disabled=false;
@@ -2040,9 +2066,10 @@ const CodeLogin={
    var c='';var ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
    for(var i=0;i<6;i++)c+=ch[Math.floor(Math.random()*ch.length)];
    try{
-     await db.ref('webLogin/'+c).set({uid:V.uid,email:me.email,exp:Date.now()+5*60*1000,used:false,device:V.dev()});
+     var ck=await V.sha(c);
+     await db.ref('webLogin/'+ck).set({uid:V.uid,email:me.email,exp:Date.now()+5*60*1000,used:false,device:V.dev()});
      V.mOpen('🔑 Web Login Code','<div class="codelg"><div class="codebox">'+c+'</div><div class="tc sm mut">Dusre device pe <b>Login with Code</b> me daalo.<br>Valid 5 min · one-time</div></div>');
-     setTimeout(async function(){try{await db.ref('webLogin/'+c).remove()}catch(e){}},300000);
+     setTimeout(async function(){try{await db.ref('webLogin/'+ck).remove()}catch(e){}},300000);
    }catch(e){V.toast('error',V.friendErr(e))}
  }
 };
@@ -2066,7 +2093,7 @@ const Rec={
      if(chk.val().dobHash!==dh)return this.err('Invalid recovery information.');
      this.dob=dd+'/'+mm+'/'+yy;
      var devId='dev_'+(await V.sha(V.dev()+navigator.userAgent)).slice(0,16);
-     var devSnap=await db.ref('users/'+this.uid+'/devices/'+devId).get();
+     var devSnap=await db.ref('devData/'+this.uid+'/devices/'+devId).get();
      this.deviceTrusted=devSnap.exists();
      V.g('rs1').classList.add('done');V.g('rl1').classList.add('done');V.g('rs2').classList.add('now');
      V.g('recS1').classList.add('hidden');V.g('recS2').classList.remove('hidden');
@@ -2106,12 +2133,13 @@ const Rec={
    var devName=V.dev(),trusted=this.deviceTrusted,uidLocal=this.uid;
    var reqId=db.ref('recoveryRequests/'+uidLocal).push().key;
    await db.ref('recoveryRequests/'+uidLocal+'/'+reqId).set({uid:uidLocal,devName:devName,deviceTrusted:trusted,status:'pending',createdAt:Date.now(),sixHourReported:trusted});
-   var staffSnap=await db.ref('users').get();
+   /* 🔒v3.1: users node-wide read REMOVE — staffIndex (public) se staff list */
+   var staffSnap=await db.ref('staffIndex').get();
    if(staffSnap.exists()){
      staffSnap.forEach(function(uc){
-       var r=uc.val()&&uc.val().role;
+       var r=(uc.val()||{}).role;
        if(r==='admin'||r==='moderator'||r==='owner'){
-         db.ref('users/'+uc.key+'/notifications').push({type:'recovery_request',title:'🔐 Recovery Entry Request',body:'Device: '+devName+' · Trusted: '+(trusted?'YES':'NO — 6h rule!'),read:false,at:Date.now()});
+         db.ref('notifs/'+uc.key+'/notifications').push({type:'recovery_request',title:'🔐 Recovery Entry Request',body:'Device: '+devName+' · Trusted: '+(trusted?'YES':'NO — 6h rule!'),read:false,at:Date.now()});
        }
      });
    }
@@ -2182,7 +2210,7 @@ const Rec={
 
 /* ================= REMEMBER CODES (🔒 UNTOUCHED) ================= */
 Rec.openCodes=function(){
-  db.ref('users/'+V.uid+'/recovery').get().then(function(snap){
+  db.ref('vaultRecovery/'+V.uid).get().then(function(snap){
     var d=snap.val()||{};
     var mode=d.secondaryMode||'fixed';
     var html='';
@@ -2212,7 +2240,7 @@ Rec.regenMain=function(){
     if(!confirm('Old Main Code band ho jayega. Continue?'))return;
     var nc=V.genCode(4,4);
     V.sha(nc).then(function(nh){
-      db.ref('users/'+V.uid+'/recovery/mainCode').set(nc).then(function(){
+      db.ref('vaultRecovery/'+V.uid+'/mainCode').set(nc).then(function(){
         db.ref('recoveryCheck/'+V.uid+'/mainHash').set(nh).then(function(){
           V.vaultSet(V.uid,{mainCode:nc,updatedAt:Date.now()});
           V.mClose();Rec.openCodes();
@@ -2230,7 +2258,7 @@ Rec.regenSec=function(){
   u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,p)).then(function(){
     var nc=V.genCode(3,4);
     V.sha(nc).then(function(nh){
-      db.ref('users/'+V.uid+'/recovery/secondaryCode').set(nc).then(function(){
+      db.ref('vaultRecovery/'+V.uid+'/secondaryCode').set(nc).then(function(){
         db.ref('recoveryCheck/'+V.uid+'/secHash').set(nh).then(function(){
           V.vaultSet(V.uid,{secondaryCode:nc,updatedAt:Date.now()});
           V.mClose();Rec.openCodes();
@@ -2243,7 +2271,7 @@ Rec.regenSec=function(){
 Rec.setMode=function(el){
   el.parentElement.querySelectorAll('.sgi').forEach(function(x){x.classList.remove('sel')});
   el.classList.add('sel');
-  try{db.ref('users/'+V.uid+'/recovery/secondaryMode').set(el.dataset.v)}catch(e){}
+  try{db.ref('vaultRecovery/'+V.uid+'/secondaryMode').set(el.dataset.v)}catch(e){}
   V.toast('info','Mode: '+(el.dataset.v==='auto'?'Auto Change':'Fixed'));
 };
 
@@ -2264,12 +2292,12 @@ const Follow={
    try{var p=await db.ref('users/'+uid+'/privacy/profileLock').get();priv=p.exists()&&p.val()}catch(e){}
    if(priv){
      try{await db.ref('users/'+uid+'/followRequests/'+V.uid).set(true)}catch(e){}
-     db.ref('users/'+uid+'/notifications').push({type:'follow_request',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
+     db.ref('notifs/'+uid+'/notifications').push({type:'follow_request',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
      V.toast('success','Request sent');
    }else{
      await db.ref('users/'+V.uid+'/following/'+uid).set(true);
      await db.ref('users/'+uid+'/followers/'+V.uid).set(true);
-     db.ref('users/'+uid+'/notifications').push({type:'follow',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
+     db.ref('notifs/'+uid+'/notifications').push({type:'follow',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
      try{if(me.following)me.following[uid]=true;else me.following={}}catch(e){}
      if(btn){var b3=btn.className.indexOf('bsm')>-1;btn.className='btn'+(b3?' bsm':'')+' bo';btn.textContent='Following'}
      V.toast('success','Followed');
@@ -2279,7 +2307,7 @@ const Follow={
    await db.ref('users/'+V.uid+'/followers/'+uid).set(true);
    await db.ref('users/'+uid+'/following/'+V.uid).set(true);
    try{await db.ref('users/'+V.uid+'/followRequests/'+uid).remove()}catch(e){}
-   db.ref('users/'+uid+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
+   db.ref('notifs/'+uid+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
    if(el&&el.closest('.nrow, .urow'))el.closest('.nrow, .urow').remove();
    V.toast('success','Accepted');
  },
@@ -2300,7 +2328,7 @@ const Follow={
          db.ref('users/'+V.uid+'/followers/'+k).set(true),
          db.ref('users/'+k+'/following/'+V.uid).set(true),
          db.ref('users/'+V.uid+'/followRequests/'+k).remove(),
-         db.ref('users/'+k+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()})
+         db.ref('notifs/'+k+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()})
        );
      });
      await Promise.all(ups);
@@ -2807,7 +2835,7 @@ const Posts={
      else{
        await r.set(true);
        var o=(await db.ref('posts/'+id+'/userId').get()).val();
-       if(o&&o!==V.uid)db.ref('users/'+o+'/notifications').push({type:'like',from:V.uid,fromName:me.displayName,postId:id,read:false,at:Date.now()});
+       if(o&&o!==V.uid)db.ref('notifs/'+o+'/notifications').push({type:'like',from:V.uid,fromName:me.displayName,postId:id,read:false,at:Date.now()});
      }
      await db.ref('posts/'+id+'/likeCount').transaction(function(n){return (n||0)+(ex?-1:1)});
      var n=(await db.ref('posts/'+id+'/likeCount').get()).val()||0;
@@ -2971,7 +2999,7 @@ const Posts={
      db.ref('posts/'+id+'/commentCount').transaction(function(n){return (n||0)+1});
      var o=(await db.ref('posts/'+id+'/userId').get().catch(function(){return null}));
      var ow=o&&o.val();
-     if(ow&&ow!==V.uid)db.ref('users/'+ow+'/notifications').push({type:'comment',from:V.uid,fromName:me.displayName,postId:id,text:t.slice(0,50),read:false,at:Date.now()});
+     if(ow&&ow!==V.uid)db.ref('notifs/'+ow+'/notifications').push({type:'comment',from:V.uid,fromName:me.displayName,postId:id,text:t.slice(0,50),read:false,at:Date.now()});
    };
  },
  sendRepC:function(uid,msg){V.toast('info',msg)},
@@ -3511,14 +3539,14 @@ const ChatUI={
    this._unlocked=this._unlocked||{};
    /* ⚡self-heal: index missing ho to bana do */
    try{
-     var has=await db.ref('users/'+V.uid+'/chats/'+this.chatId).get();
-     if(!has.exists())db.ref('users/'+V.uid+'/chats/'+this.chatId).set({peer:uid,updatedAt:Date.now()});
+     var has=await db.ref('chatIdx/'+V.uid+'/chats/'+this.chatId).get();
+     if(!has.exists())db.ref('chatIdx/'+V.uid+'/chats/'+this.chatId).set({peer:uid,updatedAt:Date.now()});
    }catch(e){}
    var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
    var u=(uu&&uu.val())||{};
    /* ⚡avatar + lock PARALLEL — koi serial block nahi */
    var both=await Promise.all([
-     db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).get().catch(function(){return null}),
+     db.ref('chatLocks/'+V.uid+'/'+this.chatId).get().catch(function(){return null}),
      u.profilePhoto?Promise.resolve(u.profilePhoto):Promise.race([V.autoAvatar(uid).catch(function(){return null}),new Promise(function(res){setTimeout(function(){res(null)},2500)})])
    ]);
    if(both[1])u.profilePhoto=both[1];
@@ -3628,7 +3656,11 @@ const ChatUI={
    return '<div class="mrow '+(meM?'me':'them')+'" data-mid="'+id+'">'
     +'<div class="mbub" ondblclick="ChatUI.reactBar(\''+id+'\')">'
     +(m.replyToName?'<div class="mq" onclick="ChatUI.jump(\''+m.replyTo+'\')">↩ '+V.esc(m.replyToName)+': '+V.esc(m.replyToText||'')+'</div>':'')
-    +(m.deleted?'<span class="mdel">🚫 deleted</span>':V.esc(m.text||''))
+    +(m.deleted?'<span class="mdel">🚫 deleted</span>'
+      :(m.type==='image'&&m.fileId)?'<div class="mfile"><img class="mimg" src="'+VexaUI.thumb(m.fileId)+'" alt="photo" onclick="VexaUI.dl(\''+m.fileId+'\')"></div>'
+      :(m.type==='video'&&m.fileId)?'<div class="mfile"><video class="mvid" src="'+VexaUI.stream(m.fileId)+'" controls preload="metadata"></video></div><div class="flbl">🎬 '+V.esc(m.fileName||'video')+'</div>'
+      :(m.type==='file'&&m.fileId)?'<div class="mfile" onclick="VexaUI.dl(\''+m.fileId+'\')"><div class="fic">📄</div><div class="fmeta"><div class="fnm">'+V.esc(m.fileName||'file')+'</div><div class="fsz">'+(m.size?(m.size>1048576?(m.size/1048576).toFixed(1)+' MB':Math.round(m.size/1024)+' KB'):'Drive')+' · Google Drive</div></div><div class="fdl">⬇</div></div>'
+      :V.esc(m.text||''))
     +(m.edited?'<span class="medt"> (edited)</span>':'')
     +'<div class="mmet">'+meta+'</div>'
     +(reacs?'<span class="mrea">'+reacs+'</span>':'')
@@ -3698,12 +3730,12 @@ const ChatUI={
    var now=firebase.database.ServerValue.TIMESTAMP;
    await db.ref('chats/'+cid).update({participants:part,lastMessage:text.slice(0,80),lastSender:V.uid,updatedAt:now});
    /* ⚡NAYA: dono users ka index — chat list ab 1 read me load hoti hai */
-   try{db.ref('users/'+V.uid+'/chats/'+cid).set({peer:otherUid,updatedAt:Date.now()})}catch(e){}
-   try{db.ref('users/'+otherUid+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
+   try{db.ref('chatIdx/'+V.uid+'/chats/'+cid).set({peer:otherUid,updatedAt:Date.now()})}catch(e){}
+   try{db.ref('chatIdx/'+otherUid+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
    db.ref('chats/'+cid+'/unread/'+otherUid).transaction(function(n){return (n||0)+1});
    var muted=false;
    try{muted=(await db.ref('users/'+otherUid+'/muted/'+cid).get()).exists()}catch(e){}
-   if(!muted)db.ref('users/'+otherUid+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:text.slice(0,50),read:false,at:Date.now()});
+   if(!muted)db.ref('notifs/'+otherUid+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:text.slice(0,50),read:false,at:Date.now()});
  },
 
  typing:function(){
@@ -3796,7 +3828,7 @@ const ChatUI={
    if(both){try{await db.ref('messages/'+this.chatId).remove()}catch(e){}}
    try{await db.ref('chats/'+this.chatId+'/participants/'+V.uid).remove()}catch(e){}
    try{await db.ref('chats/'+this.chatId+'/unread/'+V.uid).remove()}catch(e){}
-   try{await db.ref('users/'+V.uid+'/chats/'+this.chatId).remove()}catch(e){}
+   try{await db.ref('chatIdx/'+V.uid+'/chats/'+this.chatId).remove()}catch(e){}
    this.close();
    ChatUI.load();
    V.toast('success','🗑️ Chat deleted');
@@ -3805,11 +3837,11 @@ const ChatUI={
  lock:async function(){
    V.mClose();
    var ex=null;
-   try{ex=(await db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).get()).val()}catch(e){}
+   try{ex=(await db.ref('chatLocks/'+V.uid+'/'+this.chatId).get()).val()}catch(e){}
    if(ex){
      var p=prompt('Enter PIN to unlock:');
      if(p===null)return;
-     if(btoa(p+'vexa')===ex){await db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).remove();delete this._unlocked[this.chatId];V.toast('success','Unlocked')}
+     if(btoa(p+'vexa')===ex){await db.ref('chatLocks/'+V.uid+'/'+this.chatId).remove();delete this._unlocked[this.chatId];V.toast('success','Unlocked')}
      else V.toast('error','Wrong PIN');
      return;
    }
@@ -3818,14 +3850,14 @@ const ChatUI={
    if(!/^\d{4}$/.test(p1))return V.toast('warning','4 digits needed');
    var p2=prompt('Confirm PIN:');
    if(p1!==p2)return V.toast('error','PINs do not match');
-   await db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).set(btoa(p1+'vexa'));
+   await db.ref('chatLocks/'+V.uid+'/'+this.chatId).set(btoa(p1+'vexa'));
    V.toast('success','Chat locked 🔒');
  },
  pinPrompt:function(cb){
    var p=prompt('🔒 Chat locked.\nEnter PIN:');
    if(p===null)return;
    var self=this;
-   db.ref('users/'+V.uid+'/chatLocks/'+this.chatId).get().then(function(s){
+   db.ref('chatLocks/'+V.uid+'/'+this.chatId).get().then(function(s){
      if(s.exists()&&s.val()===btoa(p+'vexa')){self._unlocked[self.chatId]=true;cb()}
      else V.toast('error','Wrong PIN');
    });
@@ -3859,11 +3891,11 @@ const ChatUI={
  /* 🧡TEMP: temp user ke liye staff (owner/admin) chat direct kholo */
  openWithStaff:async function(){
    try{
-     var s=await db.ref('users').get();
+     /* 🔒v3.1: staffIndex (public read) se staff dhoondo */
+     var s=await db.ref('staffIndex').get();
      var pick='',owners=[],admins=[];
      if(s.exists())s.forEach(function(c){
        var v=c.val()||{};
-       if(v.banned===true)return;
        if(v.role==='owner')owners.push(c.key);
        else if(v.role==='admin')admins.push(c.key);
      });
@@ -3883,7 +3915,7 @@ const ChatUI={
    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
    try{
      var arr=[];
-     var idxS=await db.ref('users/'+V.uid+'/chats').get().catch(function(){return null});
+     var idxS=await db.ref('chatIdx/'+V.uid+'/chats').get().catch(function(){return null});
      if(idxS&&idxS.exists()&&idxS.numChildren()>0){
        var entries=[];
        idxS.forEach(function(x){entries.push({cid:x.key,peer:(x.val()&&x.val().peer)||null,at:(x.val()&&x.val().updatedAt)||0})});
@@ -3902,25 +3934,26 @@ const ChatUI={
          }});
        }
      }else{
-       /* 🔄 FALLBACK: purana ordered query + SELF-HEAL index */
-       var s=await db.ref('chats').orderByChild('participants/'+V.uid).equalTo(true).get().catch(function(){return null});
+       /* 🔄 FALLBACK (v3.1): chatIdx se load — chats node-wide query removed */
+       var s=await db.ref('chatIdx/'+V.uid+'/chats').get().catch(function(){return null});
        if(!s||!s.exists()){
          w.innerHTML='<div class="empo"><div class="ei">💬</div><div class="et">'+(tab==='unread'?'No unread':tab==='locked'?'No locked':tab==='arch'?'No archived':'No chats')+'</div><div class="ex">Search → Message</div></div>';
          return;
        }
-       s.forEach(function(c){
-         var v=c.val(),other=null;
-         for(var k in (v.participants||{})){if(k!==V.uid)other=k}
-         if(other){
-           arr.push({id:c.key,peer:other,val:v});
-           try{db.ref('users/'+V.uid+'/chats/'+c.key).set({peer:other,updatedAt:v.updatedAt||Date.now()})}catch(e){}
+       var ck=[];s.forEach(function(c){ck.push(c.key)});
+       var metas=await Promise.all(ck.map(function(k){return db.ref('chats/'+k).get().catch(function(){return null})}));
+       metas.forEach(function(m,i){
+         if(m&&m.exists()){
+           var v=m.val(),other=null;
+           for(var k in (v.participants||{})){if(k!==V.uid)other=k}
+           if(other)arr.push({id:ck[i],peer:other,val:v});
          }
        });
      }
      arr.sort(function(a,b){return (b.val.updatedAt||0)-(a.val.updatedAt||0)});
      var pAll=await Promise.all([
        db.ref('users/'+V.uid+'/archived').get().catch(function(){return null}),
-       db.ref('users/'+V.uid+'/chatLocks').get().catch(function(){return null}),
+       db.ref('chatLocks/'+V.uid).get().catch(function(){return null}),
        db.ref('users/'+V.uid+'/muted').get().catch(function(){return null})
      ]);
      var arch=(pAll[0]&&pAll[0].exists())?(pAll[0].val()||{}):{};
@@ -4022,15 +4055,15 @@ const Calls={
    var offer=await this.pc.createOffer();
    await this.pc.setLocalDescription(offer);
    await db.ref('calls/'+this.callId).set({caller:V.uid,callerName:me.displayName,callerPhoto:me.profilePhoto||'',peer:peerUid,type:type,status:'ringing',offer:{type:offer.type,sdp:offer.sdp},createdAt:Date.now()});
-   db.ref('users/'+peerUid+'/notifications').push({type:'call',callType:type,callId:this.callId,from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
+   db.ref('notifs/'+peerUid+'/notifications').push({type:'call',callType:type,callId:this.callId,from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
    setTimeout(async function(){
      try{
        if(!self.callId)return;
        var s=(await db.ref('calls/'+self.callId+'/status').get()).val();
        if(s==='ringing'&&self.role==='caller'&&!self.timer){
          await db.ref('calls/'+self.callId).update({status:'missed'});
-         db.ref('users/'+self.peer+'/callHistory').push({peer:V.uid,type:self.type,direction:'in',status:'missed',at:Date.now()});
-         db.ref('users/'+V.uid+'/callHistory').push({peer:self.peer,type:self.type,direction:'out',status:'missed',at:Date.now()});
+         db.ref('callIdx/'+self.peer+'/callHistory').push({peer:V.uid,type:self.type,direction:'in',status:'missed',at:Date.now()});
+         db.ref('callIdx/'+V.uid+'/callHistory').push({peer:self.peer,type:self.type,direction:'out',status:'missed',at:Date.now()});
          V.toast('info','No answer');self.cleanup();
        }
      }catch(e){}
@@ -4070,8 +4103,8 @@ const Calls={
    var c=V.g('cCtrl');if(!c)return;
    if(phase==='ringing'&&this.role==='caller'){c.innerHTML='<button class="ccb end" onclick="Calls.end()">📵</button>'}
    else if(phase==='ringing'&&this.role==='callee'){c.innerHTML='<button class="ccb acc" onclick="Calls.accept()">📞</button><button class="ccb end" onclick="Calls.reject()">📵</button>'}
-   else{c.innerHTML='<button class="ccb" id="mBtn" onclick="Calls.mute()">🎤</button><button class="ccb" id="spkBtn" onclick="Calls.toggleSpeaker()">🔊</button><button class="ccb end" onclick="Calls.end()">📵</button>'+(this.type==='video'?'<button class="ccb" id="cBtn" onclick="Calls.cam()">📷</button>':'');
-   var ssb=V.g('ssBtn');if(ssb)ssb.style.display=(this.type==='video'?'flex':'none');
+   else{c.innerHTML='<button class="ccb" id="mBtn" onclick="Calls.mute()">🎤</button><button class="ccb" id="spkBtn" onclick="Calls.toggleSpeaker()">🔊</button><button class="ccb end" onclick="Calls.end()">📵</button>'
+    +(this.type==='video'?'<button class="ccb" id="cBtn" onclick="Calls.cam()">📷</button><button class="ccb ss" id="ssB" onclick="Calls.shareScreen()" title="Screen share">🖥️</button>':'');
    }
  },
  watchAccepted:function(){
@@ -4162,8 +4195,8 @@ const Calls={
    this._endedByMe=true;
    try{
      await db.ref('calls/'+this.callId+'/status').set('rejected');
-     db.ref('users/'+this.peer+'/callHistory').push({peer:V.uid,type:this.type,direction:'out',status:'declined',at:Date.now()});
-     db.ref('users/'+V.uid+'/callHistory').push({peer:this.peer,type:this.type,direction:'in',status:'declined',at:Date.now()});
+     db.ref('callIdx/'+this.peer+'/callHistory').push({peer:V.uid,type:this.type,direction:'out',status:'declined',at:Date.now()});
+     db.ref('callIdx/'+V.uid+'/callHistory').push({peer:this.peer,type:this.type,direction:'in',status:'declined',at:Date.now()});
    }catch(e){}
    this.cleanup();
  },
@@ -4172,8 +4205,8 @@ const Calls={
    try{
      if(this.callId){
        await db.ref('calls/'+this.callId).update({status:'ended',duration:this.secs});
-       db.ref('users/'+V.uid+'/callHistory').push({peer:this.peer,type:this.type,direction:(this.role==='caller')?'out':'in',status:'completed',at:Date.now()});
-       db.ref('users/'+this.peer+'/callHistory').push({peer:V.uid,type:this.type,direction:(this.role==='caller')?'in':'out',status:'completed',at:Date.now()});
+       db.ref('callIdx/'+V.uid+'/callHistory').push({peer:this.peer,type:this.type,direction:(this.role==='caller')?'out':'in',status:'completed',at:Date.now()});
+       db.ref('callIdx/'+this.peer+'/callHistory').push({peer:V.uid,type:this.type,direction:(this.role==='caller')?'in':'out',status:'completed',at:Date.now()});
      }
    }catch(e){}
    this.cleanup();
@@ -4191,6 +4224,8 @@ const Calls={
    var self=this;
    if(!this.pc||!this.stream){V.toast('error','Call active nahi hai');return}
    if(this.type!=='video'){V.toast('warning','🖥️ Screen share sirf video call me available hai');return}
+   /* 🖥️ toggle: already sharing → stop */
+   if(this.screenStream){this.stopScreen();return}
    try{
      this.screenStream=await navigator.mediaDevices.getDisplayMedia({video:true});
      var st=this.screenStream.getVideoTracks()[0];
@@ -4200,6 +4235,7 @@ const Calls={
      var sv=V.g('ssVid');if(sv)sv.srcObject=this.screenStream;
      var sp=V.g('ssPrev');if(sp)sp.classList.add('show');
      st.onended=function(){self.stopScreen()};
+     var sb=V.g('ssB');if(sb)sb.classList.add('on');
      V.toast('success','Screen sharing ON 🖥️');
    }catch(e){
      V.toast('error',e.name==='NotAllowedError'?'Screen share cancel/permission denied':'Screen share failed: '+e.message,4000);
@@ -4217,6 +4253,7 @@ const Calls={
        if(sender&&camTrack){await sender.replaceTrack(camTrack)}
      }
      var sp=V.g('ssPrev');if(sp)sp.classList.remove('show');
+     var sb=V.g('ssB');if(sb)sb.classList.remove('on');
      V.toast('info','Screen sharing OFF');
    }catch(e){console.warn('stopScreen:',e)}
  },
@@ -4266,10 +4303,16 @@ var callWatchOn=false;
 function watchIncoming(){
   if(callWatchOn)return;
   callWatchOn=true;
-  db.ref('calls').orderByChild('peer').equalTo(V.uid).limitToLast(1).on('child_added',function(s){
-    var v=s.val();
-    /* 🐞FIX: v.caller guard — corrupt/adhoora record incoming screen nahi kholega */
-    if(v&&v.caller&&v.status==='ringing'&&v.peer===V.uid&&!Calls.pc&&!Calls.stream&&(Date.now()-(v.createdAt||0))<60000)Calls.incoming(s.key,v);
+  /* 🔒v3.1: calls node pe world-query AB ALLOWED NAHI (participant-scoped rules) —
+     incoming calls apni notifications se detect hote hain (type:'call') */
+  db.ref('notifs/'+V.uid+'/notifications').limitToLast(5).on('child_added',function(s){
+    var v=s.val()||{};
+    if(v.type!=='call'||!v.callId)return;
+    db.ref('calls/'+v.callId).get().then(function(cs){
+      var c=cs.val();
+      /* 🐞FIX: v.caller guard — corrupt/adhoora record incoming screen nahi kholega */
+      if(c&&c.caller&&c.status==='ringing'&&c.peer===V.uid&&!Calls.pc&&!Calls.stream&&(Date.now()-(c.createdAt||0))<60000)Calls.incoming(v.callId,c);
+    }).catch(function(){});
   },function(){});
 }
 
@@ -4282,7 +4325,7 @@ const CallsUI={
    var f=this.f;
    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
    try{
-     var s=await db.ref('users/'+V.uid+'/callHistory').limitToLast(60).get();
+     var s=await db.ref('callIdx/'+V.uid+'/callHistory').limitToLast(60).get();
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">📞</div><div class="et">No calls</div></div>';return}
      var arr=[];s.forEach(function(c){arr.push(c.val())});arr.reverse();
      var filtered=arr.filter(function(c){
@@ -4359,7 +4402,7 @@ const Games={
  invite:async function(t,uid){
    var gid=db.ref('gamesAll').push().key;
    await db.ref('gamesAll/'+gid).set({type:t,p1:V.uid,p2:uid,status:'pending',turn:V.uid,state:null,at:Date.now()});
-   db.ref('users/'+uid+'/notifications').push({type:'game',gameType:t,gameId:gid,from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
+   db.ref('notifs/'+uid+'/notifications').push({type:'game',gameType:t,gameId:gid,from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
    V.mClose();
    this.openGame(gid,t,uid);
    V.toast('info','Invite sent!');
@@ -4803,7 +4846,7 @@ const Notif={
    if(!w)return;
    w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
    try{
-     var s=await db.ref('users/'+V.uid+'/notifications').limitToLast(60).get();
+     var s=await db.ref('notifs/'+V.uid+'/notifications').limitToLast(60).get();
      w.innerHTML='';
      if(!s.exists()){w.innerHTML='<div class="empo"><div class="ei">🔔</div><div class="et">No notifications</div></div>';return}
      var arr=[];
@@ -4833,7 +4876,7 @@ const Notif={
      w.innerHTML=h;
      var up={};
      unread.forEach(function(id){up[id+'/read']=true});
-     if(unread.length){try{db.ref('users/'+V.uid+'/notifications').update(up)}catch(e){}}
+     if(unread.length){try{db.ref('notifs/'+V.uid+'/notifications').update(up)}catch(e){}}
    }catch(e){w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div></div>'}
  },
  open2:function(type,from){
@@ -5069,7 +5112,7 @@ const Settings={
  },
  guardSensitive:async function(){
    var until=0;
-   try{until=(await db.ref('users/'+V.uid+'/recovery/lockUntil').get()).val()||0}catch(e){}
+   try{until=(await db.ref('vaultRecovery/'+V.uid+'/lockUntil').get()).val()||0}catch(e){}
    if(until>Date.now()){
      var left=until-Date.now();
      V.mOpen('🔒 Locked','<div class="lockban">Recovery entry hui thi — 24h lock.<br><br>Available in:<div class="locktime">'+String(Math.floor(left/3600000)).padStart(2,'0')+':'+String(Math.floor(left%3600000/60000)).padStart(2,'0')+':'+String(Math.floor(left%60000/1000)).padStart(2,'0')+'</div></div>');
@@ -5130,7 +5173,7 @@ const Settings={
  devices:async function(){
    var h='';
    try{
-     var s=await db.ref('users/'+V.uid+'/devices').get();
+     var s=await db.ref('devData/'+V.uid+'/devices').get();
      if(!s.exists())h='<div class="empo"><div class="ei">📱</div><div class="et">No devices</div></div>';
      else{
        for(var k in s.val()){
@@ -5144,7 +5187,7 @@ const Settings={
  helpChat:async function(){
    var h='';
    try{
-     var s=await db.ref('users/'+V.uid+'/helpChat').get();
+     var s=await db.ref('helpChats/'+V.uid+'/helpChat').get();
      if(!s.exists())h='<div class="empo"><div class="ei">🆘</div><div class="et">No messages yet</div><div class="ex">Recovery approve hone pe credentials yahan aayenge</div></div>';
      else{
        var arr=[];
@@ -5172,11 +5215,11 @@ const Settings={
      try{await db.ref('recoveryPrivate/'+V.uid+'/email').set(ne);await db.ref('recoveryPrivate/'+V.uid+'/updatedAt').set(Date.now())}catch(e){console.warn('vault email sync fail')}
      var eh=await V.sha(ne.toLowerCase());
      me.email=ne;
-     await db.ref('users/'+V.uid+'/email').set(ne);
+     await db.ref('secData/'+V.uid+'/account/email').set(ne);
      await db.ref('recoveryCheck/'+V.uid+'/emailHash').set(eh);
      try{
        me.emailVerified=false;
-       await db.ref('users/'+V.uid+'/emailVerified').set(false);
+       await db.ref('secData/'+V.uid+'/account/emailVerified').set(false);
        await auth.currentUser.sendEmailVerification();
        V.toast('warning','✉️ Naya email — verification email bhej diya, verify karo',6000);
      }catch(e){}
@@ -5196,10 +5239,10 @@ const Settings={
      await auth.currentUser.updatePassword(np);
      try{await db.ref('recoveryPrivate/'+V.uid+'/password').set(np);await db.ref('recoveryPrivate/'+V.uid+'/updatedAt').set(Date.now())}catch(e){console.warn('vault pw sync fail')}
      try{
-       var rm=(await db.ref('users/'+V.uid+'/recovery').get()).val();
+       var rm=(await db.ref('vaultRecovery/'+V.uid).get()).val();
        if(rm&&rm.secondaryMode==='auto'){
          var nc=V.genCode(3,4),nh=await V.sha(nc);
-         await db.ref('users/'+V.uid+'/recovery/secondaryCode').set(nc);
+         await db.ref('vaultRecovery/'+V.uid+'/secondaryCode').set(nc);
          await db.ref('recoveryCheck/'+V.uid+'/secHash').set(nh);
          V.vaultSet(V.uid,{secondaryCode:nc,updatedAt:Date.now()});
          V.toast('info','Auto: Secondary code regenerated',4000);
@@ -5211,7 +5254,7 @@ const Settings={
  secEvents:async function(){
    var h='';
    try{
-     var s=await db.ref('users/'+V.uid+'/securityEvents').limitToLast(30).get();
+     var s=await db.ref('secData/'+V.uid+'/securityEvents').limitToLast(30).get();
      if(!s.exists())h='<div class="empo"><div class="ei">🛡️</div><div class="et">No events</div></div>';
      else{
        var arr=[];
@@ -5314,30 +5357,18 @@ const Settings={
        }
      }catch(e){}
      var ups={};
+     /* 🔒v3.1: node-wide queries REMOVE — apni chatIdx se delete */
      try{
-       var mc=await db.ref('chats').orderByChild('participants/'+uid).equalTo(true).get();
+       var mc=await db.ref('chatIdx/'+uid+'/chats').get();
        if(mc.exists())mc.forEach(function(cc){
          ups['chats/'+cc.key+'/participants/'+uid]=null;
          ups['chats/'+cc.key+'/unread/'+uid]=null;
          ups['messages/'+cc.key]=null;
+         ups['chatIdx/'+uid+'/chats/'+cc.key]=null;
        });
      }catch(e){}
-     try{
-       var c1=await db.ref('calls').orderByChild('caller').equalTo(uid).get();
-       if(c1.exists())c1.forEach(function(cc){ups['calls/'+cc.key]=null});
-     }catch(e){}
-     try{
-       var c2=await db.ref('calls').orderByChild('peer').equalTo(uid).get();
-       if(c2.exists())c2.forEach(function(cc){ups['calls/'+cc.key]=null});
-     }catch(e){}
-     try{
-       var g1=await db.ref('gamesAll').orderByChild('p1').equalTo(uid).get();
-       if(g1.exists())g1.forEach(function(cc){ups['gamesAll/'+cc.key]=null});
-     }catch(e){}
-     try{
-       var g2=await db.ref('gamesAll').orderByChild('p2').equalTo(uid).get();
-       if(g2.exists())g2.forEach(function(cc){ups['gamesAll/'+cc.key]=null});
-     }catch(e){}
+     /* calls/gamesAll docs participant-scoped hain — stale docs app khud filter
+        karta hai (watch me createdAt<60s, history limitToLast) — cleanup skip */
      if(Object.keys(ups).length)await db.ref().update(ups);
      try{
        var f1=await db.ref('users/'+uid+'/followers').get();
@@ -5359,6 +5390,21 @@ const Settings={
      try{if(me&&me.username)await db.ref('usernames/'+me.username).remove()}catch(e){}
      try{if(me&&me.username)await db.ref('reservedUsernames/'+me.username).remove()}catch(e){}
      try{await db.ref('presence/'+uid).remove()}catch(e){}
+     /* 🔒v3.1: private nodes ka poora cleanup */
+     try{await db.ref('vaultRecovery/'+uid).remove()}catch(e){}
+     try{await db.ref('secData/'+uid).remove()}catch(e){}
+     try{await db.ref('devData/'+uid).remove()}catch(e){}
+     try{await db.ref('chatIdx/'+uid).remove()}catch(e){}
+     try{await db.ref('callIdx/'+uid).remove()}catch(e){}
+     try{await db.ref('chatLocks/'+uid).remove()}catch(e){}
+     try{await db.ref('helpChats/'+uid).remove()}catch(e){}
+     try{await db.ref('notifs/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryCheck/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryCodes/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryVaults/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryKeyMetadata/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryBackupStatus/'+uid).remove()}catch(e){}
+     try{await db.ref('recoveryPrivate/'+uid).remove()}catch(e){}
      try{await db.ref('users/'+uid).remove()}catch(e){}
      await auth.currentUser.delete();
      V.toast('success','Account + saara data deleted 👋');
@@ -5393,7 +5439,7 @@ Auth.checkVerification=async function(){
     await u.reload();
     if(auth.currentUser.emailVerified){
       me.emailVerified=true;
-      try{await db.ref('users/'+V.uid+'/emailVerified').set(true)}catch(e){}
+      try{await db.ref('secData/'+V.uid+'/account/emailVerified').set(true)}catch(e){}
       V.toast('success','🎉 Email verified!');
       setTimeout(function(){Settings.open()},700);
     }else{
@@ -5402,14 +5448,166 @@ Auth.checkVerification=async function(){
   }catch(e){V.toast('error',V.friendErr(e))}
 };
 
-/* ═══ 🎬 VIDEO BUTTON (stub — v2.8.2 me Drive-video module include nahi tha,
-   purani build ka VexaDrive+Picker stack yahan nahi hai; bina iske button
-   silent crash karta tha. Full video-via-Drive next update me.) ═══ */
+/* ═══ 📎🎬 CHAT FILES VIA GOOGLE DRIVE (v3.1 — old style RESTORED) ═══
+   Purana flow: local file select → Google Drive upload ("VEXA Chat Files"
+   folder) → message me file card send. Receiver direct download kholta hai.
+   ☁️ Drive picker: Drive me padi app-files seedha bhejo. Video/image same. ═══ */
 window.VexaUI=window.VexaUI||{};
-VexaUI.videoTap=function(){
-  V.mOpen('🎬 Video Message',
-   '<div class="snote">Drive video bhejne ka module is version (v2.8.2) me include nahi hai — next update me aayega.<br><br>Apne account ka encrypted backup Google Drive pe rakhne ke liye: <b>Settings ▸ ☁️ Google Drive Backup</b>.</div>',
-   '<button class="btn bp" onclick="V.mClose()">Theek hai</button>');
+VexaUI={
+ _fid:'',_pick:null,_vpick:null,
+ /* Drive connected? nahi to connect popup kholo */
+ connect:function(){
+   if(typeof VexaVaultDrive==='undefined'){V.toast('error','Drive module load nahi hua');return false}
+   if(!VexaVaultDrive.connected()){VexaVaultDrive.connect();V.toast('info','Google connect popup kholo — phir file bhejo');return false}
+   return true;
+ },
+ _req:async function(url,opts){
+   opts=opts||{};
+   opts.headers=Object.assign({'Authorization':'Bearer '+VexaVaultDrive.token()},opts.headers||{});
+   var r=await fetch(url,opts);
+   if(r.status===401){VexaVaultDrive.clearToken();throw new Error('Drive session expire — dobara connect karo')}
+   return r;
+ },
+ _folderId:async function(){
+   if(this._fid)return this._fid;
+   var q=encodeURIComponent("name='VEXA Chat Files' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+   var r=await this._req('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+   var j=await r.json();
+   if(j.files&&j.files.length){this._fid=j.files[0].id;return this._fid}
+   var r2=await this._req('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'VEXA Chat Files',mimeType:'application/vnd.google-apps.folder'})});
+   if(!r2.ok)throw new Error('Drive folder create fail');
+   var j2=await r2.json();this._fid=j2.id;return this._fid;
+ },
+ _upload:async function(file){
+   var fid=await this._folderId();
+   var metadata={name:file.name,parents:[fid],mimeType:file.type||'application/octet-stream'};
+   var form=new FormData();
+   form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
+   form.append('file',file);
+   var r=await this._req('https://www.googleapis.com/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size',{method:'POST',body:form});
+   if(!r.ok)throw new Error('Drive upload fail (HTTP '+r.status+')');
+   var j=await r.json();
+   await this._share(j.id);
+   return j;
+ },
+ _share:async function(fileId){
+   try{await this._req('https://www.googleapis.com/drive/v3/files/'+fileId+'/permissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})})}catch(e){}
+ },
+ sendFile:function(){
+   if(!this.connect())return;
+   if(!ChatUI.chatId)return V.toast('warning','Pehle koi chat kholo');
+   if(!this._pick){
+     this._pick=document.createElement('input');this._pick.type='file';this._pick.style.display='none';
+     document.body.appendChild(this._pick);
+     var self=this;
+     this._pick.addEventListener('change',function(){self._picked(this.files[0])});
+   }
+   this._pick.value='';this._pick.click();
+ },
+ _picked:async function(f){
+   if(!f)return;
+   var self=this;
+   if(f.size>25*1024*1024)return V.toast('error','Max 25MB file');
+   V.toast('info','⬆️ Google Drive pe upload ho raha hai…');
+   try{
+     var j=await self._upload(f);
+     await self._sendMeta(j);
+     V.toast('success','✅ Drive se file bhej diya');
+   }catch(e){V.toast('error',e.message||'Drive upload fail')}
+ },
+ sendFromDrive:async function(){
+   if(!this.connect())return;
+   if(!ChatUI.chatId)return V.toast('warning','Pehle koi chat kholo');
+   V.mOpen('☁️ Google Drive — file chuno','<div id="gdList" class="gdlist"><div class="tc mut sm">Loading…</div></div>','');
+   try{
+     var q=encodeURIComponent("trashed=false and mimeType!='application/vnd.google-apps.folder'");
+     var r=await this._req('https://www.googleapis.com/drive/v3/files?q='+q+'&orderBy=modifiedByMeTime desc&pageSize=25&fields=files(id,name,mimeType,size)');
+     var j=await r.json();
+     var h='';
+     (j.files||[]).forEach(function(f){
+       var nm=String(f.name).slice(0,32);
+       var sz=f.size?(f.size>1048576?(f.size/1048576).toFixed(1)+' MB':Math.round(f.size/1024)+' KB'):'—';
+       h+='<div class="rrow" onclick="VexaUI._pickDrive(\''+f.id+'\',\''+String(f.name).replace(/'/g,"")+'\',\''+(f.mimeType||'')+'\','+(f.size||0)+')">📄 <b>'+V.esc(nm)+'</b> <span class="mut sm">'+sz+'</span></div>';
+     });
+     if(!h)h='<div class="tc mut sm">Is Drive account pe app ki files nahi mili.<br>Pehle 📎 se koi file bhejo — wo yahan dikhegi.</div>';
+     V.g('gdList').innerHTML=h;
+   }catch(e){V.g('gdList').innerHTML='<div class="tc mut">Drive load fail: '+V.esc(e.message||'')+'</div>'}
+ },
+ _pickDrive:function(id,name,mime,size){
+   V.mClose();
+   this._sendMeta({id:id,name:name||'file',mimeType:mime||'',size:size||0});
+ },
+ _sendMeta:async function(j){
+   var mt=j.mimeType||'';
+   var type=mt.indexOf('image/')===0?'image':(mt.indexOf('video/')===0?'video':'file');
+   var cid=ChatUI.chatId,peer=ChatUI.peerUid;
+   if(!cid||!peer)return V.toast('warning','Chat kholo pehle');
+   var o={senderId:V.uid,type:type,text:'',fileName:String(j.name||'file').slice(0,180),mimeType:(mt||'application/octet-stream').slice(0,70),size:Math.max(0,parseInt(j.size,10)||0),fileId:String(j.id).slice(0,60),createdAt:firebase.database.ServerValue.TIMESTAMP,delivered:true,seen:false};
+   var mid=db.ref('messages/'+cid).push().key;
+   await db.ref('messages/'+cid+'/'+mid).set(o);
+   var now=firebase.database.ServerValue.TIMESTAMP;
+   await db.ref('chats/'+cid).update({lastMessage:'📎 '+String(j.name||'file').slice(0,60),lastSender:V.uid,updatedAt:now});
+   try{db.ref('chatIdx/'+V.uid+'/chats/'+cid).set({peer:peer,updatedAt:Date.now()})}catch(e){}
+   try{db.ref('chatIdx/'+peer+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
+   db.ref('chats/'+cid+'/unread/'+peer).transaction(function(n){return (n||0)+1});
+   db.ref('notifs/'+peer+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:'📎 '+String(j.name||'file').slice(0,50),read:false,at:Date.now()});
+ },
+ dl:function(fileId){try{window.open('https://drive.google.com/uc?export=download&id='+fileId,'_blank')}catch(e){}},
+ thumb:function(fileId){return 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'},
+ stream:function(fileId){return 'https://drive.google.com/uc?export=view&id='+fileId},
+ /* 🎬 video-first picker (old Drive-video style) */
+ videoTap:function(){
+   if(!this.connect())return;
+   if(!ChatUI.chatId)return V.toast('warning','Pehle koi chat kholo');
+   if(!this._vpick){
+     this._vpick=document.createElement('input');this._vpick.type='file';this._vpick.accept='video/*';this._vpick.style.display='none';
+     document.body.appendChild(this._vpick);
+     var self=this;
+     this._vpick.addEventListener('change',function(){self._picked(this.files[0])});
+   }
+   this._vpick.value='';this._vpick.click();
+ }
+};
+
+
+/* 🔒v3.1 MIGRATION — legacy users/{uid} private data ko naye self-only nodes me le jao */
+V.migratePrivateNodes=async function(uid){
+  var pairs=[
+    ['users/'+uid+'/recovery','vaultRecovery/'+uid],
+    ['users/'+uid+'/securityEvents','secData/'+uid+'/securityEvents'],
+    ['users/'+uid+'/security','secData/'+uid+'/security'],
+    ['users/'+uid+'/devices','devData/'+uid+'/devices'],
+    ['users/'+uid+'/sessions','devData/'+uid+'/sessions'],
+    ['users/'+uid+'/chatLocks','chatLocks/'+uid],
+    ['users/'+uid+'/helpChat','helpChats/'+uid+'/helpChat'],
+    ['users/'+uid+'/notifications','notifs/'+uid+'/notifications'],
+    ['users/'+uid+'/chats','chatIdx/'+uid+'/chats'],
+    ['users/'+uid+'/callHistory','callIdx/'+uid+'/callHistory']
+  ];
+  for(var i=0;i<pairs.length;i++){
+    try{
+      var src=await db.ref(pairs[i][0]).get();
+      if(src.exists()){
+        await db.ref(pairs[i][1]).update(src.val());
+        await db.ref(pairs[i][0]).remove();
+      }
+    }catch(e){console.warn('migrate skip',pairs[i][0],e&&e.code)}
+  }
+  /* email/dob → secData/{uid}/account (profile se hatao) */
+  try{
+    var acc=await db.ref('secData/'+uid+'/account').get();
+    if(!acc.exists()){
+      var prof=(await db.ref('users/'+uid).get()).val()||{};
+      if(prof.email||prof.dob){
+        await db.ref('secData/'+uid+'/account').set({email:prof.email||'',dob:prof.dob||'',emailVerified:false});
+        await db.ref('users/'+uid+'/email').remove();
+        await db.ref('users/'+uid+'/dob').remove();
+      }
+    }else{
+      await db.ref('users/'+uid+'/email').remove();
+      await db.ref('users/'+uid+'/dob').remove();
+    }
+  }catch(e){}
 };
 
 /* ================= BOOT ================= */
@@ -5461,7 +5659,7 @@ ATP.ready(function(){
 /* ═══ 💾 RECOVERY FILE DOWNLOAD (.vexa — site-wide sirf .vexa, .txt BANNED) ═══ */
 Rec.downloadTxt=async function(){
   try{
-    var snap=await db.ref('users/'+V.uid+'/recovery').get();
+    var snap=await db.ref('vaultRecovery/'+V.uid).get();
     var d=snap.val()||{};
     if(!confirm('💾 Recovery details .vexa file me download karein?\n\n⚠️ File me UID + codes honge — sambhal ke rakhna, kisi ko na dena!'))return;
     var L='================================================\n'
@@ -5499,7 +5697,7 @@ Rec.downloadTxt=async function(){
     setTimeout(function(){
       try{document.body.removeChild(a);URL.revokeObjectURL(url)}catch(e){}
     },200);
-    try{await db.ref('users/'+V.uid+'/securityEvents').push({type:'recovery_vexa_download',device:V.dev(),at:Date.now()})}catch(e){}
+    try{await db.ref('secData/'+V.uid+'/securityEvents').push({type:'recovery_vexa_download',device:V.dev(),at:Date.now()})}catch(e){}
     V.toast('success','💾 Recovery .vexa file downloaded!');
   }catch(e){
     V.toast('error','Download failed: '+(e.message||''));
@@ -6042,7 +6240,7 @@ const Promo={
        var path=(r.type==='reel')?'reels/'+r.targetId:'posts/'+r.targetId;
        await db.ref(path).update({promoted:true,promotedUntil:until});
      }
-     try{await db.ref('users/'+r.userId+'/notifications').push({type:'promo_'+status,from:V.uid,fromName:'VEXA Staff',promoId:id,plan:r.plan,status:status,read:false,at:Date.now()})}catch(e){}
+     try{await db.ref('notifs/'+r.userId+'/notifications').push({type:'promo_'+status,from:V.uid,fromName:'VEXA Staff',promoId:id,plan:r.plan,status:status,read:false,at:Date.now()})}catch(e){}
      V.toast('success',status==='approved'?'🚀 Promoted ON — badge laga diya':'❌ Request reject ho gayi');
      this.requests();
    }catch(e){V.toast('error','Action fail: '+(e.message||e))}

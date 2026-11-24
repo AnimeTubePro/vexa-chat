@@ -17,6 +17,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- ⚡ADS-REMOVED (v2.8.2-R5): AdSense hata diya — ab Paid Promotion (in-app) hai -->
 <link rel="stylesheet" href="style.css">
+<!-- ═══ v3.1 REDESIGN LAYER — animations + UI upgrade (style.css ke baad load) ═══ -->
+<link rel="stylesheet" href="redesign.css">
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault styles (vv-* classes — no collision) ═══ -->
 <link rel="stylesheet" href="vault.css">
 <script defer src="script.js"></script>
@@ -101,7 +103,9 @@ function VXtemp(){
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
 <div id="splash" role="status" aria-busy="true">
+  <div class="splash-orbs" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
   <div class="loader-logo" id="splashLogo">
+    <div class="logo-ring" aria-hidden="true"></div>
     <svg class="atptri-big" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 2 30 29H2Z" fill="url(#lgTop)"/><path d="M16 12l6.5 13h-13Z" fill="#04010f"/></svg>
   </div>
   <div class="loader-title agrad">AnimeTubePro</div>
@@ -409,6 +413,8 @@ function VXtemp(){
   <div class="emoP" id="emoP"></div>
   <div class="cmsgs" id="cmsgs"></div>
   <div class="cinp">
+    <button type="button" class="bico" onclick="VexaUI.sendFile()" aria-label="Attach file" title="File bhejo — Drive upload (📎)">📎</button>
+    <button type="button" class="bico" onclick="VexaUI.sendFromDrive()" aria-label="Send from Google Drive" title="Drive se file bhejo (☁️)">☁️</button>
     <button type="button" class="bico" onclick="ChatUI.emoji()" aria-label="Emoji">😊</button>
     <button type="button" class="bico" onclick="ChatUI.gif()" aria-label="Stickers">GIF</button>
     <button type="button" class="bico vexa-video-btn" onclick="VexaUI.videoTap()" aria-label="Video message" title="Drive video bhejo">🎬</button>
@@ -428,7 +434,6 @@ function VXtemp(){
   <div class="ssPrev" id="ssPrev"><video id="ssVid" autoplay playsinline muted></video><div class="ssx" onclick="Calls.stopScreen()" role="button" tabindex="0" aria-label="Stop screen share">✕</div></div>
   <div class="ctop"><div class="clbl" id="cLbl"></div><div class="cavw"><div class="ava xl" id="cAva"></div><div class="cnm" id="cName">—</div><div class="cst" id="cSt">Connecting…</div><div class="ctmr hidden" id="cTmr">00:00</div></div></div>
   <div class="cctrl" id="cCtrl"></div>
-  <button type="button" class="ccb" id="ssBtn" onclick="Calls.shareScreen()" style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);z-index:7;display:none" title="Share Screen" aria-label="Share screen">🖥️</button>
 </div></div>
 
 <div class="mov" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" id="mCloseX" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
