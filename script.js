@@ -28,7 +28,7 @@ const ATP_LINKS=[
 
 /* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
- CURRENT:'2.0.1',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
+ CURRENT:'4.0.0',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
  get:function(){return this.CURRENT},
  cmp:function(a,b){
   var pa=String(a||'').split('.').map(function(x){return parseInt(x,10)||0});
@@ -1066,6 +1066,22 @@ const V={
  },
  email:function(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)},
  uname:function(u){return /^[a-zA-Z0-9_]{4,20}$/.test(u)},
+ /* 🔒v4 PRIVACY: cross-user reads SIRF public fields — pura node kisi aur ka nahi padha jayega.
+    (owner/admin/mod panels ko rules me users/.read full milta hai — wo alag hai) */
+ pubUser:async function(uid){
+   if(!uid)return null;
+   try{
+     if(uid===V.uid){
+       var so=await db.ref('users/'+uid).get();
+       return so.exists()?so.val():null;
+     }
+     var paths=['username','displayName','profilePhoto','bio','vip','verified','role','banned','createdAt','followers','following','posts','postCount','privacy','publicUserId','profileDesign'];
+     var vals=await Promise.all(paths.map(function(p){return db.ref('users/'+uid+'/'+p).get().catch(function(){return null})}));
+     var o={},any=false;
+     for(var i=0;i<paths.length;i++){if(vals[i]&&vals[i].exists()){o[paths[i]]=vals[i].val();any=true}}
+     return any?o:null;
+   }catch(e){return null}
+ },
  age:function(str){
    try{
      var p=str.split('/');var d=+p[0],m=+p[1],y=+p[2];
@@ -1731,17 +1747,16 @@ const Privacy={
      var s=await db.ref('users/'+V.uid+'/restrictions').get();
      if(!s.exists()){V.mOpen('🚧 Restricted Users','<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>');return}
      var keys=Object.keys(s.val());
-     var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+     var us=await Promise.all(keys.map(function(k){return V.pubUser(k)}));
      var h=keys.map(function(k,i){
-       var u=(us[i]&&us[i].val())||{displayName:k};
+       var u=us[i]||{displayName:k};
        return '<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bg bsm" onclick="Privacy.editRestr(\''+k+'\')">Edit</button></div>';
      }).join('');
      V.mOpen('🚧 Restricted Users',h);
    }catch(e){V.mOpen('🚧 Restricted Users','<div class="empo"><div class="ei">🤝</div><div class="et">No restricted users</div></div>')}
  },
  editRestr:async function(uid){
-   var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
-   var u=(uu&&uu.val())||{displayName:uid};
+   var u=(await V.pubUser(uid))||{displayName:uid};
    var perms=['messages','voiceCall','videoCall','follow','localScan','postInteraction','comments','mentions','notifications'];
    /* ⚡PERF: parallel */
    var rs=await Promise.all(perms.map(function(p){
@@ -1764,7 +1779,7 @@ const Privacy={
      var s=await db.ref('users/'+V.uid+'/blocks').get();
      if(!s.exists()){V.mOpen('🚷 Blocked Users','<div class="empo"><div class="ei">✅</div><div class="et">No blocked users</div></div>');return}
      var keys=Object.keys(s.val());
-     var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+     var us=await Promise.all(keys.map(function(k){return V.pubUser(k)}));
      var h=keys.map(function(k,i){
        var u=(us[i]&&us[i].val())||{displayName:k};
        return '<div class="urow">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div></div><button class="btn bds2 bsm" onclick="Privacy.unblock(\''+k+'\')">Unblock</button></div>';
@@ -1885,7 +1900,7 @@ const Auth={
          createdAt:firebase.database.ServerValue.TIMESTAMP,
          privacy:{onlineVis:'everyone',lastSeenVis:'everyone',msgReq:'everyone',voiceCalls:'everyone',videoCalls:'everyone',readReceipts:true,typingInd:true,profileLock:false},
          settings:{theme:'t0_0',font:'Inter',profileDesign:'modern'},
-         followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},archived:{},muted:{},followRequests:{},posts:{},postCount:0,
+         followers:{},following:{},blocks:{},restrictions:{},posts:{},postCount:0,
          usernameChangedAt:0
        });
      }catch(pe2){
@@ -2291,7 +2306,7 @@ const Follow={
    var priv=false;
    try{var p=await db.ref('users/'+uid+'/privacy/profileLock').get();priv=p.exists()&&p.val()}catch(e){}
    if(priv){
-     try{await db.ref('users/'+uid+'/followRequests/'+V.uid).set(true)}catch(e){}
+     try{await db.ref('followReq/'+uid+'/'+V.uid).set(true)}catch(e){}
      db.ref('notifs/'+uid+'/notifications').push({type:'follow_request',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
      V.toast('success','Request sent');
    }else{
@@ -2306,20 +2321,20 @@ const Follow={
  accept:async function(uid,el){
    await db.ref('users/'+V.uid+'/followers/'+uid).set(true);
    await db.ref('users/'+uid+'/following/'+V.uid).set(true);
-   try{await db.ref('users/'+V.uid+'/followRequests/'+uid).remove()}catch(e){}
+   try{await db.ref('followReq/'+V.uid+'/'+uid).remove()}catch(e){}
    db.ref('notifs/'+uid+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()});
    if(el&&el.closest('.nrow, .urow'))el.closest('.nrow, .urow').remove();
    V.toast('success','Accepted');
  },
  reject:async function(uid,el){
-   try{await db.ref('users/'+V.uid+'/followRequests/'+uid).remove()}catch(e){}
+   try{await db.ref('followReq/'+V.uid+'/'+uid).remove()}catch(e){}
    if(el&&el.closest('.nrow, .urow'))el.closest('.nrow, .urow').remove();
  },
  acceptAll:async function(){
    var b=document.getElementById('acceptAllB');
    if(b){b.disabled=true;b.textContent='Accepting…'}
    try{
-     var s=await db.ref('users/'+V.uid+'/followRequests').get();
+     var s=await db.ref('followReq/'+V.uid).get();
      if(!s.exists()){V.mClose();return}
      var ups=[];
      s.forEach(function(c){
@@ -2327,7 +2342,7 @@ const Follow={
        ups.push(
          db.ref('users/'+V.uid+'/followers/'+k).set(true),
          db.ref('users/'+k+'/following/'+V.uid).set(true),
-         db.ref('users/'+V.uid+'/followRequests/'+k).remove(),
+         db.ref('followReq/'+V.uid+'/'+k).remove(),
          db.ref('notifs/'+k+'/notifications').push({type:'follow_accepted',from:V.uid,fromName:me.displayName,read:false,at:Date.now()})
        );
      });
@@ -2349,9 +2364,9 @@ const Follow={
      if(!s||!s.exists())h='<div class="empo"><div class="ei">📭</div><div class="et">Empty</div></div>';
      else{
        var keys=Object.keys(s.val());
-       var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+       var us=await Promise.all(keys.map(function(k){return V.pubUser(k)}));
        h=keys.map(function(k,i){
-         var u=(us[i]&&us[i].val())||{displayName:'User',username:k};
+         var u=us[i]||{displayName:'User',username:k};
          return '<div class="urow" onclick="V.openProfile(\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+(u.username||'')+'</div></div></div>';
        }).join('');
      }
@@ -2360,7 +2375,7 @@ const Follow={
  },
  requests:async function(){
    try{
-     var s=await db.ref('users/'+V.uid+'/followRequests').get();
+     var s=await db.ref('followReq/'+V.uid).get();
      var h='';
      if(!s.exists()){h='<div class="empo"><div class="ei">📭</div><div class="et">No requests</div></div>';}
      else{
@@ -2369,8 +2384,8 @@ const Follow={
        s.forEach(function(c){
          var k=c.key;
          h+='<div class="urow" id="fr-'+k+'"><div class="uinf"><div class="unm">Loading…</div></div><div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="Follow.accept(\''+k+'\',this)">✓</button><button class="btn bds2 bsm" onclick="Follow.reject(\''+k+'\',this)">✕</button></div></div>';
-         db.ref('users/'+k).get().then(function(us){
-           var u=(us&&us.val())||{displayName:'User',username:k};
+         V.pubUser(k).then(function(us){
+           var u=us||{displayName:'User',username:k};
            var row=document.getElementById('fr-'+k);
            if(row)row.innerHTML=V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName||'User')+'</div><div class="uun">@'+(u.username||'')+'</div></div><div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="Follow.accept(\''+k+'\',this)">✓</button><button class="btn bds2 bsm" onclick="Follow.reject(\''+k+'\',this)">✕</button></div>';
          });
@@ -2419,18 +2434,22 @@ const Profile={
    if(!c)return;
    c.innerHTML='<div class="pgc"><div class="skel" style="height:300px"></div></div>';
    try{
-     var s=await db.ref('users/'+uid).get();
+     /* 🔒v4: OWN = pura node (self read allowed); OTHER = sirf PUBLIC fields */
+     var own=(uid===V.uid);
+     var u=await V.pubUser(uid);
      if(rid!==Profile._rr)return;
-     if(!s.exists()){
-       try{
-         await db.ref('users/'+uid).set({
-           username:'user'+uid.slice(0,6),displayName:(auth.currentUser&&auth.currentUser.email?auth.currentUser.email.split('@')[0]:'User'),email:auth.currentUser?auth.currentUser.email:'',dob:'',profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,appVer:Ver.get(),createdAt:Date.now(),recovery:{lockUntil:0},settings:{profileDesign:'modern',theme:'t0_0',font:'Inter'},followers:{},following:{},blocks:{},restrictions:{},saved:{},social:{},notifications:{},securityEvents:{},sessions:{},callHistory:{},chatLocks:{},archived:{},muted:{},followRequests:{},devices:{},posts:{},postCount:0,usernameChangedAt:0
-         });
-         s=await db.ref('users/'+uid).get();
-       }catch(pe){console.error('auto-profile fail:',pe)}
-       if(!s.exists()){c.innerHTML='<div class="empo"><div class="ei">❓</div><div class="et">User not found</div></div>';return}
+     if(!u){
+       if(own){
+         try{
+           await db.ref('users/'+uid).set({
+             username:'user'+uid.slice(0,6),displayName:(auth.currentUser&&auth.currentUser.email?auth.currentUser.email.split('@')[0]:'User'),profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,appVer:Ver.get(),createdAt:Date.now(),settings:{profileDesign:'modern',theme:'t0_0',font:'Inter'},followers:{},following:{},blocks:{},restrictions:{},posts:{},postCount:0,usernameChangedAt:0
+           });
+           var s2=await db.ref('users/'+uid).get();
+           u=s2.exists()?s2.val():null;
+         }catch(pe){console.error('auto-profile fail:',pe)}
+       }
+       if(!u){c.innerHTML='<div class="empo"><div class="ei">❓</div><div class="et">User not found</div></div>';return}
      }
-     var u=s.val(),own=(uid===V.uid);
      /* ⚡3 chhote reads parallel — buttons sahi dikhne ke liye */
      var pre=await Promise.all([
        own?Promise.resolve(null):db.ref('users/'+V.uid+'/following/'+uid).get().catch(function(){return null}),
@@ -2705,7 +2724,7 @@ const Profile={
        var _sv=this.socNorm(_pk,_el.value);
        if(_sv)soc[_pk]={url:_sv,visibility:'everyone'};
      }
-     try{await db.ref('users/'+V.uid+'/social').set(soc);me.social=soc}catch(se){console.warn('social save:',se)}
+     try{await db.ref('socialIdx/'+V.uid).set(soc);me.social=soc}catch(se){console.warn('social save:',se)}
      me.displayName=name;me.bio=bio;
      V.mClose();V.toast('success','Profile updated ✅');
      var tt=V.g('topTitle');if(tt)tt.textContent=name;
@@ -2776,8 +2795,7 @@ const Posts={
    if(img.dataset.tried==='1')img.dataset.tried='2';
  },
  card:async function(id,p){
-   var au=(await db.ref('users/'+p.userId).get().catch(function(){return null}));
-   var a=(au&&au.val())||{displayName:'Unknown',username:'?'};
+   var a=(await V.pubUser(p.userId))||{displayName:'Unknown',username:'?'};
    if(!a.profilePhoto){
      var auto=await Promise.race([V.autoAvatar(p.userId),new Promise(function(res){setTimeout(function(){res(null)},4000)})]);
      if(auto){a.profilePhoto=auto}
@@ -2818,8 +2836,8 @@ const Posts={
    list.innerHTML=h;
    s.forEach(function(c){
      var uid=c.key;
-     db.ref('users/'+uid).get().then(function(us){
-       var u=(us&&us.val())||{displayName:'User',username:'?'};
+     V.pubUser(uid).then(function(us){
+       var u=us||{displayName:'User',username:'?'};
        var row=document.createElement('div');
        row.className='urow';
        row.innerHTML=V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+(u.username||'')+'</div></div>';
@@ -2846,7 +2864,7 @@ const Posts={
  },
  save:async function(id,el){
    try{
-     var r=db.ref('users/'+V.uid+'/saved/'+id);
+     var r=db.ref('savedIdx/'+V.uid+'/'+id);
      var ex=(await r.get()).exists();
      if(ex){await r.remove();V.toast('info','Removed')}
      else{await r.set(true);V.toast('success','Saved 🔖')}
@@ -2980,11 +2998,11 @@ const Posts={
      s.forEach(function(c){arr.push({cid:c.key,val:c.val()})});
      arr.sort(function(a,b){return (a.val.at||0)-(b.val.at||0)});
      /* ⚡PERF: users parallel — pehle loop me sequential await tha */
-     var us=await Promise.all(arr.map(function(x){return db.ref('users/'+x.val.uid).get().catch(function(){return null})}));
+     var us=await Promise.all(arr.map(function(x){return V.pubUser(x.val.uid)}));
      var h='';
      for(var i=0;i<arr.length;i++){
        var c=arr[i].val,cid=arr[i].cid;
-       var u=(us[i]&&us[i].val())||{displayName:c.name||'User'};
+       var u=us[i]||{displayName:c.name||'User'};
        var clk=c.likes&&c.likes[V.uid];
        h+='<div class="cmt">'+V.ava(u,'sm')+'<div style="flex:1;min-width:0"><div class="cmtb"><div class="cmtn" onclick="V.openProfile(\''+c.uid+'\')">'+V.nameB(u)+'</div><div>'+V.esc(c.text)+'</div></div><div class="cmta"><span class="clk'+(clk?' lk':'')+'" onclick="Posts.cLike(\''+id+'\',\''+cid+'\',this)">'+(clk?'❤️':'🤍')+' '+(c.likes?Object.keys(c.likes).length:'')+'</span>'+(c.uid===V.uid?'<span style="color:var(--dn)" onclick="Posts.cDel(\''+id+'\',\''+cid+'\')">Delete</span>':'<span onclick="Posts.sendRepC(\''+c.uid+'\',\'Reported\')">Report</span>')+'</div></div></div>';
      }
@@ -3431,8 +3449,7 @@ const Reels={
    var s=await db.ref('reels/'+rid).get().catch(function(){return null});
    if(!s||!s.exists())return V.toast('error','Reel nahi mila');
    var p=s.val();
-   var au=await db.ref('users/'+p.userId).get().catch(function(){return null});
-   var a=(au&&au.val())||{displayName:'User',username:'?'};
+   var a=(await V.pubUser(p.userId))||{displayName:'User',username:'?'};
    var liked=false;
    try{liked=(await db.ref('reels/'+rid+'/likes/'+V.uid).get()).exists()}catch(e){}
    var mine=p.userId===V.uid;
@@ -3542,8 +3559,7 @@ const ChatUI={
      var has=await db.ref('chatIdx/'+V.uid+'/chats/'+this.chatId).get();
      if(!has.exists())db.ref('chatIdx/'+V.uid+'/chats/'+this.chatId).set({peer:uid,updatedAt:Date.now()});
    }catch(e){}
-   var uu=(await db.ref('users/'+uid).get().catch(function(){return null}));
-   var u=(uu&&uu.val())||{};
+   var u=(await V.pubUser(uid))||{};
    /* ⚡avatar + lock PARALLEL — koi serial block nahi */
    var both=await Promise.all([
      db.ref('chatLocks/'+V.uid+'/'+this.chatId).get().catch(function(){return null}),
@@ -3866,9 +3882,9 @@ const ChatUI={
  archive:async function(){
    V.mClose();
    var ex=false;
-   try{ex=(await db.ref('users/'+V.uid+'/archived/'+this.chatId).get()).exists()}catch(e){}
-   if(ex)await db.ref('users/'+V.uid+'/archived/'+this.chatId).remove();
-   else await db.ref('users/'+V.uid+'/archived/'+this.chatId).set(true);
+   try{ex=(await db.ref('archIdx/'+V.uid+'/'+this.chatId).get()).exists()}catch(e){}
+   if(ex)await db.ref('archIdx/'+V.uid+'/'+this.chatId).remove();
+   else await db.ref('archIdx/'+V.uid+'/'+this.chatId).set(true);
    V.toast('success',ex?'Restored':'Archived');
  },
  mute:async function(){
@@ -3952,7 +3968,7 @@ const ChatUI={
      }
      arr.sort(function(a,b){return (b.val.updatedAt||0)-(a.val.updatedAt||0)});
      var pAll=await Promise.all([
-       db.ref('users/'+V.uid+'/archived').get().catch(function(){return null}),
+       db.ref('archIdx/'+V.uid).get().catch(function(){return null}),
        db.ref('chatLocks/'+V.uid).get().catch(function(){return null}),
        db.ref('users/'+V.uid+'/muted').get().catch(function(){return null})
      ]);
@@ -3982,13 +3998,13 @@ const ChatUI={
        return;
      }
      var us=await Promise.all(rows0.map(function(o){
-       return db.ref('users/'+o.other).get().catch(function(){return null});
+       return V.pubUser(o.other);
      }));
      /* 🧡TEMP: temp account ki list me sirf owner/admin rows rakho */
      if(typeof me!=='undefined'&&me&&me.tempRecovery){
        var keep=[];
        for(var tq=0;tq<rows0.length;tq++){
-         var tur=((us[tq]&&us[tq].val())||{}).role||'';
+         var tur=((us[tq]||{}).role||'');
          if(tur==='owner'||tur==='admin')keep.push(tq);
        }
        if(!keep.length){
@@ -4001,7 +4017,7 @@ const ChatUI={
      }
      var h='';
      for(var q=0;q<rows0.length;q++){
-       var o2=rows0[q],u2=(us[q]&&us[q].val())||{displayName:'User'};
+       var o2=rows0[q],u2=us[q]||{displayName:'User'};
        var cid2=o2.cid,c2=o2.c;
        var un2=(c2.unread&&c2.unread[V.uid])||0;
        h+='<div class="crow" onclick="ChatUI.openWith(\''+o2.other+'\')">'+V.ava(u2,'md')
@@ -4043,8 +4059,7 @@ const Calls={
    /* 🐞FIX: signaling error pe call UI hang na ho — full try/catch */
    try{
    this.callId=db.ref('calls').push().key;
-   var uu=(await db.ref('users/'+peerUid).get().catch(function(){return null}));
-   var u=(uu&&uu.val())||{};
+   var u=(await V.pubUser(peerUid))||{};
    if(!u.profilePhoto){var auto=await V.autoAvatar(peerUid);if(auto){u.profilePhoto=auto}}
    this.show(u,'Calling…');
    this.pc=new RTCPeerConnection(this.cfg);
@@ -4286,7 +4301,7 @@ const Calls={
    try{if(this.screenStream)this.screenStream.getTracks().forEach(function(t){t.stop()})}catch(e){}
    this.screenStream=null;
    var sp=V.g('ssPrev');if(sp)sp.classList.remove('show');
-   var ssb=V.g('ssBtn');if(ssb)ssb.style.display='none';
+   var ssb=V.g('ssB');if(ssb)ssb.classList.remove('on');
    try{if(this.stream)this.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
    this.stream=null;
    /* 🐞FIX: video elements reset — agli call me stale frame/toast nahi aayega */
@@ -4335,8 +4350,8 @@ const CallsUI={
        return true;
      });
      var rows=await Promise.all(filtered.map(function(c){
-       return db.ref('users/'+c.peer).get().catch(function(){return null}).then(function(uu){
-         var u=(uu&&uu.val())||{displayName:'Unknown'};
+       return V.pubUser(c.peer).then(function(uu){
+         var u=uu||{displayName:'Unknown'};
          var ic=(c.type==='video')?'🎥':'📞';
          /* 🐞FIX: purane records me type missing ho to voice call fallback */
          return '<div class="clrow'+(c.status==='missed'?' miss':'')+'" onclick="Calls.startWith(\''+c.peer+'\',\''+(c.type||'voice')+'\')">'+V.ava(u,'md')
@@ -4390,9 +4405,9 @@ const Games={
      else{
        /* ⚡PERF: parallel — pehle sequential loop tha */
        var keys=Object.keys(f.val());
-       var us=await Promise.all(keys.map(function(k){return db.ref('users/'+k).get().catch(function(){return null})}));
+       var us=await Promise.all(keys.map(function(k){return V.pubUser(k)}));
        h+=keys.map(function(k,i){
-         var u=(us[i]&&us[i].val())||{};
+         var u=us[i]||{};
          return '<div class="urow" onclick="Games.invite(\''+t+'\',\''+k+'\')">'+V.ava(u,'sm')+'<div class="uinf"><div class="unm">'+V.esc(u.displayName||'')+'</div></div><button class="btn bp bsm">Invite</button></div>';
        }).join('');
      }
@@ -4460,8 +4475,7 @@ const Games={
        if(gb0)gb0.innerHTML='<div class="garena tc"><p style="font-weight:800">🎮 Game invite!</p><button class="btn bp blg mt16" onclick="Games.acceptInvite()">✓ Accept</button><button class="btn bds2 blg mt8" onclick="Games.rejectInvite()">✕ Reject</button></div>';
        return;
      }
-     var puu=(await db.ref('users/'+self.peer).get().catch(function(){return null}));
-     var pu=(puu&&puu.val())||{displayName:'?'};
+     var pu=(await V.pubUser(self.peer))||{displayName:'?'};
      self.renderState(g,pu);
    });
    this.unsub=function(){r.off('value',cb)};
@@ -4683,13 +4697,13 @@ const Local={
   toggle:function(on){
     var self=this;
     if(on){
-      if(!navigator.geolocation){V.toast('error','Geolocation not supported');var t0=V.g('lsTgl');if(t0)t0.checked=false;return}
+      if(!navigator.geolocation){V.toast('error',window.isSecureContext?'Geolocation not supported — dusra browser try karo':'GPS ke liye app HTTPS par kholo (http:// par GPS block hota hai)',5000);var t0=V.g('lsTgl');if(t0)t0.checked=false;return}
       navigator.geolocation.getCurrentPosition(async function(pos){
         var rp=self.roundPos(pos.coords.latitude,pos.coords.longitude);
         var key=self.grid(pos.coords.latitude,pos.coords.longitude);
         try{
           var oldKey=null;
-          try{oldKey=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
+          try{oldKey=(await db.ref('localIdx/'+V.uid+'/grid').get()).val()}catch(e){}
           if(oldKey&&oldKey!==key){try{await db.ref('localPresence/'+oldKey+'/'+V.uid).remove()}catch(e){}}
           self._curKey=key;
           var lpRef=db.ref('localPresence/'+key+'/'+V.uid);
@@ -4700,23 +4714,23 @@ const Local={
           }catch(e1){
             try{await lpRef.set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()})}catch(e2){}
           }
-          await db.ref('users/'+V.uid+'/localGrid').set(key);
+          await db.ref('localIdx/'+V.uid+'/grid').set(key);
           V.toast('success','📍 Local Share ON ✅');
           self.load();
         }catch(e){console.error('local toggle:',e);V.toast('error','DB error — rules check karo',5000);var t1=V.g('lsTgl');if(t1)t1.checked=false}
       },function(err){
-        V.toast('error',err.code===1?'Location permission denied':'Location failed',4000);
+        V.toast('error',err.code===1?'Location permission denied — browser settings me allow karo':'GPS fail — page HTTPS par khula hona chahiye (GPS secure connection me hi chalta hai)',5000);
         var t2=V.g('lsTgl');if(t2)t2.checked=false;
       },{enableHighAccuracy:false,timeout:10000});
     }else this.off();
   },
   off:async function(){
     try{
-      var s=await db.ref('users/'+V.uid+'/localGrid').get();
+      var s=await db.ref('localIdx/'+V.uid+'/grid').get();
       var key=s.val()||Local._curKey;
       Local._curKey=null;
       if(key){try{await db.ref('localPresence/'+key+'/'+V.uid).remove()}catch(e){}}
-      try{await db.ref('users/'+V.uid+'/localGrid').remove()}catch(e){}
+      try{await db.ref('localIdx/'+V.uid+'/grid').remove()}catch(e){}
       V.toast('info','📍 Local Share OFF');
     }catch(e){}
     var t=V.g('lsTgl');if(t)t.checked=false;
@@ -4724,7 +4738,7 @@ const Local={
   },
   load:async function(){
     var key=null;
-    try{key=(await db.ref('users/'+V.uid+'/localGrid').get()).val()}catch(e){}
+    try{key=(await db.ref('localIdx/'+V.uid+'/grid').get()).val()}catch(e){}
     var tg=V.g('lsTgl');if(tg)tg.checked=!!key;
     var w=V.g('localL');if(!w)return;
     if(!key){
@@ -4779,10 +4793,10 @@ const Local={
           var trio=await Promise.all([
             db.ref('users/'+V.uid+'/blocks/'+v.uid).get().catch(function(){return null}),
             db.ref('users/'+V.uid+'/following/'+v.uid).get().catch(function(){return null}),
-            db.ref('users/'+v.uid).get().catch(function(){return null})
+            V.pubUser(v.uid)
           ]);
           if(trio[0]&&trio[0].exists())return null;
-          var u=(trio[2]&&trio[2].val())||{displayName:v.displayName,username:v.username,profilePhoto:v.photo};
+          var u=trio[2]||{displayName:v.displayName,username:v.username,profilePhoto:v.photo};
           return{u:u,uid:v.uid,at:v.at,m:m,lat:v.lat,lng:v.lng,fol:!!(trio[1]&&trio[1].exists())};
         }catch(e){return null}
       }))).filter(Boolean);
@@ -4799,7 +4813,9 @@ const Local={
       w.innerHTML=h;
     }catch(e){
       console.error('local load:',e);
-      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Load failed</div><div class="ex sm mut">'+V.esc(e.message||'')+'</div></div>';
+      var em=String(e&&e.message||'');
+      var hint=em.indexOf('permission')>-1?'Rules issue — dobara login karo ya app update karo':'Internet/HTTPS check karo — GPS ke liye secure connection chahiye';
+      w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Local scan load nahi hua</div><div class="ex sm mut">'+V.esc(hint)+'</div><div class="ex sm mut">'+V.esc(em)+'</div><div class="ex" style="margin-top:10px"><button class="btn bg bsm" onclick="Local.reload()">🔄 Retry</button></div></div>';
     }
   },
   /* 🔄 NAYA: Reload — GPS refresh + list reload + spin animation */
@@ -4823,7 +4839,7 @@ const Local={
           }catch(e1){
             try{await db.ref('localPresence/'+nk+'/'+V.uid).set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()})}catch(e2){}
           }
-          try{await db.ref('users/'+V.uid+'/localGrid').set(nk)}catch(e){}
+          try{await db.ref('localIdx/'+V.uid+'/grid').set(nk)}catch(e){}
         }else{
           /* same cell — sirf at + coords refresh */
           try{await db.ref('localPresence/'+nk+'/'+V.uid).update({at:Date.now(),lat:rp.lat,lng:rp.lng})}catch(e){}
@@ -4926,7 +4942,7 @@ const Search={
        if(s2.exists()){
          var entries=[];
          s2.forEach(function(c){entries.push({un:c.key,uid:c.val()})});
-         var us=await Promise.all(entries.map(function(e){return db.ref('users/'+e.uid).get().catch(function(){return null})}));
+         var us=await Promise.all(entries.map(function(e){return V.pubUser(e.uid)}));
          h+=entries.map(function(e,i){
            n2++;
            var u=(us[i]&&us[i].val())||{};
@@ -4991,6 +5007,15 @@ const Settings={
       +'<span class="sha">›</span></div>';
    }
    h+='</div>';
+   /* ⚡v4: QUICK ACTIONS — Logout aur Delete Account seedha Settings hub pe */
+   h+='<div class="shub" style="margin-top:14px">'
+    +'<div class="shc" role="button" tabindex="0" onclick="Auth.logout()"><span class="shi">🚪</span>'
+    +'<div class="shf"><div class="sht">Logout</div><div class="shs">'+V.esc((me&&me.username)?('@'+me.username+' — account safe rahega'):'Account se bahar aao')+'</div></div>'
+    +'<span class="sha" style="color:var(--wn)">⏏</span></div>'
+    +'<div class="shc" role="button" tabindex="0" onclick="Settings.deleteAcct()" style="border-color:rgba(255,77,109,.45)"><span class="shi">🗑️</span>'
+    +'<div class="shf"><div class="sht" style="color:#ff9db1">Delete Account</div><div class="shs">Saara data Firebase + Supabase se remove — Danger Zone</div></div>'
+    +'<span class="sha" style="color:var(--dn)">›</span></div>'
+    +'</div>';
    /* Drive mini status — hamesha dikhe (green/red) */
    var drv=false;try{drv=(typeof VexaVaultDrive!=='undefined')&&VexaVaultDrive.connected()}catch(e){}
    h+='<div class="drvmini '+(drv?'on':'off')+'" role="button" tabindex="0" onclick="Settings.page(\'bak\')">'
@@ -5379,7 +5404,7 @@ const Settings={
        if(f2.exists())f2.forEach(function(fc){db.ref('users/'+fc.key+'/followers/'+uid).remove()});
      }catch(e){}
      try{
-       var lg=await db.ref('users/'+uid+'/localGrid').get();
+       var lg=await db.ref('localIdx/'+uid+'/grid').get();
        var lkey=lg.val();
        if(lkey){try{await db.ref('localPresence/'+lkey+'/'+uid).remove()}catch(e){}}
      }catch(e){}
@@ -5703,7 +5728,12 @@ V.migratePrivateNodes=async function(uid){
     ['users/'+uid+'/helpChat','helpChats/'+uid+'/helpChat'],
     ['users/'+uid+'/notifications','notifs/'+uid+'/notifications'],
     ['users/'+uid+'/chats','chatIdx/'+uid+'/chats'],
-    ['users/'+uid+'/callHistory','callIdx/'+uid+'/callHistory']
+    ['users/'+uid+'/callHistory','callIdx/'+uid+'/callHistory'],
+    ['users/'+uid+'/saved','savedIdx/'+uid],
+    ['users/'+uid+'/social','socialIdx/'+uid],
+    ['users/'+uid+'/archived','archIdx/'+uid],
+    ['users/'+uid+'/followRequests','followReq/'+uid],
+    ['users/'+uid+'/localGrid','localIdx/'+uid+'/grid']
   ];
   for(var i=0;i<pairs.length;i++){
     try{

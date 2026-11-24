@@ -1,6 +1,6 @@
 {
   /* ═══════════════════════════════════════════════════════════════════
-     VEXA CHAT — Firebase Realtime Database Security Rules (v3.1 SECURE)
+     VEXA CHAT — Firebase Realtime Database Security Rules (v4.0 OWNER-PRIVACY)
      ═══════════════════════════════════════════════════════════════════
      DESIGN (owner-panel-first):
        • Sensitive user data RESTRUCTURED out of users/{uid}:
@@ -33,7 +33,7 @@
     "users": {
       ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
       "$uid": {
-        ".read": "auth != null",
+        ".read": "auth != null && (auth.uid === $uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
         ".write": "auth != null && auth.uid === $uid",
 
         /* PUBLIC profile — sab logged-in users (chat/feed ke liye zaroori) */
@@ -66,13 +66,9 @@
         "blocks":           { ".read": "auth != null", ".write": "auth != null && auth.uid === $uid" },
         "muted":            { ".read": "auth != null", ".write": "auth != null && auth.uid === $uid" },
 
-        /* PRIVATE — sirf khud */
-        "muted":            { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
-        "blocks":           { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
-        "restrictions":     { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
-        "saved":            { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
-        "archived":         { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
-        "followRequests":   { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null" },
+        /* PRIVATE — sirf khud (v4: saved/archived/followRequests users se BAHAR —
+           savedIdx/archIdx/followReq nodes me migrate ho gaye) */
+        "muted":            { ".read": "auth != null", ".write": "auth != null && auth.uid === $uid" },
         "social":           { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" },
         "callHistory":      { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null" },
         "chats":            { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null" },
@@ -121,6 +117,37 @@
       "$uid": {
         ".read":  "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    /* ── v4 PRIVATE NODES (users/{uid} se migrate) — self-only (+staff jahan zaroori) ── */
+    "savedIdx": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "archIdx": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "socialIdx": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "localIdx": {
+      "$uid": {
+        ".read":  "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'owner')",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "followReq": {
+      "$uid": {
+        ".read":  "auth != null && (auth.uid === $uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+        ".write": "auth != null"
       }
     },
     "helpChats": {

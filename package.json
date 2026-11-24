@@ -1,11 +1,10 @@
 {
-  "name": "vexa-backend",
-  "description": "VEXA Chat Cloud Functions — Secure Recovery Vault v1.0",
-  "main": "vexaBackend.js",
-  "engines": { "node": "18" },
-  "dependencies": {
-    "firebase-admin": "^11.10.1",
-    "firebase-functions": "^4.8.1"
+  "name": "vexa-chat-v4",
+  "version": "4.0.0",
+  "description": "AnimeTubePro Studio x VEXA v4 — rebuilt UI, owner-privacy, no-limit Drive files, calls + games",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8080"
   },
-  "private": true
+  "license": "UNLICENSED"
 }
