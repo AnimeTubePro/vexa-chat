@@ -3659,7 +3659,7 @@ const ChatUI={
     +(m.deleted?'<span class="mdel">🚫 deleted</span>'
       :(m.type==='image'&&m.fileId)?'<div class="mfile"><img class="mimg" src="'+VexaUI.thumb(m.fileId)+'" alt="photo" onclick="VexaUI.dl(\''+m.fileId+'\')"></div>'
       :(m.type==='video'&&m.fileId)?'<div class="mfile"><video class="mvid" src="'+VexaUI.stream(m.fileId)+'" controls preload="metadata"></video></div><div class="flbl">🎬 '+V.esc(m.fileName||'video')+'</div>'
-      :(m.type==='file'&&m.fileId)?'<div class="mfile" onclick="VexaUI.dl(\''+m.fileId+'\')"><div class="fic">📄</div><div class="fmeta"><div class="fnm">'+V.esc(m.fileName||'file')+'</div><div class="fsz">'+(m.size?(m.size>1048576?(m.size/1048576).toFixed(1)+' MB':Math.round(m.size/1024)+' KB'):'Drive')+' · Google Drive</div></div><div class="fdl">⬇</div></div>'
+      :(m.type==='file'&&m.fileId)?'<div class="mfile" onclick="VexaUI.dl(\''+m.fileId+'\')"><div class="fic">📄</div><div class="fmeta"><div class="fnm">'+V.esc(m.fileName||'file')+'</div><div class="fsz">'+((m.size?VexaUI._fmtSize(m.size):'Drive'))+' · Google Drive</div></div><div class="fdl">⬇</div></div>'
       :V.esc(m.text||''))
     +(m.edited?'<span class="medt"> (edited)</span>':'')
     +'<div class="mmet">'+meta+'</div>'
@@ -5449,8 +5449,9 @@ Auth.checkVerification=async function(){
 };
 
 /* ═══ 📎🎬 CHAT FILES VIA GOOGLE DRIVE (v3.1 — old style RESTORED) ═══
-   Purana flow: local file select → Google Drive upload ("VEXA Chat Files"
+   Flow: local file select → Google Drive RESUMABLE upload ("VEXA Chat Files"
    folder) → message me file card send. Receiver direct download kholta hai.
+   🚫 KOI SIZE LIMIT NAHI — multi-GB video bhi (chunked + resume + progress).
    ☁️ Drive picker: Drive me padi app-files seedha bhejo. Video/image same. ═══ */
 window.VexaUI=window.VexaUI||{};
 VexaUI={
@@ -5478,15 +5479,129 @@ VexaUI={
    if(!r2.ok)throw new Error('Drive folder create fail');
    var j2=await r2.json();this._fid=j2.id;return this._fid;
  },
- _upload:async function(file){
+ /* 🚫 NO SIZE LIMIT — resumable chunked upload (Drive API v3):
+    8MB chunks, network fail pe auto-resume, 3 retry/chunk, live progress.
+    1KB se multi-GB video tak — sab upload hoga. */
+ _upCancelFlag:false,_upXhr:null,
+ CHUNK:8*1024*1024,
+ upCancel:function(){
+   this._upCancelFlag=true;
+   try{if(this._upXhr)this._upXhr.abort()}catch(e){}
+ },
+ _progShow:function(name){
+   var w=V.g('upProg');if(!w)return;
+   V.g('upName').textContent=name||'file';
+   this._progSet(0);
+   w.classList.remove('hidden');
+ },
+ _progSet:function(p){
+   var f=V.g('upFill'),pc=V.g('upPct');
+   if(f)f.style.width=Math.max(0,Math.min(100,p))+'%';
+   if(pc)pc.textContent=Math.round(p)+'%';
+ },
+ _progHide:function(){var w=V.g('upProg');if(w)w.classList.add('hidden')},
+ _fmtSize:function(b){
+   if(!b||b<=0)return '';
+   if(b>=1073741824)return (b/1073741824).toFixed(2)+' GB';
+   if(b>=1048576)return (b/1048576).toFixed(1)+' MB';
+   return Math.round(b/1024)+' KB';
+ },
+ /* session status poochho — resume kahan se karna hai (network fail ke baad) */
+ _sesStatus:function(loc,total){
+   var self=this;
+   return new Promise(function(res){
+     var xhr=new XMLHttpRequest();
+     self._upXhr=xhr;
+     xhr.open('PUT',loc,true);
+     xhr.setRequestHeader('Content-Range','bytes */'+total);
+     xhr.onload=function(){
+       res({status:xhr.status,range:xhr.getResponseHeader('Range')||'',body:xhr.responseText||''});
+     };
+     xhr.onerror=function(){res({status:0,range:'',body:''})};
+     xhr.send();
+   });
+ },
+ /* ek chunk PUT — 308 = partial ok, 200/201 = complete + metadata */
+ _upChunk:function(loc,blob,start,total){
+   var self=this;
+   return new Promise(function(res,rej){
+     var xhr=new XMLHttpRequest();
+     self._upXhr=xhr;
+     xhr.open('PUT',loc,true);
+     xhr.setRequestHeader('Content-Range','bytes '+start+'-'+(start+blob.size-1)+'/'+total);
+     xhr.onload=function(){
+       if(xhr.status===308){res({partial:true})}
+       else if(xhr.status===200||xhr.status===201){
+         try{res(JSON.parse(xhr.responseText))}catch(e){res({id:''})}
+       }
+       else{rej(new Error('Drive chunk fail (HTTP '+xhr.status+')'))}
+     };
+     xhr.onerror=function(){rej(new Error('network'))};
+     xhr.onabort=function(){rej(new Error('cancel'))};
+     xhr.send(blob);
+   });
+ },
+ _upload:async function(file,onProg){
    var fid=await this._folderId();
    var metadata={name:file.name,parents:[fid],mimeType:file.type||'application/octet-stream'};
-   var form=new FormData();
-   form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
-   form.append('file',file);
-   var r=await this._req('https://www.googleapis.com/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size',{method:'POST',body:form});
-   if(!r.ok)throw new Error('Drive upload fail (HTTP '+r.status+')');
-   var j=await r.json();
+   var init=await this._req('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size',{
+     method:'POST',
+     headers:{
+       'Content-Type':'application/json',
+       'X-Upload-Content-Type':(file.type||'application/octet-stream'),
+       'X-Upload-Content-Length':String(file.size)
+     },
+     body:JSON.stringify(metadata)
+   });
+   if(!init.ok)throw new Error('Drive session start fail (HTTP '+init.status+')');
+   var loc=init.headers.get('Location')||init.headers.get('location')||'';
+   if(!loc)throw new Error('Drive upload session nahi mila');
+   var total=file.size,self=this,CH=this.CHUNK,off=0,j=null;
+   /* 0-byte file — single final PUT */
+   if(total===0){
+     var z=await new Promise(function(res,rej){
+       var xhr=new XMLHttpRequest();self._upXhr=xhr;
+       xhr.open('PUT',loc,true);
+       xhr.setRequestHeader('Content-Range','bytes */0');
+       xhr.onload=function(){(xhr.status===200||xhr.status===201)?res(JSON.parse(xhr.responseText||'{}')):rej(new Error('Drive upload fail (HTTP '+xhr.status+')'))};
+       xhr.onerror=function(){rej(new Error('network'))};
+       xhr.send();
+     });
+     await this._share(z.id);
+     return z;
+   }
+   /* chunk loop — fail ho to server se resume offset poochh ke aage */
+   while(off<total){
+     if(this._upCancelFlag)throw new Error('cancel');
+     var end=Math.min(off+CH,total);
+     var attempt=0,advanced=false;
+     while(!advanced){
+       if(this._upCancelFlag)throw new Error('cancel');
+       try{
+         var r=await this._upChunk(loc,file.slice(off,end),off,total);
+         if(r&&r.partial){off=end}
+         else{j=r;off=end}
+         advanced=true;
+       }catch(e){
+         if(String(e.message)==='cancel')throw e;
+         attempt++;
+         if(attempt>3)throw e;
+         await new Promise(function(rs){setTimeout(rs,700*attempt)});
+         var st=await this._sesStatus(loc,total);
+         if(st.status===200||st.status===201){
+           try{j=JSON.parse(st.body||'{}')}catch(pe){j={id:''}}
+           off=total;advanced=true;
+         }else if(st.status===308&&st.range){
+           var m=st.range.match(/bytes=0-(\d+)/);
+           if(m){off=parseInt(m[1],10)+1;advanced=true}
+         }
+         /* warna same chunk dobara try */
+       }
+     }
+     if(onProg){try{onProg((off/total)*100)}catch(pe){}}
+     if(j&&j.id)break;
+   }
+   if(!j||!j.id)throw new Error('Upload incomplete');
    await this._share(j.id);
    return j;
  },
@@ -5507,13 +5622,19 @@ VexaUI={
  _picked:async function(f){
    if(!f)return;
    var self=this;
-   if(f.size>25*1024*1024)return V.toast('error','Max 25MB file');
-   V.toast('info','⬆️ Google Drive pe upload ho raha hai…');
+   /* 🚫 KOI SIZE LIMIT NAHI — pehle Drive pe upload (resumable), phir message */
+   this._upCancelFlag=false;
+   this._progShow(f.name);
    try{
-     var j=await self._upload(f);
+     var j=await self._upload(f,function(p){self._progSet(p)});
+     self._progHide();
      await self._sendMeta(j);
-     V.toast('success','✅ Drive se file bhej diya');
-   }catch(e){V.toast('error',e.message||'Drive upload fail')}
+     V.toast('success','✅ Drive se bhej diya ('+self._fmtSize(f.size)+')');
+   }catch(e){
+     self._progHide();
+     if(String(e.message)==='cancel')V.toast('info','⏹️ Upload cancel ho gaya');
+     else V.toast('error',e.message||'Drive upload fail');
+   }
  },
  sendFromDrive:async function(){
    if(!this.connect())return;
@@ -5526,7 +5647,7 @@ VexaUI={
      var h='';
      (j.files||[]).forEach(function(f){
        var nm=String(f.name).slice(0,32);
-       var sz=f.size?(f.size>1048576?(f.size/1048576).toFixed(1)+' MB':Math.round(f.size/1024)+' KB'):'—';
+       var sz=f.size?this._fmtSize(f.size):'—';
        h+='<div class="rrow" onclick="VexaUI._pickDrive(\''+f.id+'\',\''+String(f.name).replace(/'/g,"")+'\',\''+(f.mimeType||'')+'\','+(f.size||0)+')">📄 <b>'+V.esc(nm)+'</b> <span class="mut sm">'+sz+'</span></div>';
      });
      if(!h)h='<div class="tc mut sm">Is Drive account pe app ki files nahi mili.<br>Pehle 📎 se koi file bhejo — wo yahan dikhegi.</div>';
@@ -5552,9 +5673,9 @@ VexaUI={
    db.ref('chats/'+cid+'/unread/'+peer).transaction(function(n){return (n||0)+1});
    db.ref('notifs/'+peer+'/notifications').push({type:'message',from:V.uid,fromName:me.displayName,text:'📎 '+String(j.name||'file').slice(0,50),read:false,at:Date.now()});
  },
- dl:function(fileId){try{window.open('https://drive.google.com/uc?export=download&id='+fileId,'_blank')}catch(e){}},
+ dl:function(fileId){try{window.open('https://drive.usercontent.google.com/download?id='+fileId+'&export=download&confirm=t','_blank')}catch(e){}},
  thumb:function(fileId){return 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'},
- stream:function(fileId){return 'https://drive.google.com/uc?export=view&id='+fileId},
+ stream:function(fileId){return 'https://drive.usercontent.google.com/download?id='+fileId+'&export=view&confirm=t'},
  /* 🎬 video-first picker (old Drive-video style) */
  videoTap:function(){
    if(!this.connect())return;

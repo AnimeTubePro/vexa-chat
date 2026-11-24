@@ -73,13 +73,20 @@ aur purana Drive file-sharing style wapas laya. Neeche sab kuch detail me.
 - game.html ka loading bhi polish: shimmer bar + glow ring + pulsing logo
 
 ## 4) DRIVE FILE SHARING — OLD STYLE RESTORED (v2.8.2 me stub tha)
-- 📎 **Local file**: file select → Google Drive upload ("VEXA Chat Files"
-  folder, anyone-reader link) → message me file card. Max 25MB.
-- ☁️ **Drive se direct**: apne Drive ki recent files picker se seedha send
+### 🚫 KOI SIZE LIMIT NAHI (v3.1 update)
+- 📎 **Local file**: file select → Google Drive **RESUMABLE chunked upload**
+  ("VEXA Chat Files" folder, anyone-reader link) → message me file card.
+  1KB se multi-GB video tak — **sab chalega** (Drive ka apna 5TB/file limit).
+- 8MB chunks (256KB-aligned), network fail pe **auto-resume** (server se
+  offset poochh ke), har chunk **3 retry**, full cancel support.
+- **Live progress UI** — filename + % + shimmer bar + cancel ✕ (glass card).
+- ☁️ **Drive se direct**: Drive ki recent files picker se seedha send
   (drive.file scope — app ki files dikhti hain).
-- 🎬 **Video**: video-first picker; video bubble me inline player.
-- 🖼️ Image bubbles (Drive thumbnail), video player, file card + size + download.
-- Receiver pe download direct Drive link se — koi extra auth nahi.
+- 🎬 **Video**: video-first picker; video bubble me inline player —
+  bade videos ke liye `drive.usercontent.google.com` streaming endpoint.
+- 🖼️ Image bubbles (Drive thumbnail), video player, file card + size
+  (KB/MB/GB formatter) + download. Receiver pe direct download — koi
+  extra auth nahi. Message bubbles kisi size pe depend nahi karte.
 - OAuth same proven popup flow (VexaVaultDrive module reuse).
 
 ## 5) CALLS / VIDEO CALL / SCREEN SHARE

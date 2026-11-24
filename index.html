@@ -439,6 +439,18 @@ function VXtemp(){
 <div class="mov" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><div class="mhd"><div class="mtitle" id="mTitle"></div><button type="button" class="mclose" id="mCloseX" onclick="V.mClose()" aria-label="Close">✕</button></div><div class="mbody" id="mBody"></div><div class="mft" id="mFt"></div></div></div>
 <div class="tcont" id="tcont" aria-live="polite"></div>
 
+<!-- ═══ v3.1: Drive upload progress (no size limit — resumable chunked) ═══ -->
+<div id="upProg" class="hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+  <div class="upIn">
+    <div class="upIco">☁️</div>
+    <div class="upMid">
+      <div class="upT"><span id="upName">file</span><span id="upPct">0%</span></div>
+      <div class="upBar"><span id="upFill"></span></div>
+    </div>
+    <button type="button" class="upX" onclick="VexaUI.upCancel()" aria-label="Cancel upload">✕</button>
+  </div>
+</div>
+
 <script>
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Enter' && e.key !== ' ') return;
