@@ -16,20 +16,22 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- ⚡ADS-REMOVED (v2.8.2-R5): AdSense hata diya — ab Paid Promotion (in-app) hai -->
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4.5.4">
 <!-- ═══ v3.1 REDESIGN LAYER — animations + UI upgrade (style.css ke baad load) ═══ -->
-<link rel="stylesheet" href="redesign.css">
+<link rel="stylesheet" href="redesign.css?v=4.5.4">
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault styles (vv-* classes — no collision) ═══ -->
-<link rel="stylesheet" href="vault.css">
-<script defer src="script.js"></script>
+<link rel="stylesheet" href="vault.css?v=4.5.4">
+<!-- 🔧v4.5.2 CACHE-FIX: ?v=4.5.4 — purana WebView/browser cached JS chala raha tha,
+     naya search code devices tak pahunch hi nahi raha tha. Har release pe ye bump karo. -->
+<script defer src="script.js?v=4.5.4"></script>
 <!-- ═══ ⚡VAULT v1.0: Secure Recovery Vault modules — order matters:
      vexa-vault.js (crypto core → VexaVaultCore) → vexa-drive.js (Google Drive
      drive.file — visible "VEXA Backups" folder) → vault-ui.js (VaultUI —
      Settings/Support se open hota hai) ═══ -->
-<script defer src="services/vexa-vault.js"></script>
-<script defer src="services/vexa-drive.js"></script>
-<script defer src="services/vault-ui.js"></script>
-<script defer src="services/vexa-temp.js"></script>
+<script defer src="services/vexa-vault.js?v=4.5.4"></script>
+<script defer src="services/vexa-drive.js?v=4.5.4"></script>
+<script defer src="services/vault-ui.js?v=4.5.4"></script>
+<script defer src="services/vexa-temp.js?v=4.5.4"></script>
 </head>
 <body>
 <script>
@@ -102,25 +104,25 @@ function VXtemp(){
 
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
+<!-- ═══ v4.5.3 SPLASH PREMIUM REDESIGN — clutter hata diya (stars/scan/orbit/bubble
+     emoji gone). Clean: glow + logo + counter-rotating rings + single-baseline
+     wordmark + dynamic version chip + sheen progress bar. JS hooks same:
+     #splash/#splashLogo/#loadBar/#loadPct/#splashTx/.loader-title/.loader-sub/
+     .loader-chip/.skiphint (Ver.showLock inhi par kaam karta hai) ═══ -->
 <div id="splash" role="status" aria-busy="true">
-  <div class="splash-aurora" aria-hidden="true"><span class="au a1"></span><span class="au a2"></span><span class="au a3"></span></div>
-  <div class="splash-orbs" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
-  <div class="splash-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b class="shoot"></b></div>
-  <div class="splash-scan" aria-hidden="true"></div>
+  <div class="sp-glow" aria-hidden="true"></div>
   <div class="loader-logo" id="splashLogo">
     <div class="logo-ring" aria-hidden="true"></div>
     <div class="logo-ring r2" aria-hidden="true"></div>
-    <div class="orbit-dot" aria-hidden="true"><i></i></div>
     <img src="logo-v44.png" alt="VEXA-Chat" class="vlogo-img">
-    <span class="splash-bubble" aria-hidden="true">💬</span>
   </div>
-  <div class="loader-title vx-wordmark" aria-label="VEXA-Chat"><span class="vxw1" aria-hidden="true"><b style="--i:0">V</b><b style="--i:1">E</b><b style="--i:2">X</b><b style="--i:3">A</b><b style="--i:4">-</b></span><span class="vxw2" aria-hidden="true"><b style="--i:5">C</b><b style="--i:6">h</b><b style="--i:7">a</b><b style="--i:8">t</b></span></div>
-  <div class="loader-sub f-vibes" aria-hidden="true"><span class="subline agrad">AnimeTubePro Studio × VEXA — Connect Privately</span></div>
-  <div class="loader-chip">⚡ V4.4 · REBUILD</div>
+  <div class="loader-title vx-wordmark" aria-label="VEXA-Chat"><b style="--i:0">V</b><b style="--i:1">E</b><b style="--i:2">X</b><b style="--i:3">A</b><b class="dash" style="--i:4">-</b><b style="--i:5">C</b><b style="--i:6">h</b><b style="--i:7">a</b><b style="--i:8">t</b></div>
+  <div class="loader-sub" aria-hidden="true"><span class="subline">AnimeTubePro Studio × VEXA — Connect Privately</span></div>
+  <div class="loader-chip" id="splashChip">v4.5.4</div>
   <div class="loader-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading"><span id="loadBar"></span></div>
   <div class="loader-pct" id="loadPct">0%</div>
   <div id="splashTx" class="sm mut">Initializing...</div>
-  <div class="skiphint sm mut">👆 Tap to skip</div>
+  <div class="skiphint sm mut">Tap to skip</div>
 </div>
 
 <div id="offBan" class="offban hidden" role="alert">⚠️ You are offline</div>
@@ -324,7 +326,8 @@ function VXtemp(){
         <button type="button" class="pfab" onclick="Posts.fabTap()" aria-label="Create post or reel">✏️</button>
       </section>
       <section class="scr" id="sc-search"><div class="pgc">
-        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Naam, @username, UID ya #hashtag..." oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"></div>
+        <!-- 🔧v4.5.2 INSTAGRAM-STYLE search bar: rounded pill, center placeholder, ✕ clear -->
+        <div class="sbar"><span class="sbar-ico" aria-hidden="true">🔍</span><input id="sInput" class="sbar-inp" placeholder="Search" oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"><button type="button" class="sbar-x" id="sClear" onclick="Search.clear()" aria-label="Clear search">✕</button></div>
         <div id="sRes"></div></div></section>
       <section class="scr" id="sc-local"><div class="pgc">
         <div class="radar"><div class="rdc">📡</div></div>
