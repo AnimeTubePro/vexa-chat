@@ -120,6 +120,11 @@ const VexaVaultDrive = {
       try{ V.toast('error',m1,6000) }catch(e){ alert(m1) }
       return;
     }
+    /* ⚡APP-BRIDGE v4.4.1: APK WebView me GIS popup fail hota hai aur redirect par
+       Google WebView UA block karta hai. App me → Chrome dance (VxaApp):
+       redirect URL (state=vxaapp) → APK accounts.google.com ko Chrome me kholta
+       hai → consent ke baad intent://oauth se app me wapas auto-connect. */
+    if (window.VxaApp && VxaApp.is()){ VxaApp.driveConnect(cid); return; }
     /* FIX (HTTP 400): file:// pe Google OAuth kabhi kaam nahi karta. */
     if (location.protocol==='file:'){
       var m2='⚠️ Drive connect ke liye site ko http/https par kholo (file:// nahi).';
@@ -173,6 +178,9 @@ const VexaVaultDrive = {
      Isse user ko baar-baar "Connect Google Drive" nahi dabana padta. */
   silentFix:function(){
     if(this.connected()||!this.wasOn())return;
+    /* ⚡APP-BRIDGE: app me GIS popup fail — silent auto-popup skip, user jab
+       connect dabayega to VxaApp Chrome dance chalega */
+    if(window.VxaApp&&VxaApp.is())return;
     var self=this;
     var go=function(){
       try{

@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VEXA OWNER — VEXA Staff Console</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--acc:#00ff66;--accrgb:0,255,102;--bg:#02060a;--bg2:#050b12;--bg3:#0a141d;--bds:#12242f;--tx:#d7e4dc;--tx2:#8fa89b;--mut:#5d7268;--ok:#00ff66;--dn:#ff4d5e;--dns:#2a0d12;--wn:#ffb020;--wns:#241a05}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font-family:'Courier New',ui-monospace,monospace;overflow-x:hidden}
+#mxCanvas{position:fixed;inset:0;z-index:0;opacity:.35;pointer-events:none}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 4px)}
+.hidden{display:none!important}
+.mono{font-family:ui-monospace,'Courier New',monospace}
+.mt8{margin-top:8px}.mb8{margin-bottom:8px}.mut{color:var(--mut)}
+/* ── login gate ── */
+.gate{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}
+.gcard{position:relative;width:100%;max-width:420px;background:rgba(6,12,18,.92);border:1.5px solid var(--acc);border-radius:14px;padding:26px 24px;box-shadow:0 0 40px rgba(var(--accrgb),.25),inset 0 0 30px rgba(var(--accrgb),.06)}
+.gcard::before,.gcard::after{content:'';position:absolute;width:22px;height:22px;border:2.5px solid var(--acc)}
+.gcard::before{top:-2px;left:-2px;border-right:none;border-bottom:none;border-radius:6px 0 0 0}
+.gcard::after{bottom:-2px;right:-2px;border-left:none;border-top:none;border-radius:0 0 6px 0}
+.gtitle{text-align:center;font-size:30px;font-weight:900;letter-spacing:6px;color:var(--acc);text-shadow:0 0 18px rgba(var(--accrgb),.75);margin-bottom:8px}
+.gsub{text-align:center;color:var(--tx2);font-size:12px;line-height:1.55;margin-bottom:20px}
+.plabel{font-size:11px;font-weight:800;letter-spacing:2px;color:var(--acc);margin:14px 0 6px}
+.inp{width:100%;background:var(--bg3);border:1.5px solid var(--bds);border-radius:10px;color:var(--tx);padding:11px 13px;font-size:14px;font-family:inherit;outline:none}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 12px rgba(var(--accrgb),.3)}
+select.inp{appearance:auto}
+.txta{width:100%;background:var(--bg3);border:1.5px solid var(--bds);border-radius:10px;color:var(--tx);padding:10px 13px;font-size:13px;font-family:inherit;outline:none;min-height:74px;resize:vertical}
+.gnote{text-align:center;font-size:10.5px;color:var(--mut);margin-top:16px;line-height:1.6}
+.gerr{color:var(--dn);font-size:12px;margin-top:10px;text-align:center;min-height:16px}
+/* ── buttons ── */
+.btn{border:1.5px solid var(--bds);background:var(--bg3);color:var(--tx);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--acc);box-shadow:0 0 10px rgba(var(--accrgb),.25)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.bg{background:rgba(var(--accrgb),.14);border-color:var(--acc);color:var(--acc)}
+.btn.bp{background:var(--acc);border-color:var(--acc);color:#02120a}
+.btn.bd{border-color:var(--dn);color:var(--dn)}
+.btn.bds2{border-color:var(--dn);background:var(--dns);color:var(--dn)}
+.btn.bw{border-color:var(--wn);color:var(--wn)}
+.btn.bsm{padding:6px 10px;font-size:11.5px;border-radius:8px}
+.btn.bfull{width:100%}
+.fld{margin-top:10px}
+.flbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.5px;color:var(--tx2);margin-bottom:6px;text-transform:uppercase}
+/* ── app shell ── */
+#app{position:relative;z-index:5;max-width:980px;margin:0 auto;padding:14px 12px 60px}
+.phead{display:flex;align-items:center;gap:10px;padding:6px 2px 12px}
+.plogo{font-size:17px;font-weight:900;letter-spacing:3px;color:var(--acc);text-shadow:0 0 14px rgba(var(--accrgb),.7)}
+.phead .btn{margin-left:auto}
+.tabbar{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 12px;border-bottom:1px solid var(--bds);margin-bottom:12px}
+.tp{border:1px solid var(--bds);background:transparent;color:var(--tx2);border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.tp:hover{color:var(--tx);border-color:var(--acc)}
+.tp.on{background:rgba(var(--accrgb),.13);border-color:var(--acc);color:var(--acc);text-shadow:0 0 8px rgba(var(--accrgb),.6)}
+.pcount{display:none;margin-left:5px;background:var(--dn);color:#fff;border-radius:8px;padding:0 5px;font-size:9.5px}
+#tabContent{min-height:300px}
+/* ── cards & lists ── */
+.card{background:rgba(8,15,22,.85);border:1px solid var(--bds);border-radius:12px;padding:11px 13px;margin-bottom:8px}
+.crow{display:flex;gap:10px;align-items:flex-start}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:13.5px;font-weight:800;word-break:break-word}
+.cmeta{font-size:11px;color:var(--tx2);margin-top:2px;word-break:break-word}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge{display:inline-block;border-radius:7px;padding:1px 7px;font-size:9.5px;font-weight:800;margin-left:5px;vertical-align:middle}
+.snote{background:rgba(var(--accrgb),.07);border:1px solid rgba(var(--accrgb),.28);border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.65;color:var(--tx)}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:700px){.statgrid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:rgba(8,15,22,.85);border:1px solid var(--bds);border-radius:12px;padding:13px 8px;text-align:center}
+.sn{font-size:26px;font-weight:900;color:var(--acc);text-shadow:0 0 12px rgba(var(--accrgb),.5)}
+.sl{font-size:9.5px;font-weight:800;letter-spacing:1.5px;color:var(--mut);margin-top:3px}
+.searchrow{display:flex;gap:7px;margin-bottom:10px}
+.searchrow .inp{flex:1}
+.empt{text-align:center;padding:44px 12px;color:var(--mut)}
+.ei{font-size:40px;margin-bottom:8px}
+.et{font-size:14px;font-weight:700}
+/* ── checkbox rows ── */
+.chkrow{display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--bds);border-radius:10px;padding:10px 12px;margin-top:7px;cursor:pointer}
+.chkrow input{width:17px;height:17px;accent-color:var(--acc)}
+.ckl{font-size:13px;font-weight:800}
+.ckd{font-size:10.5px;color:var(--mut);margin-left:auto;text-align:right}
+/* ── modal ── */
+.mwrap{position:fixed;inset:0;z-index:50;background:rgba(1,4,8,.78);display:none;align-items:center;justify-content:center;padding:16px}
+.mwrap.show{display:flex}
+.mcard{width:100%;max-width:520px;max-height:86vh;overflow:auto;background:var(--bg2);border:1.5px solid var(--acc);border-radius:14px;padding:18px 16px;box-shadow:0 0 40px rgba(var(--accrgb),.3)}
+.mtitle{font-size:15.5px;font-weight:900;color:var(--acc);margin-bottom:12px;letter-spacing:.5px}
+.mbtns{display:flex;gap:8px;margin-top:14px}
+.mbtns .btn{flex:1}
+/* ── toasts ── */
+#toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:7px;align-items:center;width:min(92vw,460px)}
+.toast{background:var(--bg3);border:1px solid var(--acc);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;box-shadow:0 0 18px rgba(var(--accrgb),.35);animation:tin .2s ease}
+.toast.tok{border-color:var(--ok);color:var(--ok)}
+.toast.terr{border-color:var(--dn);color:var(--dn)}
+.toast.out{opacity:0;transition:opacity .4s}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+/* ── pass send 2-column ── */
+.ps2col{display:grid;grid-template-columns:.9fr 1.1fr;gap:10px;align-items:start}
+.psres{max-height:430px;overflow:auto}
+.psres .card{margin:0 0 6px}
+@media(max-width:760px){.ps2col{grid-template-columns:1fr}}
+.sechead{font-size:11px;font-weight:900;letter-spacing:1.5px;color:var(--wn);margin:12px 0 6px}
+</style>
+</head>
+<body>
+<canvas id="mxCanvas"></canvas><div class="scanlines"></div>
+<div class="gate" id="gate">
+ <div class="gcard">
+  <div class="gtitle">VEXA OWNER</div>
+  <div class="gsub">Root console — poore VEXA ka control<br><span class="mono" style="font-size:10.5px">v3.2.4 · hacker console · v4.2 rules integrated</span></div>
+  <div class="snote" id="gtWait" style="margin:14px 0 2px;text-align:center">⏳ SESSION CHECK…</div>
+  <div id="gtForm" style="display:none">
+  <div class="plabel">&gt; STAFF EMAIL</div>
+  <input class="inp" id="gtEm" type="email" placeholder="staff@vexa.com" autocomplete="email">
+  <div class="plabel">&gt; PASSWORD</div>
+  <input class="inp" id="gtPw" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')PANEL.login()">
+  <div class="fld"><button class="btn bg bfull" id="gtBtn" onclick="PANEL.login()">🔒 LOGIN AS OWNER</button></div>
+  <div class="gnote">Sirf <b>OWNER</b> role wale staff accounts — role RTDB (users/&lt;uid&gt;/role) se verify hota hai<br>Owner = sab tabs + 🔑 Recovery vault + 👑 SAB KE PASSWORDS + 🧾 Audit</div>
+  </div>
+  <div class="gerr" id="gtErr"></div>
+ </div>
+</div>
+<div id="app" class="hidden">
+ <div class="phead"><span class="plogo">OWNER@VEXA</span><span class="mono" id="pWho" style="font-size:11px;color:var(--mut)"></span><button class="btn bds2 bsm" onclick="PANEL.logout()">⏏ EXIT</button></div>
+ <div class="tabbar" id="tabbar"></div>
+ <div id="tabContent"></div>
+</div>
+<div class="mwrap" id="mWrap" onclick="if(event.target===this)PANEL.mClose()"><div class="mcard" id="mCard"></div></div>
+<div id="toasts"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+'use strict';
+/* VEXA OWNER PANEL v3.2.3 — FULL REBUILD (2col pass send · temp vault save · temp cleanup guide · target select · confirm · sab passwords owner)
+   Hardened rules (non-negotiable):
+   (1) user node pe poora .set() KABHI nahi — sirf EXACT-path .update()
+   (2) profile missing? → SILENT AUTO-REPAIR (_uRepair), "user not found" error kabhi nahi
+   (3) multi-path writes = EK atomic db.ref().update(ups)
+   (4) har staff action → uid-tail toast + auditLog push
+   (5) 📨 Pass Send: 2-column — 🎯 TARGET SELECT (main/temp) · 🔑 Send Password · 📤 Send Temp Username · 🛑 CONFIRM · 👑 owner sab passwords (hide/show) */
+const CFG={firebase:{apiKey:"AIzaSyDU-J6_YGJC1CUOr_v3ih_rqWGRyhqB4mw",authDomain:"vexa-b3a1d.firebaseapp.com",databaseURL:"https://vexa-b3a1d-default-rtdb.firebaseio.com",projectId:"vexa-b3a1d",storageBucket:"vexa-b3a1d.firebasestorage.app",messagingSenderId:"431099898297",appId:"1:431099898297:web:3adf83427e1b8c7f9c2e68"}};
+const LVL={moderator:1,admin:2,owner:3};
+/* v3.2.1 LOGIN-LOOP FIX — panel apna NAMED Firebase app ('VexaPanelApp') use karta hai.
+   Pehle [DEFAULT] app tha: same origin + same apiKey pe panel aur MAIN APP ka auth session
+   EK HI localStorage key (firebase:authUser:<apiKey>:[DEFAULT]) share karte the —
+   panel me login → main app logout, main app me login → panel logout =
+   "login ke baad bar bar login panel" wala OVERLAP LOOP isi se hota tha.
+   Named app = alag persistence key → dono sessions alag, koi overlap nahi. */
+var _PAPP=null;(function(){for(var i=0;i<firebase.apps.length;i++){if(firebase.apps[i].name==='VexaPanelApp')_PAPP=firebase.apps[i]}})();
+if(!_PAPP)_PAPP=firebase.initializeApp(CFG.firebase,'VexaPanelApp');
+var auth=_PAPP.auth(),db=_PAPP.database();
+
+/* ── 🇮🇳 desi matrix rain — Hindi + English + digits ── */
+(function(){
+ var cv=document.getElementById('mxCanvas'),cx=cv.getContext('2d'),cols,drops;
+ var glyphs='अआइईउऊएऐओऔकखगघचछजझटठडढणतथदधनपफबभमयरलवशषसह0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<>[]{}$#%*+?'.split('');
+ function rs(){cv.width=innerWidth;cv.height=innerHeight;cols=Math.floor(cv.width/16);drops=[];for(var i=0;i<cols;i++)drops[i]=Math.random()*-80}
+ rs();addEventListener('resize',rs);
+ setInterval(function(){
+  cx.fillStyle='rgba(2,6,10,0.09)';cx.fillRect(0,0,cv.width,cv.height);
+  cx.font='13px monospace';
+  for(var i=0;i<cols;i++){
+   var g=glyphs[Math.floor(Math.random()*glyphs.length)];
+   cx.fillStyle=(Math.random()<0.04)?'#eaffea':'rgba(0,255,102,0.6)';
+   cx.fillText(g,i*16,drops[i]*16);
+   if(drops[i]*16>cv.height&&Math.random()>0.975)drops[i]=0;
+   drops[i]++;
+  }
+ },60);
+})();
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function FR_ERR(e){var m=(e&&e.message)||String(e||'error');
+ if(/PERMISSION_DENIED|permission/i.test(m))return 'Permission denied — database rules check karo';
+ if(/auth\/invalid-credential|wrong-password|user-not-found/i.test(m))return 'Galat email ya password';
+ if(/auth\/too-many/i.test(m))return 'Bahut attempts — thodi der baad';
+ if(/auth\/network/i.test(m))return 'Network error — internet check karo';
+ return m}
+function ago(ts){if(!ts)return'—';var d=Date.now()-ts,m=Math.floor(d/60000);if(m<1)return'abhi';if(m<60)return m+'m';var h2=Math.floor(m/60);if(h2<24)return h2+'h';var dd=Math.floor(h2/24);if(dd<30)return dd+'d';return new Date(ts).toLocaleDateString()}
+function t(msg,ok){var w=document.getElementById('toasts');var d=document.createElement('div');d.className='toast'+(ok===false?' terr':(ok===true?' tok':''));d.textContent=msg;w.appendChild(d);setTimeout(function(){d.classList.add('out')},3600);setTimeout(function(){try{w.removeChild(d)}catch(e){}},4100)}
+
+const PANEL={
+ ROLE:'owner',db:db,myUid:null,me:null,myRole:null,usersCache:{},_usersAll:null,_dups:{},_tab:'dash',
+ /* ── auth + role gate ── */
+ init:function(){
+  auth.onAuthStateChanged(async function(u){
+   if(!u){document.getElementById('gate').classList.remove('hidden');PANEL.gtShow('');return}
+   try{
+    var s=await db.ref('users/'+u.uid).get();
+    var v=(s&&s.exists())?s.val():null;
+    var role=v&&v.role;
+    if(role!==PANEL.ROLE){
+     document.getElementById('gate').classList.remove('hidden');
+     PANEL.gtShow('❌ Ye account "'+String(role||'no-role')+'" hai — OWNER panel ke liye authorized nahi. Sahi panel kholo.');
+     try{await auth.signOut()}catch(e){}
+     return;
+    }
+    PANEL.myUid=u.uid;PANEL.me=v||{};PANEL.myRole=role;
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('pWho').textContent='@'+(v.username||u.uid.slice(0,8))+' · '+(v.email||'');
+    PANEL.buildTabs();PANEL.tab('dash');
+    t('🔓 OWNER console ready — @'+(v.username||'?'),true);
+   }catch(e){
+    document.getElementById('gate').classList.remove('hidden');
+    PANEL.gtShow('❌ '+FR_ERR(e));
+   }
+  });
+ },
+ /* v3.2.1 gate states — pehle "⏳ SESSION CHECK…" dikhta hai; login form tabhi dikhta hai jab
+     session confirm ho chuka (ya nahi mila). Reload pe login-form flash/overlap nahi hoga. */
+ gtShow:function(err){
+  var w=document.getElementById('gtWait'),f=document.getElementById('gtForm'),e=document.getElementById('gtErr');
+  if(w)w.style.display='none';
+  if(f)f.style.display='block';
+  if(e&&err!=null)e.textContent=err;
+ },
+ login:async function(){
+  var em=(document.getElementById('gtEm').value||'').trim(),pw=document.getElementById('gtPw').value||'';
+  var b=document.getElementById('gtBtn'),er=document.getElementById('gtErr');
+  if(!em||!pw){er.textContent='Email + password dono daalo';return}
+  b.disabled=true;b.textContent='⏳ VERIFY…';er.textContent='';
+  try{await auth.signInWithEmailAndPassword(em,pw)}
+  catch(e){er.textContent='❌ '+FR_ERR(e);b.disabled=false;b.textContent='🔓 LOGIN AS OWNER'}
+ },
+ logout:function(){auth.signOut().then(function(){location.reload()})},
+ /* ── tabs ── */
+ TABS:[{id:'dash',label:'📊 Dashboard',min:1},{id:'users',label:'👥 Users',min:1},{id:'posts',label:'📸 Posts',min:1},{id:'reels',label:'🎬 Reels',min:1},{id:'reports',label:'🚨 Reports',min:1},{id:'help',label:'🆘 Help',min:1},{id:'passsend',label:'📨 Pass Send',min:2},{id:'promo',label:'🚀 Promo',min:2},{id:'announce',label:'📢 Announce',min:2},{id:'version',label:'🔐 Version',min:2},{id:'recovery',label:'🔑 Recovery',min:3},{id:'audit',label:'🧾 Audit',min:3}],
+ buildTabs:function(){
+  var lv=LVL[this.myRole]||0,h='';
+  this.TABS.forEach(function(tb){
+   if(lv<tb.min)return;
+   h+='<button class="tp" id="tp_'+tb.id+'" onclick="PANEL.tab(\''+tb.id+'\')">[ '+tb.label+' ]'
+    +(tb.id==='promo'?'<span class="pcount" id="promoCount" style="display:none">0</span>':'')
+    +(tb.id==='help'?'<span class="pcount" id="helpCount" style="display:none">0</span>':'')
+    +(tb.id==='reports'?'<span class="pcount" id="repCount" style="display:none">0</span>':'')
+    +'</button>';
+  });
+  document.getElementById('tabbar').innerHTML=h;
+ },
+ tab:function(id){
+  var map={dash:'loadStats',users:'loadUsers',posts:'loadPosts',reels:'loadReels',reports:'loadReports',help:'loadHelp',promo:'loadPromo',announce:'loadAnnounce',version:'loadVersion',recovery:'loadRecovery',passsend:'loadPassSend',audit:'loadAudit'};
+  this._tab=id;
+  var ls=document.querySelectorAll('.tp');for(var i=0;i<ls.length;i++)ls[i].classList.remove('on');
+  var el=document.getElementById('tp_'+id);if(el)el.classList.add('on');
+  this[map[id]]&&this[map[id]]();
+ },
+ badge:function(id,n){
+  var el=document.getElementById(id);if(!el)return;
+  if(n>0){el.textContent=n>99?'99+':n;el.style.display='inline-block'}else el.style.display='none';
+ },
+ /* ── ui helpers ── */
+ modal:function(title,body,btns){
+  document.getElementById('mCard').innerHTML='<div class="mtitle">'+title+'</div>'+body+'<div class="mbtns">'+(btns||'<button class="btn" onclick="PANEL.mClose()">Band karo</button>')+'</div>';
+  document.getElementById('mWrap').classList.add('show');
+ },
+ mClose:function(){document.getElementById('mWrap').classList.remove('show')},
+ _tail:function(uid){return '<span class="mono" style="font-size:10px">'+esc(String(uid).slice(0,10))+'…</span>'},
+ _copyUid:function(uid){try{navigator.clipboard.writeText(uid);t('📋 UID copy: '+uid,true)}catch(e){t(uid,false)}},
+ _dupsBadges:function(){var dm={};(this._usersAll||[]).forEach(function(r){var em=(r.v.email||'').toLowerCase();if(em)dm[em]=(dm[em]||0)+1});this._dups=dm},
+ _dupBadge:function(v){var em=(v.email||'').toLowerCase();return (em&&this._dups[em]>1)?'<span class="badge" style="background:var(--wns);color:var(--wn)">⚠ DUP-EMAIL</span>':''},
+ /* ⚡AUTO-REPAIR: profile missing? shell banao — "user not found" KABHI nahi */
+ _uExist:async function(uid,noask){
+  var s=await this.db.ref('users/'+uid).get();
+  if(s&&s.exists())return s.val();
+  if(noask)throw{message:'Profile missing — pehle 🔧 REPAIR karo'};
+  return await this._uRepair(uid);
+ },
+ _uRepair:async function(uid){
+  await this.db.ref('users/'+uid).update({username:'user'+String(uid).slice(0,6),displayName:'User',email:'',dob:'',profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,appVer:'2.0.1',createdAt:Date.now(),recovery:{lockUntil:0},settings:{profileDesign:'modern'},repaired:true,repairedAt:Date.now(),repairedBy:'panel-'+this.ROLE});
+  var s=await this.db.ref('users/'+uid).get();
+  if(!s||!s.exists())throw{message:'REPAIR FAIL — database rules check karo'};
+  t('🔧 Profile auto-repair: '+String(uid).slice(0,10)+'… (user Firebase me tha — node missing tha, ab ban gaya)',true);
+  return s.val();
+ },
+ userRepairOpen:async function(uid){
+  try{await this._uRepair(uid);this.userModal(uid)}catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ audit:function(action,target,detail){
+  try{this.db.ref('auditLog').push({at:Date.now(),by:this.myUid,byName:(this.me&&this.me.username)||'',role:this.myRole||this.ROLE,action:String(action).slice(0,40),target:String(target||'').slice(0,60),detail:String(detail||'').slice(0,140)}).catch(function(){})}catch(e){}
+ },
+ /* ── 🛠 user ops (hardened) ── */
+ userModal:async function(uid){
+  var s0=await this.db.ref('users/'+uid).get();
+  if(!s0||!s0.exists()){
+   var mh='<div class="snote">⚠️ Is UID ka profile node RTDB me nahi mila — par user <b>Firebase AUTH me ho sakta hai</b> (purana / partial signup).<br><span class="mono" style="font-size:10px">UID: '+esc(uid)+'</span></div>'
+    +'<div class="fld"><button class="btn bg bfull" onclick="PANEL.userRepairOpen(\''+uid+'\')">🔧 REPAIR &amp; MANAGE</button></div>'
+    +'<div class="snote mt8">💡 Repair = minimal profile banega (upsert — kuch overwrite nahi) + REPAIRED marker. 🛠 Missing Scan se SAB missing profiles ek saath repair hote hain.</div>';
+   return this.modal('👤 USER (missing): '+String(uid).slice(0,10)+'…',mh);
+  }
+  var v=s0.val();this.usersCache[uid]=v;
+  var isOwner=(LVL[this.myRole]||0)>=3;
+  var h='<div class="snote">@'+esc(v.username||'?')+' · '+esc(v.email||'—')+this._dupBadge(v)+(v.repaired?' <span class="badge" style="background:var(--wns);color:var(--wn)">⚙ REPAIRED</span>':'')+(v.tempRecovery?' <span class="badge" style="background:var(--wns);color:var(--wn)">🧡 TEMP</span>':'')
+   +'<br><span class="mono" style="font-size:10px">UID: '+esc(uid)+'</span> <button class="btn bsm" onclick="PANEL._copyUid(\''+uid+'\')">📋 Copy UID</button></div>';
+  h+='<div class="acts">'
+   +(LVL[this.myRole]>=2?'<button class="btn bp bsm" onclick="PANEL.uGrant(\''+uid+'\')">🛠 Grant / Edit (atomic)</button>':'')
+   +'<button class="btn '+(v.banned?'bg':'bd')+' bsm" onclick="PANEL.uToggle(\''+uid+'\',\'banned\','+(!v.banned)+')">'+(v.banned?'✅ Unban':'🚫 Ban')+'</button>'
+   +'<button class="btn bw bsm" onclick="PANEL.uWarn(\''+uid+'\')">⚠️ Warn</button>'
+   +(LVL[this.myRole]>=2?'<button class="btn bp bsm" onclick="PANEL.pwOpen(\''+uid+'\')">📨 Pass Send</button>':'');
+  if(isOwner){
+   h+='<button class="btn bp bsm" onclick="PANEL.uRole(\''+uid+'\')">👑 Role Set</button>';
+   h+='<button class="btn bd bsm" onclick="PANEL.uDelete(\''+uid+'\')">🗑️ Delete User</button>';
+  }
+  h+='</div>';
+  h+='<div class="snote mt8">Joined: '+ago(v.createdAt)+' · App ver: '+esc(v.appVer||'—')+' · Posts: '+(v.postCount||0)+' · VIP: '+(v.vip?'💎 YES':'no')+' · Verified: '+(v.verified?'✔ YES':'no')+' · Role: '+esc(v.role||'user')+'</div>';
+  if(LVL[this.myRole]>=2)h+='<div class="snote mt8">💡 Grant/Edit — VIP + Verified + Ban'+(isOwner?' + Role':'')+' SAB ek hi ATOMIC update me. Beech me kuch aur touch nahi hoga.</div>';
+  if(v.securityEvents){
+   h+='<div class="sechead">🛡 RECENT SECURITY EVENTS</div>';
+   var evs=[];Object.keys(v.securityEvents).forEach(function(k){evs.push(v.securityEvents[k])});
+   evs.sort(function(a,b){return (b.at||0)-(a.at||0)}).slice(0,6).forEach(function(e2){
+    h+='<div class="sm mut" style="font-size:11px">'+esc(e2.type||'?')+' · '+esc(e2.device||'')+' · '+ago(e2.at)+'</div>';
+   });
+  }
+  this.modal('👤 USER: @'+esc(v.username||'?'),h);
+ },
+ uGrant:async function(uid){
+  var v=await this._uExist(uid);
+  var isOwner=(LVL[this.myRole]||0)>=3;
+  var h='<div class="snote mb8">🛠 @'+esc(v.username||'?')+' — changes EK ATOMIC update me jayenge (koi race nahi, beech me kuch aur touch nahi).</div>'
+   +'<label class="chkrow"><input type="checkbox" id="ugVip"'+(v.vip?' checked':'')+'><span class="ckl">💎 VIP</span><span class="ckd">VIP badge + VIP themes</span></label>'
+   +'<label class="chkrow"><input type="checkbox" id="ugVer"'+(v.verified?' checked':'')+'><span class="ckl">✔ Verified</span><span class="ckd">blue tick profile pe</span></label>'
+   +'<label class="chkrow"><input type="checkbox" id="ugBan"'+(v.banned?' checked':'')+'><span class="ckl">🚫 Banned</span><span class="ckd">login block + feed block</span></label>'
+   +(isOwner?'<div class="fld"><label class="flbl">ROLE (owner-only)</label><select class="inp" id="ugRole"><option value="">— change na karo —</option><option value="user">user</option><option value="moderator">moderator</option><option value="admin">admin</option><option value="owner">owner</option></select></div>':'')
+   +'<div class="fld"><label class="flbl">NOTE (user ki notification me jayega)</label><input class="inp" id="ugNote" placeholder="e.g. giveaway winner — VIP 30d" maxlength="120"></div>'
+   +'<div class="fld"><button class="btn bg bfull" onclick="PANEL.uGrantSave(\''+uid+'\')">💾 ATOMIC SAVE</button></div>';
+  this.modal('🛠 GRANT / EDIT — @'+esc(v.username||'?'),h);
+ },
+ uGrantSave:async function(uid){
+  try{
+   var v=await this._uExist(uid,true);
+   var ups={},chg=[];
+   var nv=document.getElementById('ugVip').checked;
+   if(nv!==!!v.vip){ups['users/'+uid+'/vip']=nv;chg.push('VIP='+(nv?'ON':'OFF'))}
+   var ne=document.getElementById('ugVer').checked;
+   if(ne!==!!v.verified){ups['users/'+uid+'/verified']=ne;chg.push('Verified='+(ne?'ON':'OFF'))}
+   var nb=document.getElementById('ugBan').checked;
+   if(nb!==!!v.banned){ups['users/'+uid+'/banned']=nb;chg.push('Banned='+(nb?'ON':'OFF'))}
+   var re=document.getElementById('ugRole');
+   if(re&&re.value){ups['users/'+uid+'/role']=re.value;chg.push('role='+re.value)}
+   if(!chg.length){t('Kuch change nahi hua',false);return}
+   await this.db.ref().update(ups);
+   var note=(document.getElementById('ugNote').value||'').trim();
+   try{await this.db.ref('notifs/'+uid+'/notifications').push({type:'staff_grant',title:'🛠 Account Update',body:'Staff ne account update kiya: '+chg.join(', ')+(note?' — '+note.slice(0,100):''),read:false,at:Date.now(),by:this.myUid})}catch(ne2){}
+   this.audit('grant',uid,chg.join(','));
+   t('✅ Atomic save: '+chg.join(', ')+' — '+this._tail(uid),true);
+   this.mClose();this.userModal(uid);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ uToggle:async function(uid,key,val){
+  try{
+   await this._uExist(uid,true);
+   var ups={};ups['users/'+uid+'/'+key]=val;
+   await this.db.ref().update(ups);
+   this.audit(key==='banned'?'ban':'toggle:'+key,uid,String(val));
+   t((val?'🚫 Ban':'✅ Unban')+' ho gaya — '+this._tail(uid),true);
+   this.loadUsers(this._uq,true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ uWarn:async function(uid){
+  var msg=prompt('⚠️ Warning message (user ki notification me jayega):');
+  if(msg===null)return;
+  msg=String(msg).trim();
+  if(!msg){t('Message khali hai',false);return}
+  try{
+   await this._uExist(uid,true);
+   await this.db.ref('notifs/'+uid+'/notifications').push({type:'warn',title:'⚠️ Staff Warning',body:msg.slice(0,200),read:false,at:Date.now(),by:this.myUid});
+   this.audit('warn',uid,msg.slice(0,80));
+   t('⚠️ Warning bhej di — '+this._tail(uid),true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ uRole:async function(uid){
+  var r=prompt('👑 Naya role (user / moderator / admin / owner):');
+  if(r===null)return;r=String(r).trim().toLowerCase();
+  if(['user','moderator','admin','owner'].indexOf(r)<0){t('Invalid role',false);return}
+  try{
+   await this._uExist(uid,true);
+   await this.db.ref('users/'+uid+'/role').set(r);
+   this.audit('role',uid,r);
+   t('👑 Role set: '+r+' — '+this._tail(uid),true);
+   this.userModal(uid);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ uDelete:async function(uid){
+  if(!confirm('🗑️ DELETE user profile? (Firebase AUTH user nahi — sirf RTDB profile + uska data)'))return;
+  var p=prompt('Confirm karne ke liye "DELETE" type karo:');
+  if(p!=='DELETE'){t('Cancel — confirm nahi hua',false);return}
+  try{
+   await this._uExist(uid,true);
+   await this.db.ref('users/'+uid).remove();
+   this.audit('delete',uid,'profile removed');
+   t('🗑️ Profile delete — '+this._tail(uid),true);
+   this.loadUsers(this._uq,true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ uScanMissing:async function(){
+  var c=document.getElementById('tabContent');
+  c.innerHTML='<div class="empt"><div class="ei">🛠</div>Scan chal raha hai — usernames index vs users/…</div>';
+  try{
+   var us=await this.db.ref('users').get();
+   var have={};if(us.exists())us.forEach(function(x){have[x.key]=1});
+   var un=await this.db.ref('usernames').get();
+   var missing=[];
+   if(un.exists())un.forEach(function(x){var uid=x.val();if(uid&&typeof uid==='string'&&!have[uid])missing.push({u:x.key,uid:uid})});
+   if(!missing.length){
+    c.innerHTML='<div class="empt"><div class="ei">✅</div>Sab clean — koi missing profile nahi (usernames index vs users/)</div>';
+    t('✅ Sab clean — koi missing profile nahi',true);return;
+   }
+   this._missing=missing;
+   var h='<div class="snote mb8">🛠 <b>'+missing.length+' missing profiles</b> mile — usernames index me hai par users/ node nahi. Repair = minimal shell (kuch overwrite nahi hota).</div><div class="card" style="max-height:300px;overflow:auto">';
+   missing.slice(0,60).forEach(function(m){h+='<div class="cmeta mono" style="padding:3px 0">@'+esc(m.u)+' → '+esc(String(m.uid).slice(0,12))+'…</div>'});
+   h+='</div><div class="fld"><button class="btn bg bfull" onclick="PANEL.uScanFix()">🔧 SAB REPAIR ('+missing.length+') — ek atomic batch me</button></div>';
+   c.innerHTML=h;
+  }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>'}
+ },
+ uScanFix:async function(){
+  var ms=this._missing||[];if(!ms.length)return;
+  try{
+   var ups={};
+   ms.forEach(function(m){ups['users/'+m.uid]={username:m.u,displayName:m.u,email:'',dob:'',profilePhoto:'',bio:'',vip:false,verified:false,role:'user',banned:false,appVer:'2.0.1',createdAt:Date.now(),recovery:{lockUntil:0},settings:{profileDesign:'modern'},repaired:true,repairedAt:Date.now(),repairedBy:'panel-scan'}});
+   await this.db.ref().update(ups);
+   this.audit('missing_scan_repair',String(ms.length)+' users','panel-scan batch');
+   t('🔧 '+ms.length+' profiles repair ho gaye (atomic batch)',true);
+   this.loadUsers('',true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 📊 DASHBOARD ── */
+ loadStats:async function(){
+  var c=document.getElementById('tabContent');
+  c.innerHTML='<div class="empt"><div class="ei">⏳</div>Stats load ho rahe…</div>';
+  var P=this.db.ref;
+  try{
+   var us=await P('users').get(),ps=await P('posts').get(),rs=await P('reels').get(),
+       reqs=await P('promotionRequests').limitToLast(200).get(),
+       help=await P('helpRequests').limitToLast(200).get(),
+       reps=await P('reports').limitToLast(200).get(),
+       va=await P('versionApp/latest').get();
+   var tot=0,vip=0,ban=0,staff=0;
+   this.usersCache={};this._usersAll=[];
+   if(us.exists())us.forEach(function(x){var v=x.val()||{};tot++;PANEL.usersCache[x.key]=v;
+    if(v.vip)vip++;if(v.banned)ban++;if(v.role&&v.role!=='user')staff++;
+    PANEL._usersAll.push({k:x.key,v:v})});
+   this._dupsBadges();
+   var npost=0;if(ps.exists())ps.forEach(function(){npost++});
+   var nreel=0;if(rs.exists())rs.forEach(function(){nreel++});
+   var npend=0;if(reqs.exists())reqs.forEach(function(x){if((x.val()||{}).status==='pending')npend++});
+   var nhelp=0;if(help.exists())help.forEach(function(x){var v=x.val()||{};if((v.status||'open')==='open')nhelp++});
+   var nrep=0;if(reps.exists())reps.forEach(function(x){var v=x.val()||{};if((v.status||'open')==='open')nrep++});
+   var h='<div class="statgrid">'
+    +'<div class="stat"><div class="sn">'+tot+'</div><div class="sl">USERS</div></div>'
+    +'<div class="stat"><div class="sn">'+vip+'</div><div class="sl">💎 VIP</div></div>'
+    +'<div class="stat"><div class="sn">'+ban+'</div><div class="sl">🚫 BANNED</div></div>'
+    +'<div class="stat"><div class="sn">'+staff+'</div><div class="sl">🛡 STAFF</div></div>'
+    +'<div class="stat"><div class="sn">'+npost+'</div><div class="sl">📸 POSTS</div></div>'
+    +'<div class="stat"><div class="sn">'+nreel+'</div><div class="sl">🎬 REELS</div></div>'
+    +'<div class="stat"><div class="sn">'+nrep+'</div><div class="sl">🚨 REPORTS OPEN</div></div>'
+    +'<div class="stat"><div class="sn">'+nhelp+'</div><div class="sl">🆘 HELP OPEN</div></div>'
+    +'</div>'
+    +'<div class="stat" style="margin-top:10px"><div class="sn">'+npend+'</div><div class="sl">🚀 PROMO PENDING</div></div>'
+    +(va.exists()?'<div class="snote mt8">🔐 Live version: <b class="mono">'+esc((va.val()||{}).ver||'—')+'</b>'+(va.val().note?' · '+esc(va.val().note):'')+'</div>':'')
+    +'<div class="snote mt8">💡 🛠 Users tab → Missing Scan (gum profiles repair) · 📨 Pass Send tab → password/temp id bhejo'+((LVL[this.myRole]||0)>=3?' · 👑 SAB KE PASSWORDS owner ke liye Pass Send me':'')+'</div>';
+   c.innerHTML=h;
+   this.badge('repCount',nrep);this.badge('helpCount',nhelp);this.badge('promoCount',npend);
+  }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>'}
+ },
+ /* ── 👥 USERS ── */
+ loadUsers:async function(q,force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._usersAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Users load…</div>';
+   try{
+    var s=await this.db.ref('users').get();this.usersCache={};this._usersAll=[];
+    if(s.exists())s.forEach(function(x){var v=x.val()||{};PANEL.usersCache[x.key]=v;PANEL._usersAll.push({k:x.key,v:v})});
+    this._dupsBadges();
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  q=(q==null)?(this._uq||''):String(q).toLowerCase();this._uq=q;
+  var list=this._usersAll.filter(function(r){
+   if(!q)return true;var v=r.v||{};
+   return (v.username||'').toLowerCase().indexOf(q)>-1||(v.displayName||'').toLowerCase().indexOf(q)>-1||(v.email||'').toLowerCase().indexOf(q)>-1||r.k.toLowerCase().indexOf(q)>-1;
+  });
+  var h='<div class="snote mb8">👥 '+list.length+' users'+(q?' (filter: "'+esc(q)+'")':'')+' — card pe tap = manage</div>'
+   +'<div class="searchrow"><input class="inp" id="uQ" placeholder="Username / email / UID…" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')PANEL.loadUsers(document.getElementById(\'uQ\').value)"><button class="btn bp" onclick="PANEL.loadUsers(document.getElementById(\'uQ\').value)">🔍</button></div>'
+   +'<div class="fld mb8"><button class="btn bw bfull" onclick="PANEL.uScanMissing()">🛠 MISSING SCAN — usernames index vs users/ (gum profiles repair)</button></div>';
+  if(!list.length)h+='<div class="empt"><div class="ei">📭</div>Koi user nahi mila</div>';
+  list.slice(0,60).forEach(function(r){
+   var v=r.v,uid=r.k,rb='';
+   if(v.banned)rb='<span class="badge" style="background:var(--dns);color:var(--dn)">BANNED</span>';
+   h+='<div class="card" style="cursor:pointer" onclick="PANEL.userModal(\''+uid+'\')"><div class="crow"><div style="font-size:22px">'+(v.banned?'🚫':(v.vip?'💎':(v.tempRecovery?'🧡':'👤')))+'</div><div class="cinfo">'
+    +'<div class="cname">@'+esc(v.username||'?')+(v.verified?' <span style="color:var(--ok)">✔</span>':'')+(v.vip?' 💎':'')+rb+(v.repaired?' <span class="badge" style="background:var(--wns);color:var(--wn)">⚙ REPAIRED</span>':'')+PANEL._dupBadge(v)+(v.tempRecovery?' <span class="badge" style="background:var(--wns);color:var(--wn)">🧡 TEMP</span>':'')+'</div>'
+    +'<div class="cmeta">'+esc(v.email||'—')+' · '+esc(v.displayName||'')+' · <span class="mono" style="font-size:10px">'+esc(String(uid).slice(0,10))+'…</span></div>'
+    +'</div></div></div>';
+  });
+  if(list.length>60)h+='<div class="sm mut">+'+(list.length-60)+' more — search use karo</div>';
+  c.innerHTML=h;
+ },
+ /* ── 📸 POSTS ── */
+ loadPosts:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._postsAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Posts load…</div>';
+   try{
+    var s=await this.db.ref('posts').limitToLast(150).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.reverse();this._postsAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var h='<div class="snote mb8">📸 Latest '+Math.min(this._postsAll.length,80)+' posts — harmful content delete kar sakte ho (LVL2+)</div>';
+  if(!this._postsAll.length)h+='<div class="empt"><div class="ei">📭</div>Koi post nahi</div>';
+  this._postsAll.slice(0,80).forEach(function(r){
+   var v=r.v;
+   var txt=String(v.text||v.caption||'').slice(0,90);
+   var lk=0;if(v.likes&&typeof v.likes==='object'){lk=Object.keys(v.likes).length}else lk=v.likesCount||0;
+   h+='<div class="card"><div class="crow"><div style="font-size:18px">'+((v.image||v.media||v.images)?'🖼️':'📝')+'</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">'+esc(txt||'(media post)')+'</div>'
+    +'<div class="cmeta">by <span class="mono">'+esc(String(v.uid||v.userId||'?').slice(0,10))+'…</span> · '+ago(v.createdAt)+' · ❤️ '+lk+'</div>'
+    +'<div class="acts">'+(LVL[PANEL.myRole]>=2?'<button class="btn bd bsm" onclick="PANEL.postDel(\''+r.id+'\')">🗑️ Delete</button>':'')+'</div>'
+    +'</div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ postDel:async function(pid){
+  if(!confirm('🗑️ Post delete?'))return;
+  try{
+   await this.db.ref('posts/'+pid).remove();
+   this.audit('post_del',pid,'');
+   t('🗑️ Post delete: '+String(pid).slice(0,10)+'…',true);
+   this.loadPosts(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 🎬 REELS MOD ── */
+ loadReels:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._reelsAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Reels load…</div>';
+   try{
+    var s=await this.db.ref('reels').limitToLast(150).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.reverse();this._reelsAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var h='<div class="snote mb8">🎬 Latest '+Math.min(this._reelsAll.length,80)+' reels — delete (LVL2) ya featured promo mark (LVL2)</div>';
+  if(!this._reelsAll.length)h+='<div class="empt"><div class="ei">📭</div>Koi reel nahi</div>';
+  this._reelsAll.slice(0,80).forEach(function(r){
+   var v=r.v;
+   var cap=String(v.caption||v.text||'').slice(0,80);
+   h+='<div class="card"><div class="crow"><div style="font-size:18px">'+(v.featured?'⭐':'🎬')+'</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">'+esc(cap||'(reel)')+(v.featured?' <span class="badge" style="background:var(--wns);color:var(--wn)">⭐ FEATURED</span>':'')+'</div>'
+    +'<div class="cmeta">by <span class="mono">'+esc(String(v.uid||'?').slice(0,10))+'…</span> · '+ago(v.createdAt)+' · ❤️ '+(v.likesCount||0)+' · 💬 '+(v.commentsCount||0)+'</div>'
+    +'<div class="acts">'+(LVL[PANEL.myRole]>=2?'<button class="btn bd bsm" onclick="PANEL.reelDel(\''+r.id+'\')">🗑️ Delete</button><button class="btn bw bsm" onclick="PANEL.reelPromo(\''+r.id+'\')">'+(v.featured?'☆ Un-feature':'⭐ Feature promo')+'</button>':'')+'</div>'
+    +'</div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ reelDel:async function(rid){
+  if(!confirm('🗑️ Reel delete?'))return;
+  try{
+   await this.db.ref('reels/'+rid).remove();
+   this.audit('reel_del',rid,'');
+   t('🗑️ Reel delete: '+String(rid).slice(0,10)+'…',true);
+   this.loadReels(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ reelPromo:async function(rid){
+  var r=(this._reelsAll||[]).filter(function(x){return x.id===rid})[0];
+  var feat=r&&r.v.featured;
+  try{
+   await this.db.ref('reels/'+rid+'/featured').set(!feat);
+   await this.db.ref('reels/'+rid+'/featuredAt').set(Date.now());
+   this.audit('reel_promo',rid,feat?'un-featured':'featured');
+   t((feat?'☆ Feature hatadi':'⭐ Reel featured — feed me highlight hoga')+' — '+String(rid).slice(0,10)+'…',true);
+   this.loadReels(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 🚨 REPORTS ── */
+ loadReports:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._repAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Reports load…</div>';
+   try{
+    var s=await this.db.ref('reports').limitToLast(200).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.sort(function(a,b){return (a.v.status==='open'?0:1)-(b.v.status==='open'?0:1)||(b.v.at||b.v.createdAt||0)-(a.v.at||a.v.createdAt||0)});
+    this._repAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var open=this._repAll.filter(function(r){return (r.v.status||'open')==='open'}).length;
+  var h='<div class="snote mb8">🚨 Reports — '+open+' open / '+this._repAll.length+' total</div>';
+  if(!this._repAll.length)h+='<div class="empt"><div class="ei">📭</div>Koi report nahi</div>';
+  this._repAll.slice(0,80).forEach(function(r){
+   var v=r.v,st=v.status||'open';
+   h+='<div class="card"><div class="crow"><div style="font-size:17px">'+(st==='open'?'🚨':'✅')+'</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">'+esc(v.type||v.reason||'report')+(st==='open'?'':' <span class="badge" style="background:var(--wns);color:var(--wn)">'+esc(st.toUpperCase())+'</span>')+'</div>'
+    +'<div class="cmeta">'+esc(String(v.details||v.body||'').slice(0,110))+'</div>'
+    +'<div class="cmeta">by <span class="mono">'+esc(String(v.by||v.reporter||'?').slice(0,10))+'…</span> · target: <span class="mono">'+esc(String(v.target||v.targetUid||'?').slice(0,10))+'…</span> · '+ago(v.at||v.createdAt)+'</div>'
+    +'<div class="acts">'
+    +(st==='open'?'<button class="btn bg bsm" onclick="PANEL.repResolve(\''+r.id+'\')">✅ Resolve</button>':'')
+    +(v.target||v.targetUid?'<button class="btn bsm" onclick="PANEL.repTarget(\''+esc(v.target||v.targetUid)+'\')">👤 Target user</button>':'')
+    +'</div></div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ repResolve:async function(rid){
+  try{
+   await this.db.ref('reports/'+rid).update({status:'resolved',resolvedBy:this.myUid,resolvedAt:Date.now()});
+   this.audit('report_resolve',rid,'');
+   t('✅ Report resolved — '+String(rid).slice(0,10)+'…',true);
+   this.loadReports(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ repTarget:function(uid){this.userModal(uid)},
+ /* ── 🆘 HELP REQUESTS ── */
+ loadHelp:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._helpAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Help requests load…</div>';
+   try{
+    var s=await this.db.ref('helpRequests').limitToLast(200).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.sort(function(a,b){return (a.v.status==='open'?0:1)-(b.v.status==='open'?0:1)||(b.v.at||0)-(a.v.at||0)});
+    this._helpAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var open=this._helpAll.filter(function(r){return (r.v.status||'open')==='open'}).length;
+  var h='<div class="snote mb8">🆘 Help requests — '+open+' open / '+this._helpAll.length+' total</div>';
+  if(!this._helpAll.length)h+='<div class="empt"><div class="ei">📭</div>Koi request nahi</div>';
+  this._helpAll.slice(0,80).forEach(function(r){
+   var v=r.v,st=v.status||'open';
+   h+='<div class="card"><div class="crow"><div style="font-size:17px">'+(st==='open'?'🆘':'✅')+'</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">'+esc(v.subject||v.type||'help')+'</div>'
+    +'<div class="cmeta">'+esc(String(v.body||v.message||'').slice(0,110))+'</div>'
+    +'<div class="cmeta">by <span class="mono">'+esc(String(v.uid||'?').slice(0,10))+'…</span> · '+ago(v.at)+'</div>'
+    +'<div class="acts">'+(st==='open'?'<button class="btn bg bsm" onclick="PANEL.helpAct(\''+r.id+'\')">✅ Resolve</button>':'<span class="cmeta">resolved '+ago(v.resolvedAt)+'</span>')+'</div>'
+    +'</div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ helpAct:async function(hid){
+  try{
+   await this.db.ref('helpRequests/'+hid).update({status:'resolved',resolvedBy:this.myUid,resolvedAt:Date.now()});
+   this.audit('help_resolve',hid,'');
+   t('✅ Help resolved — '+String(hid).slice(0,10)+'…',true);
+   this.loadHelp(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 🚀 PROMO (paid promotion — ads ki jagah) ── */
+ loadPromo:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._promoAll||!this._promoCfg){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Promo system load…</div>';
+   try{
+    var s=await this.db.ref('promotionRequests').limitToLast(200).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.sort(function(a,b){return (a.v.status==='pending'?0:1)-(b.v.status==='pending'?0:1)||(b.v.requestedAt||0)-(a.v.requestedAt||0)});
+    this._promoAll=arr;
+    var cf=await this.db.ref('config/promotion').get();
+    this._promoCfg=(cf&&cf.exists())?cf.val():{};
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var cfg=this._promoCfg||{};
+  var pend=this._promoAll.filter(function(r){return (r.v.status||'pending')==='pending'});
+  var h='<div class="snote mb8">🚀 <b>PAID PROMOTION</b> — ads ki jagah users apna content promote karte hain. Pending: <b>'+pend.length+'</b></div>';
+  var pl=cfg.plans||{};
+  h+='<div class="card"><div class="cname">💰 PROMO PLANS <button class="btn bsm" onclick="PANEL.promoPlans()">✏️ Edit plans</button></div>'
+   +'<div class="cmeta mt8">Plan 1: '+esc((pl.p1&&pl.p1.name)||'Starter')+' — '+esc((pl.p1&&pl.p1.price)||'—')+' / '+esc((pl.p1&&pl.p1.days)||'—')+'d</div>'
+   +'<div class="cmeta">Plan 2: '+esc((pl.p2&&pl.p2.name)||'Grow')+' — '+esc((pl.p2&&pl.p2.price)||'—')+' / '+esc((pl.p2&&pl.p2.days)||'—')+'d</div>'
+   +'<div class="cmeta">Plan 3: '+esc((pl.p3&&pl.p3.name)||'Max')+' — '+esc((pl.p3&&pl.p3.price)||'—')+' / '+esc((pl.p3&&pl.p3.days)||'—')+'d</div>'
+   +'<div class="cmeta">Uptime: '+esc((cfg.uptime||'—'))+' views/day estimate</div></div>';
+  h+='<div class="sechead">📥 REQUESTS ('+this._promoAll.length+')</div>';
+  if(!this._promoAll.length)h+='<div class="empt"><div class="ei">📭</div>Koi promo request nahi</div>';
+  this._promoAll.slice(0,60).forEach(function(r){
+   var v=r.v,st=v.status||'pending';
+   h+='<div class="card"><div class="crow"><div style="font-size:16px">'+(st==='pending'?'⏳':(st==='approved'?'✅':'❌'))+'</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">'+esc(v.plan||'plan?')+' — @'+esc(v.username||'?')+(st!=='pending'?' <span class="badge" style="background:var(--wns);color:var(--wn)">'+esc(st.toUpperCase())+'</span>':'')+'</div>'
+    +'<div class="cmeta">“'+esc(String(v.text||v.promoText||'').slice(0,110))+'”</div>'
+    +'<div class="cmeta">by <span class="mono">'+esc(String(v.uid||'?').slice(0,10))+'…</span> · '+ago(v.requestedAt)+'</div>'
+    +'<div class="acts">'+(st==='pending'?'<button class="btn bg bsm" onclick="PANEL.promoAct(\''+r.id+'\',\'approved\')">✅ Approve</button><button class="btn bd bsm" onclick="PANEL.promoAct(\''+r.id+'\',\'rejected\')">❌ Reject</button>':'')+'</div>'
+    +'</div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ promoAct:async function(rid,st){
+  try{
+   var s=await this.db.ref('promotionRequests/'+rid).get();
+   var v=(s&&s.exists())?s.val():{};
+   var ups={};
+   ups['promotionRequests/'+rid+'/status']=st;
+   ups['promotionRequests/'+rid+'/reviewedBy']=this.myUid;
+   ups['promotionRequests/'+rid+'/reviewedAt']=Date.now();
+   if(st==='approved'){
+    ups['config/promotion/live/'+rid]={uid:v.uid||'',username:v.username||'',text:v.text||v.promoText||'',plan:v.plan||'',approvedAt:Date.now(),active:true};
+    try{await this.db.ref('notifs/'+(v.uid||'')+'/notifications').push({type:'promo',title:'🚀 Promotion LIVE!',body:'Aapki paid promotion approve ho gayi — ab feed me dikhegi.',read:false,at:Date.now(),by:this.myUid})}catch(e){}
+   }else{
+    try{await this.db.ref('notifs/'+(v.uid||'')+'/notifications').push({type:'promo',title:'❌ Promotion rejected',body:'Aapki promotion request reject ho gayi. Detail ke liye support se baat karo.',read:false,at:Date.now(),by:this.myUid})}catch(e){}
+   }
+   await this.db.ref().update(ups);
+   this.audit('promo',rid,st);
+   t('🚀 Promo '+st+' — '+String(rid).slice(0,10)+'…',true);
+   this.loadPromo(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ promoPlans:function(){
+  var pl=(this._promoCfg||{}).plans||{};
+  var h='<div class="snote mb8">💰 Promo plans — users ko yahi dikhte hain (paid promotion pricing).</div>'
+   +'<div class="fld"><label class="flbl">PLAN 1 — name</label><input class="inp" id="pp1n" value="'+esc((pl.p1&&pl.p1.name)||'Starter')+'"></div>'
+   +'<div style="display:flex;gap:7px"><div class="fld" style="flex:1"><label class="flbl">Price</label><input class="inp" id="pp1p" value="'+esc((pl.p1&&pl.p1.price)||'₹49')+'"></div>'
+   +'<div class="fld" style="flex:1"><label class="flbl">Days</label><input class="inp" id="pp1d" value="'+esc((pl.p1&&pl.p1.days)||'3')+'"></div></div>'
+   +'<div class="fld"><label class="flbl">PLAN 2 — name</label><input class="inp" id="pp2n" value="'+esc((pl.p2&&pl.p2.name)||'Grow')+'"></div>'
+   +'<div style="display:flex;gap:7px"><div class="fld" style="flex:1"><label class="flbl">Price</label><input class="inp" id="pp2p" value="'+esc((pl.p2&&pl.p2.price)||'₹149')+'"></div>'
+   +'<div class="fld" style="flex:1"><label class="flbl">Days</label><input class="inp" id="pp2d" value="'+esc((pl.p2&&pl.p2.days)||'7')+'"></div></div>'
+   +'<div class="fld"><label class="flbl">PLAN 3 — name</label><input class="inp" id="pp3n" value="'+esc((pl.p3&&pl.p3.name)||'Max')+'"></div>'
+   +'<div style="display:flex;gap:7px"><div class="fld" style="flex:1"><label class="flbl">Price</label><input class="inp" id="pp3p" value="'+esc((pl.p3&&pl.p3.price)||'₹399')+'"></div>'
+   +'<div class="fld" style="flex:1"><label class="flbl">Days</label><input class="inp" id="pp3d" value="'+esc((pl.p3&&pl.p3.days)||'30')+'"></div></div>'
+   +'<div class="fld"><label class="flbl">Uptime note (reach estimate)</label><input class="inp" id="ppUp" value="'+esc((this._promoCfg||{}).uptime||'~2000 views/day')+'"></div>'
+   +'<div class="fld"><button class="btn bg bfull" onclick="PANEL.promoSave()">💾 SAVE PLANS</button></div>';
+  this.modal('💰 PROMO PLANS',h);
+ },
+ promoSave:async function(){
+  try{
+   var ups={};
+   ups['config/promotion/plans/p1']={name:(document.getElementById('pp1n').value||'').slice(0,30),price:(document.getElementById('pp1p').value||'').slice(0,20),days:(document.getElementById('pp1d').value||'').slice(0,10)};
+   ups['config/promotion/plans/p2']={name:(document.getElementById('pp2n').value||'').slice(0,30),price:(document.getElementById('pp2p').value||'').slice(0,20),days:(document.getElementById('pp2d').value||'').slice(0,10)};
+   ups['config/promotion/plans/p3']={name:(document.getElementById('pp3n').value||'').slice(0,30),price:(document.getElementById('pp3p').value||'').slice(0,20),days:(document.getElementById('pp3d').value||'').slice(0,10)};
+   ups['config/promotion/uptime']=(document.getElementById('ppUp').value||'').slice(0,60);
+   ups['config/promotion/updatedAt']=Date.now();
+   await this.db.ref().update(ups);
+   this.audit('promo_plans','','plans updated');
+   t('💰 Promo plans save ho gaye',true);
+   this.mClose();this.loadPromo(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 📢 ANNOUNCE ── */
+ loadAnnounce:async function(){
+  var c=document.getElementById('tabContent');
+  c.innerHTML='<div class="empt"><div class="ei">⏳</div>Announce load…</div>';
+  this.db.ref('config/announcement').get().then(function(an){
+   var v=(an&&an.exists())?an.val():{};
+   var h='<div class="snote mb8">📢 SAB users ko notification bhejo (ek atomic batch me) + config/announcement update.</div>'
+    +(v.title?'<div class="card"><div class="cname" style="font-size:12.5px">📜 Current: '+esc(v.title)+'</div><div class="cmeta">'+esc(String(v.body||'').slice(0,140))+' · '+ago(v.at)+'</div></div>':'')
+    +'<div class="fld"><label class="flbl">TITLE</label><input class="inp" id="anT" maxlength="80" placeholder="🎉 VEXA update aa gaya!"></div>'
+    +'<div class="fld"><label class="flbl">BODY</label><textarea class="txta" id="anB" maxlength="300" placeholder="Naya kya hai…"></textarea></div>'
+    +'<div class="fld"><button class="btn bg bfull" onclick="PANEL.announceSend()">📢 SEND TO ALL USERS</button></div>';
+   c.innerHTML=h;
+  }).catch(function(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>'});
+ },
+ announceSend:async function(){
+  var ti=(document.getElementById('anT').value||'').trim();
+  var bo=(document.getElementById('anB').value||'').trim();
+  if(!ti||!bo){t('Title + body dono daalo',false);return}
+  if(!confirm('📢 SAB users ko bhejein?'))return;
+  try{
+   var us=await this.db.ref('users').get();
+   var ups={},n=0;
+   if(us.exists())us.forEach(function(x){
+    var key=db.ref('notifs/'+x.key+'/notifications').push().key;
+    if(key){ups['notifs/'+x.key+'/notifications/'+key]={type:'announcement',title:ti.slice(0,90),body:bo.slice(0,200),read:false,at:Date.now(),by:PANEL.myUid};n++}
+   });
+   ups['config/announcement']={title:ti,body:bo,at:Date.now(),by:this.myUid};
+   await this.db.ref().update(ups);
+   this.audit('announce','',ti+' — '+n+' users');
+   t('📢 '+n+' users ko announce bhej diya (atomic batch)',true);
+   this.loadAnnounce();
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ /* ── 🔐 VERSION TOOLS ── */
+ loadVersion:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._ver){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Version load…</div>';
+   try{
+    var s=await this.db.ref('versionApp').get();
+    this._ver=(s&&s.exists())?s.val():{};
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var v=this._ver||{},la=v.latest||{};
+  var h='<div class="snote mb8">🔐 App version control — user ke app ko naya version force-update kar sakte ho.</div>'
+   +'<div class="card"><div class="cname">📦 LIVE: <span class="mono">'+esc(la.ver||'—')+'</span></div>'
+   +'<div class="cmeta">'+esc(la.note||'')+' · '+ago(la.at)+'</div>'
+   +(v.apkUrl?'<div class="cmeta">APK: <span class="mono" style="font-size:9.5px">'+esc(v.apkUrl)+'</span></div>':'')
+   +'</div>'
+   +'<div class="card"><div class="cname">✏️ SET NEW VERSION</div>'
+   +'<div class="fld"><label class="flbl">VERSION (e.g. 2.9.0)</label><input class="inp" id="vrVer" value="'+esc(la.ver||'')+'"></div>'
+   +'<div class="fld"><label class="flbl">NOTE</label><input class="inp" id="vrNote" maxlength="120" value="'+esc(la.note||'')+'"></div>'
+   +'<div class="fld"><label class="flbl">MIN FORCE VERSION (iskem neeche wale block honge — optional)</label><input class="inp" id="vrMin" value="'+esc(v.minForce||'')+'"></div>'
+   +'<div class="fld"><button class="btn bg bfull" onclick="PANEL.verSave()">💾 SAVE VERSION</button></div>'
+   +'<div class="fld"><button class="btn bw bfull" onclick="PANEL.verBc()">📢 BROADCAST update notification (sab users)</button></div></div>'
+   +'<div class="card"><div class="cname">🧰 QUICK TOOLS</div>'
+   +'<div class="acts mt8"><button class="btn bsm" onclick="PANEL.adminPrompt()">👑 Role quick-set (UID prompt)</button>'
+   +'<button class="btn bsm" onclick="PANEL.apkPrompt()">📥 APK URL set</button>'
+   +'<button class="btn bsm" onclick="PANEL.recheck()">♻ Recheck</button></div></div>';
+  c.innerHTML=h;
+ },
+ verSave:async function(){
+  try{
+   var ver=(document.getElementById('vrVer').value||'').trim();
+   if(!ver){t('Version daalo',false);return}
+   var ups={};
+   ups['versionApp/latest']={ver:ver,note:(document.getElementById('vrNote').value||'').slice(0,120),at:Date.now(),by:this.myUid};
+   var mn=(document.getElementById('vrMin').value||'').trim();
+   if(mn)ups['versionApp/minForce']=mn;
+   await this.db.ref().update(ups);
+   this.audit('version_set',ver,'');
+   t('🔐 Version set: '+ver,true);
+   this.loadVersion(true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ verBc:async function(){
+  try{
+   var la=(this._ver&&this._ver.latest)||{};
+   if(!la.ver){t('Pehle version save karo',false);return}
+   var us=await this.db.ref('users').get();
+   var ups={},n=0;
+   if(us.exists())us.forEach(function(x){
+    var key=db.ref('notifs/'+x.key+'/notifications').push().key;
+    if(key){ups['notifs/'+x.key+'/notifications/'+key]={type:'update',title:'🔄 Naya version: '+la.ver,body:la.note||'VEXA update aa gaya — app update kar lo!',read:false,at:Date.now(),by:PANEL.myUid};n++}
+   });
+   await db.ref().update(ups);
+   this.audit('version_bc',la.ver,n+' users');
+   t('📢 '+n+' users ko update notification',true);
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ adminPrompt:function(){
+  var uid=prompt('👑 ROLE SET — UID daalo:');
+  if(!uid)return;
+  var r=prompt('Role (user / moderator / admin / owner):');
+  if(!r)return;r=String(r).trim().toLowerCase();
+  if(['user','moderator','admin','owner'].indexOf(r)<0){t('Invalid role',false);return}
+  this.uRole(uid.trim());
+ },
+ apkPrompt:function(){
+  var u=prompt('📥 APK download URL:',(this._ver&&this._ver.apkUrl)||'');
+  if(u===null)return;
+  var self=this;
+  db.ref('versionApp/apkUrl').set(String(u).trim()).then(function(){self.audit('apk_url','',String(u).slice(0,60));t('📥 APK URL save',true);self.loadVersion(true)}).catch(function(e){t('❌ '+FR_ERR(e),false)});
+ },
+ recheck:function(){this._ver=null;this._usersAll=null;this._pwUsers=null;this.loadVersion(true);t('♻ Recheck — fresh data load ho gaya',true)},
+ /* ── 🔑 RECOVERY VAULT (owner) ── */
+ loadRecovery:async function(q,force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._recAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Recovery vault load…</div>';
+   try{
+    var s=await this.db.ref('recoveryPrivate').limitToLast(300).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.sort(function(a,b){return (b.v.updatedAt||b.v.createdAt||0)-(a.v.updatedAt||a.v.createdAt||0)});
+    this._recAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  q=(q===undefined||q===null)?(this._recq||''):String(q).toLowerCase();this._recq=q;
+  var list=this._recAll.filter(function(r){
+   if(!q)return true;
+   return (r.v.username||'').toLowerCase().indexOf(q)>-1||(r.v.email||'').toLowerCase().indexOf(q)>-1;
+  });
+  var h='<div class="snote mb8">🔑 Owner-only vault — recoveryPrivate (username/email/password/codes). '+list.length+' entries (latest 300).</div>';
+  h+='<div class="searchrow"><input class="inp" id="rcQ" placeholder="Search username / email…" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')PANEL.loadRecovery(document.getElementById(\'rcQ\').value)"><button class="btn bp" onclick="PANEL.loadRecovery(document.getElementById(\'rcQ\').value)">🔍</button></div>';
+  if(!list.length)h+='<div class="empt"><div class="ei">📭</div>Koi entry nahi</div>';
+  list.slice(0,50).forEach(function(r){
+   var v=r.v;
+   h+='<div class="card"><div class="crow"><div style="font-size:18px">🔑</div><div class="cinfo">'
+    +'<div class="cname">@'+esc(v.username||'?')+' <span class="mono" style="font-size:10px;color:var(--mut)">'+esc(r.id.slice(0,10))+'…</span></div>'
+    +'<div class="cmeta">'+esc(v.email||'—')+' · DOB: '+esc(v.dob||'—')+' · pass: <span class="mono">'+esc(v.password?'••••':'—')+'</span> · '+ago(v.updatedAt||v.createdAt)+'</div>'
+    +'<div class="acts">'
+    +(v.password?'<button class="btn bsm" onclick="PANEL.recCopy(\''+r.id+'\',\'password\')">📋 Password</button>':'')
+    +(v.mainCode?'<button class="btn bsm" onclick="PANEL.recCopy(\''+r.id+'\',\'mainCode\')">📋 Main Code</button>':'')
+    +(v.secondaryCode?'<button class="btn bsm" onclick="PANEL.recCopy(\''+r.id+'\',\'secondaryCode\')">📋 Secondary</button>':'')
+    +'</div></div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ recCopy:function(id,field){
+  var r=(this._recAll||[]).filter(function(x){return x.id===id})[0];
+  var v=r?r.v:{};
+  try{navigator.clipboard.writeText(String(v[field]||''));t('📋 '+field+' copied — @'+(v.username||'?'),true)}catch(e){t(String(v[field]||''),false)}
+ },
+ /* ── 🧾 AUDIT LOG (owner) ── */
+ loadAudit:async function(force){
+  var c=document.getElementById('tabContent');
+  if(force||!this._audAll){
+   c.innerHTML='<div class="empt"><div class="ei">⏳</div>Audit log load…</div>';
+   try{
+    var s=await this.db.ref('auditLog').limitToLast(150).get();
+    var arr=[];if(s.exists())s.forEach(function(x){arr.push({id:x.key,v:x.val()||{}})});
+    arr.reverse();this._audAll=arr;
+   }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>';return}
+  }
+  var h='<div class="snote mb8">🧾 Panel ke saare staff actions (grant/ban/delete/promo/announce/version/password_send…) — latest 150.</div>';
+  if(!this._audAll.length)h+='<div class="empt"><div class="ei">📭</div>Abhi koi action log nahi — kuch bhi karo, yahan dikhega</div>';
+  this._audAll.slice(0,100).forEach(function(r){
+   var v=r.v;
+   h+='<div class="card" style="padding:9px 12px"><div class="crow"><div style="font-size:14px">▸</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12px">'+esc(v.action||'?')+' → <span class="mono" style="font-size:10.5px">'+esc(String(v.target||'').slice(0,24))+'</span></div>'
+    +'<div class="cmeta">@'+esc(v.byName||'?')+' ('+esc(v.role||'?')+')'+(v.detail?' · '+esc(v.detail):'')+' · '+ago(v.at)+'</div>'
+    +'</div></div></div>';
+  });
+  c.innerHTML=h;
+ },
+ /* ═════════ 📨 PASSWORD SEND v3.2.1 — 2-COLUMN + TARGET SELECT + CONFIRM ═════════
+    Column 1: user search (username/email/UID) · Column 2: 🎯 target select + credentials + send
+    1) OLD ID  = email+password+DOB+codes (recoveryPrivate vault)
+    2) TEMP ID = naya temp account (temp username + TEMP-UID + password)
+    🧡 TEMP RECOVERY VAULT = user ka MAIN ID + SAB linked temp IDs ek jagah — radio se target chuno
+    🛑 SEND → CONFIRM modal (receiver + message preview) → "✅ CONFIRM & SEND" dabane par hi jata hai
+    👑 owner-only niche: SAB KE PASSWORDS (hidden by default, 👁/🙈 toggle) */
+ loadPassSend:async function(){
+  var c=document.getElementById('tabContent');
+  c.innerHTML='<div class="empt"><div class="ei">⏳</div>Password Send console load…</div>';
+  this._pwUsers=null;
+  try{
+   var own=(LVL[this.myRole]||0)>=3;
+   var h='<style>.ps2col{display:grid;grid-template-columns:.9fr 1.1fr;gap:10px;align-items:start}.psres{max-height:430px;overflow:auto}.psres .card{margin:0 0 6px}@media(max-width:760px){.ps2col{grid-template-columns:1fr}}</style>'
+    +'<div class="snote mb8">📨 <b>PASSWORD SEND — 2 COLUMN CONSOLE</b> · 📜 <b>1) OLD ID</b> = email + password + DOB + codes · 🧡 <b>2) TEMP ID</b> = temp account credentials<br><span class="mono" style="font-size:10px">Column 1: user dhundo · Column 2: 🔑 Send Password + 📤 Send Temp Username buttons'+(own?' · 👑 neeche SAB KE PASSWORDS (owner, hide/show)':'')+'</span></div>'
+    +'<div class="ps2col">'
+    +'<div class="card" style="margin:0"><div class="cname">👥 COLUMN 1 — USER DHUNDO</div>'
+    +'<div class="searchrow mt8"><input class="inp" id="psQ" placeholder="Username / email / UID…" onkeydown="if(event.key===\'Enter\')PANEL.pwSearch(document.getElementById(\'psQ\').value)"><button class="btn bp" onclick="PANEL.pwSearch(document.getElementById(\'psQ\').value)">🔍</button></div>'
+    +'<div id="psRes" class="psres"><div class="snote">Username daalo — matching users yahan aayenge. Card pe tap karo → Column 2 me details + send buttons.</div></div>'
+    +'</div>'
+    +'<div class="card" style="margin:0" id="psRight"><div class="cname">📨 COLUMN 2 — CREDENTIALS + SEND</div><div class="snote mt8">⬅ Pehle Column 1 se user select karo.</div></div>'
+    +'</div>';
+   if(own){
+    h+='<div class="card" style="margin-top:10px"><div class="cname">👑 SAB KE PASSWORDS <span class="badge" style="background:var(--wns);color:var(--wn)">OWNER-ONLY</span> <span class="mono" style="font-size:10px;color:var(--mut)" id="pwaCount"></span></div>'
+     +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">'
+     +'<button class="btn bsm" id="pwaEyeAll" onclick="PANEL.pwAllToggle()">👁 Sab Dikhao</button>'
+     +'<input class="inp" id="pwaQ" placeholder="filter username / email…" style="max-width:230px" onkeydown="if(event.key===\'Enter\')PANEL.pwAllRender(document.getElementById(\'pwaQ\').value)">'
+     +'<button class="btn bsm" onclick="PANEL.pwAllRender(document.getElementById(\'pwaQ\').value)">🔍</button>'
+     +'</div>'
+     +'<div id="psAll" class="mt8"><div class="snote">⏳ vault load…</div></div>'
+     +'<div class="sm mut mt8">🙈 passwords <b>HIDDEN</b> rehte hain — 👁 per-row ya "👁 Sab Dikhao" se dikhte hain, 🙈 se dobara hide. 📋 Copy bhi hai.</div></div>';
+   }
+   c.innerHTML=h;
+   if(own)this.pwAllLoad();
+  }catch(e){c.innerHTML='<div class="empt">Fail: '+esc(FR_ERR(e))+'</div>'}
+ },
+ pwSearch:async function(q){
+  q=String(q||'').trim().toLowerCase().replace(/^@/,'');
+  var box=document.getElementById('psRes');
+  if(!box)return this.pwFind(q);
+  if(!q){box.innerHTML='<div class="snote">Username / email / UID daalo…</div>';return}
+  box.innerHTML='<div class="snote">🔍 searching…</div>';
+  try{
+   await this.pwUsersAll();
+   var list=this._pwUsers.filter(function(r){
+    var v=r.v||{};
+    return String(v.username||'').toLowerCase().indexOf(q)>-1||String(v.displayName||'').toLowerCase().indexOf(q)>-1||String(v.email||'').toLowerCase().indexOf(q)>-1||r.uid.toLowerCase().indexOf(q)>-1;
+   });
+   if(!list.length){box.innerHTML='<div class="snote">❌ "'+esc(q)+'" — koi user nahi mila. 🛠 Missing Scan (Users tab) chalao ya spelling check karo.</div>';t('Koi user nahi mila',false);return}
+   var h='';
+   list.slice(0,12).forEach(function(r){
+    var v=r.v||{};
+    h+='<div class="card" style="cursor:pointer" onclick="PANEL.pwSelect(\''+r.uid+'\')"><div class="crow"><div style="font-size:18px">'+(v.tempRecovery?'🧡':(v.vip?'💎':'👤'))+'</div><div class="cinfo">'
+     +'<div class="cname">@'+esc(v.username||'?')+(v.vip?' 💎':'')+(v.verified?' ✔':'')+(v.tempRecovery?' 🧡TEMP':'')+(v.banned?' 🚫':'')+'</div>'
+     +'<div class="cmeta">'+esc(v.email||'—')+' · <span class="mono" style="font-size:10px">'+esc(String(r.uid).slice(0,10))+'…</span></div>'
+     +'</div></div></div>';
+   });
+   if(list.length>12)h+='<div class="sm mut">+'+(list.length-12)+' more — aur specific search karo</div>';
+   box.innerHTML=h;
+   t(list.length+' user mile — tap karke select karo',true);
+  }catch(e){box.innerHTML='<div class="snote">❌ '+esc(FR_ERR(e))+'</div>'}
+ },
+ pwFind:async function(u){
+  u=String(u||'').trim().toLowerCase().replace(/^@/,'');
+  if(!u)return t('Username daalo',false);
+  try{
+   var s=await this.db.ref('usernames/'+u).get();
+   if(!s||!s.exists())return t('❌ @'+u+' usernames index me nahi mila — Users tab me 🛠 Missing Scan chalao',false);
+   t('✅ @'+u+' mila — UID: '+String(s.val()).slice(0,10)+'…',true);
+   this.pwOpen(s.val());
+  }catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ pwSelect:function(uid){
+  var r=document.getElementById('psRight');
+  if(!r)return this.pwOpen(uid);
+  r.innerHTML='<div class="cname">📨 COLUMN 2 — CREDENTIALS + SEND</div><div class="snote mt8">⏳ load…</div>';
+  this.pwInto(uid,r);
+ },
+ pwInto:async function(uid,box){
+  try{box.innerHTML='<div class="cname">📨 COLUMN 2 — CREDENTIALS + SEND</div>'+(await this.pwLoad(uid))}catch(e){box.innerHTML='<div class="snote">❌ '+esc(FR_ERR(e))+'</div>'}
+ },
+ pwOpen:async function(uid){
+  try{this.modal('📨 PASSWORD SEND',await this.pwLoad(uid))}catch(e){t('❌ '+FR_ERR(e),false)}
+ },
+ pwRow:function(l,v,mono){
+  return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--bds)"><span style="color:var(--mut);font-size:11px">'+l+'</span><b class="'+(mono?'mono':'')+'" style="font-size:11.5px;word-break:break-all;text-align:right">'+esc(v==null||v===''?'—':v)+'</b></div>';
+ },
+ /* v3.2.1 — 🧡 TEMP RECOVERY VAULT helpers: users cache + linked temp IDs + target select */
+ pwUsersAll:async function(){
+  if(this._pwUsers)return this._pwUsers;
+  var s=await this.db.ref('users').get();this._pwUsers=[];
+  if(s.exists())s.forEach(function(x){PANEL._pwUsers.push({uid:x.key,v:x.val()||{}})});
+  return this._pwUsers;
+ },
+ pwTempsOf:function(uid,prof,oldUid){
+  var out=[],seen={},mainUid=oldUid||uid,uname='';
+  if(prof)uname=prof.tempRecovery===true?(prof.origUsername||''):(prof.username||'');
+  (this._pwUsers||[]).forEach(function(r){
+   var v=r.v||{};
+   if(v.tempRecovery!==true)return;
+   if(v.origUid===mainUid||(uname&&v.origUsername===uname)){if(!seen[r.uid]){seen[r.uid]=1;out.push({uid:r.uid,v:v})}}
+  });
+  if(this._pwTempNew&&!seen[this._pwTempNew.uid])out.push({uid:this._pwTempNew.uid,v:{username:this._pwTempNew.user,tempUid:this._pwTempNew.disp,origUid:mainUid,createdAt:Date.now(),justMade:true}});
+  out.sort(function(a,b){return (b.v.createdAt||0)-(a.v.createdAt||0)});
+  return out;
+ },
+ pwTgtSet:function(v){
+  this._pwTgt=v;
+  var o=(this._pwTgtList||[]).filter(function(x){return x.v===v})[0];
+  t('🎯 Target: '+((o&&o.label)||v),true);
+ },
+ pwTargetUid:function(){
+  var pw=this._pw;if(!pw)return null;
+  var v=this._pwTgt||'main';
+  if(v==='main')return (pw.prof&&pw.prof.tempRecovery===true)?(pw.oldUid||pw.uid):pw.uid;
+  if(v==='self')return pw.uid;
+  if(String(v).indexOf('T:')===0)return String(v).slice(2);
+  return pw.uid;
+ },
+ pwTgtName:function(tuid){
+  var o=(this._pwTgtList||[]).filter(function(x){return x.uid===tuid})[0];
+  if(o)return o.label;
+  var pw=this._pw||{};
+  return '@'+((pw.prof&&pw.prof.username)||String(tuid||'').slice(0,8));
+ },
+ pwLoad:async function(uid){
+  try{
+   if(this._pwLastUid!==uid){this._pwTempNew=null;this._pwTgt='main'}
+   var ps=await this.db.ref('users/'+uid).get();
+   var prof=(ps&&ps.exists())?ps.val():null;
+   if(!prof)return '<div class="snote">⚠️ Is UID ka profile node nahi mila: <span class="mono">'+esc(String(uid).slice(0,14))+'…</span></div><div class="fld mt8"><button class="btn bg bfull" onclick="PANEL.userRepairOpen(\''+uid+'\')">🔧 REPAIR karo, phir wapas aao</button></div>';
+   this._pwLastUid=uid;
+   var isTemp=prof.tempRecovery===true;
+   var oldUid=isTemp?(prof.origUid||''):uid;
+   if(isTemp&&!oldUid&&prof.origUsername){
+    try{var os=await this.db.ref('usernames/'+String(prof.origUsername).toLowerCase()).get();if(os&&os.exists())oldUid=os.val()}catch(e){}
+   }
+   var vault=null;
+   if(oldUid){try{var vs=await this.db.ref('recoveryPrivate/'+oldUid).get();if(vs&&vs.exists())vault=vs.val()}catch(e){}}
+   var tVault=null;
+   if(isTemp){try{var tvs=await this.db.ref('recoveryPrivate/'+uid).get();if(tvs&&tvs.exists())tVault=tvs.val()}catch(e){}}
+   this._pw={uid:uid,prof:prof,oldUid:oldUid,vault:vault,tempVault:tVault};
+   var vp=vault||{};
+   var oUser=(oldUid===uid)?(prof.username||'?'):(vp.username||prof.origUsername||'?');
+   var have=!!(vp.email||vp.password||vp.dob);
+   /* v3.2.1 🧡 TEMP RECOVERY VAULT — user ka MAIN ID + SAB linked temp IDs, radio se target select */
+   try{await this.pwUsersAll()}catch(e){}
+   var temps=this.pwTempsOf(uid,prof,oldUid);
+   var self=this;
+   this._pwTgtList=[{v:'main',uid:(isTemp?(oldUid||uid):uid),label:'📜 @'+oUser+' — MAIN ID'}];
+   temps.forEach(function(tp){if(isTemp&&tp.uid===uid)return;self._pwTgtList.push({v:'T:'+tp.uid,uid:tp.uid,label:'🧡 @'+(tp.v.username||'?')+' — '+(tp.v.tempUid||'TEMP ID')+(tp.v.justMade?' (naya)':'')})});
+   if(isTemp)this._pwTgtList.push({v:'self',uid:uid,label:'🧡 @'+(prof.username||'?')+' — YE TEMP ID'});
+   if(!this._pwTgt)this._pwTgt='main';
+   var h='<div class="card" style="margin-bottom:8px"><div class="cname">🎯 TARGET SELECT — details KISKO bhejni hain?</div>'
+    +'<div class="snote mt8" style="padding:6px 10px;font-size:11px">User: <b>@'+esc(prof.username||'?')+'</b>'+(isTemp?' <span class="badge" style="background:var(--wns);color:var(--wn)">🧡 TEMP</span>':'')+' · <span class="mono" style="font-size:10px">'+esc(String(uid).slice(0,14))+'…</span>'+(temps.length?' · <b>'+temps.length+' temp ID'+(temps.length>1?'s':'')+' linked</b>':' · koi temp ID linked nahi')+'</div>'
+    +this._pwTgtList.map(function(o){var on=(self._pwTgt===o.v);return '<label class="chkrow"><input type="radio" name="pwTgt"'+(on?' checked':'')+' onclick="PANEL.pwTgtSet(\''+o.v+'\')"><span class="ckl">'+esc(o.label)+'</span><span class="ckd mono" style="font-size:9.5px">'+esc(String(o.uid).slice(0,10))+'…</span></label>'}).join('')
+    +'</div>';
+   h+='<div class="card" style="margin-bottom:8px"><div class="cname">📜 1) OLD ID SEND'+(have?'':' <span class="badge" style="background:var(--dns);color:var(--dn)">VAULT EMPTY</span>')+'</div>'
+    +'<label class="chkrow"><input type="checkbox" id="pwOldChk"'+(have?' checked':'')+'><span class="ckl">Original account details bhejo</span><span class="ckd">email + password + DOB + codes</span></label>'
+    +this.pwRow('👤 Username','@'+oUser)
+    +this.pwRow('🪪 UID',oldUid||'',true)
+    +this.pwRow('📧 Email',vp.email||prof.origEmail||'',true)
+    +this.pwRow('🔑 Password',vp.password||'',true)
+    +(vp.dob?this.pwRow('📅 DOB',vp.dob):'')
+    +(vp.mainCode?this.pwRow('🗝️ Main Code',vp.mainCode,true):'')
+    +(vp.secondaryCode?this.pwRow('🗝️ Secondary Code',vp.secondaryCode,true):'');
+   if(!vault)h+='<div class="snote mt8">⚠️ recoveryPrivate me is account ki entry nahi mili — password ke bina sirf email/username jayega. (Vault signup pe banta hai — purane users me missing ho sakta hai.)</div>';
+   h+='</div>';
+   if(isTemp){
+    h+='<div class="card" style="margin-bottom:8px"><div class="cname">🧡 2) TEMP ID (already active)</div>'
+     +'<label class="chkrow"><input type="checkbox" id="pwTempChk" checked><span class="ckl">Temp account info bhejo</span></label>'
+     +this.pwRow('👤 Temp Username','@'+(prof.username||''),true)
+     +this.pwRow('🪪 Temp UID',prof.tempUid||'',true)
+     +this.pwRow('⏰ Expiry',prof.tempExpiresAt?new Date(prof.tempExpiresAt).toLocaleDateString():'')
+     +((this._pw.tempVault&&this._pw.tempVault.password)
+      ?(this.pwRow('🔑 Temp Password (vault)',this._pw.tempVault.password,true)
+       +'<div class="snote mt8">💾 Temp password <b>recoveryPrivate vault me saved</b> hai — panel band/refresh hone par bhi kabhi lost nahi hoga. 📤 Send Temp Username se user ko bhej do.</div>')
+      :'<div class="snote mt8">🔑 Temp password vault me nahi mila (purana temp — user ke paas pehle se hai). 🎲 se naya banaya gaya temp ab vault me save hoga.</div>')
+    +'</div>';
+   }else{
+    h+='<div class="card" style="margin-bottom:8px"><div class="cname">🧡 2) TEMP ID SEND</div>'
+     +'<label class="chkrow"><input type="checkbox" id="pwTempChk"><span class="ckl">Naya TEMP ID banake bhejo</span><span class="ckd">7 din valid · sirf admin/owner chat · message TEMP account me jayega</span></label>'
+     +'<div class="fld"><button class="btn bw bfull" id="pwTempBtn" onclick="PANEL.pwTempMake()">🎲 Naya TEMP ID abhi banao</button></div>';
+    if(this._pwTempNew){
+     var tn=this._pwTempNew;
+     h+=this.pwRow('👤 Temp Username','@'+tn.user,true)
+      +this.pwRow('🪪 Temp UID',tn.disp,true)
+      +this.pwRow('🔑 Temp Password',tn.pass,true)
+      +'<div class="snote mt8">✅ Temp account ban gaya — 📤 send buttons se details chat me jayengi.<br>💾 Password <b>recoveryPrivate vault me save ho gaya</b> — panel refresh ke baad bhi 👑 SAB KE PASSWORDS me milega.</div>';
+    }else{
+     h+='<div class="snote mt8">Pehle 🎲 se temp account banao (staff session safe — alag Firebase app), phir 📤 Send Temp Username.</div>';
+    }
+    h+='</div>';
+   }
+   h+='<div class="fld" style="display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button class="btn bp bsm" onclick="PANEL.pwSendOne(\'old\')">🔑 Send Password</button>'
+    +'<button class="btn bw bsm" onclick="PANEL.pwSendOne(\'temp\')">📤 Send Temp Username</button>'
+    +'<button class="btn bg bsm" onclick="PANEL.pwSendBoth()">📤📤 Send DONO</button>'
+    +'</div>'
+    +'<div class="sm mut" style="margin-top:6px">🛑 Har send pehle <b>CONFIRM modal</b> dikhayega — target + preview check karke ✅ CONFIRM &amp; SEND dabao.</div>'
+    +'<div class="fld"><button class="btn bsm" onclick="PANEL.pwCopyAll()">📋 Copy all (backup)</button></div>';
+   return h;
+  }catch(e){return '<div class="snote">❌ '+esc(FR_ERR(e))+'</div>'}
+ },
+ pwBuildText:function(wOld,wTemp){
+  var pw=this._pw||{},prof=pw.prof||{},vp=pw.vault||{};
+  var L='🔐 VEXA LOGIN DETAILS — staff ('+(this.ROLE||'staff')+') se\n━━━━━━━━━━━━━━';
+  if(wOld){
+   L+='\n\n📜 1) OLD ID (original account)'
+    +'\n👤 Username: @'+((pw.oldUid===pw.uid)?(prof.username||'?'):(vp.username||prof.origUsername||'?'))
+    +(pw.oldUid?'\n🪪 UID: '+pw.oldUid:'')
+    +'\n📧 Email: '+(vp.email||prof.origEmail||'—')
+    +'\n🔑 Password: '+(vp.password||'— (vault me nahi mila)')
+    +(vp.dob?'\n📅 DOB: '+vp.dob:'')
+    +(vp.mainCode?'\n🗝️ Main Code: '+vp.mainCode:'')
+    +(vp.secondaryCode?'\n🗝️ Secondary Code: '+vp.secondaryCode:'');
+  }
+  if(wTemp){
+   if(prof.tempRecovery===true){
+    L+='\n\n🧡 2) TEMP ID (temporary account — active)'
+     +'\n👤 Temp Username: @'+(prof.username||'')
+     +'\n🪪 Temp UID: '+(prof.tempUid||'—')
+     +'\n🔑 Temp Password: '+((this._pw&&this._pw.tempVault&&this._pw.tempVault.password)?this._pw.tempVault.password:'(aapke paas hai — account banate waqt mila tha)')
+     +(prof.tempExpiresAt?'\n⏰ Expiry: '+new Date(prof.tempExpiresAt).toLocaleDateString():'');
+   }else if(this._pwTempNew){
+    L+='\n\n🧡 2) TEMP ID (naya temporary account)'
+     +'\n👤 Temp Username: @'+this._pwTempNew.user
+     +'\n🪪 Temp UID: '+this._pwTempNew.disp
+     +'\n🔑 Temp Password: '+this._pwTempNew.pass
+     +'\n⏰ Valid: 7 din (sirf admin/owner se chat)';
+   }
+  }
+  if(wTemp){
+   var tu=(prof.tempRecovery===true)?(prof.username||''):((this._pwTempNew&&this._pwTempNew.user)||'');
+   if(tu)L+='\n\n🧹 TEMP ACCOUNT DELETE — future dikat se bachne ke liye (ZAROORI)\nAgar aapko upar ID + password + baaki jaankari mil gayi hai aur aap ORIGINAL account me wapas login ho chuke ho — to ye TEMP account (@'+tu+') delete kar do:\n▸ App me Settings kholo → ⚠️ DANGER ZONE\n▸ "Delete Temporary Account" pe tap karo\n▸ "delete" type karo + upar wala TEMP PASSWORD daalo\n▸ 🗑️ Permanently delete dabao — temp account hamesha ke liye khatam\n✅ Isse future me do account / purane login ki koi dikat nahi hogi.';
+  }
+  L+='\n\n━━━━━━━━━━━━━━\n⚠️ PRIVATE — ye details sirf aapke liye hain, kisi se share mat karo.\n🔑 Login ke baad Settings ▸ Change Password se naya password laga lo.';
+  return L;
+ },
+ pwCopyAll:function(){
+  var oc=document.getElementById('pwOldChk'),tc=document.getElementById('pwTempChk');
+  var pw=this._pw||{};
+  var wO=oc?!!oc.checked:true;
+  var wT=tc?!!tc.checked:((pw.prof&&pw.prof.tempRecovery===true)||!!this._pwTempNew);
+  var txt=this.pwBuildText(!!wO,!!wT);
+  try{navigator.clipboard.writeText(txt);t('📋 Copy ho gaya — kahin paste karke padh lo',true)}catch(e){t('Copy fail — manually note karo',false)}
+ },
+ pwTempMake:async function(){
+  var pw=this._pw;if(!pw)return;
+  var b=document.getElementById('pwTempBtn');if(b){b.disabled=true;b.textContent='⏳ Temp account ban raha hai…'}
+  try{
+   var prof=pw.prof||{};
+   var base=String(prof.origUsername||prof.username||'user').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,12)||'user';
+   var user='temp_'+base+'_'+this._pwNum(4);
+   var disp='TEMP-'+base.toUpperCase().slice(0,10)+'-'+this._pwNum(4);
+   var temail='temp.'+this._pwRand(10)+'@vexa-temp.account';
+   var tpass=this._pwRand(4)+'-'+this._pwRand(4);
+   var app=null,name='VexaTempApp';
+   try{for(var i=0;i<firebase.apps.length;i++){if(firebase.apps[i].name===name)app=firebase.apps[i]}}catch(e){}
+   if(!app)app=firebase.initializeApp(CFG.firebase,name);
+   var cred=await app.auth().createUserWithEmailAndPassword(temail,tpass);
+   var nu=cred.user,now=Date.now();
+   var profile={displayName:'🔄 @'+(prof.origUsername||prof.username||'user')+' (Temp)',username:user,email:temail,role:'user',accountType:'temp_recovery',tempRecovery:true,tempUid:disp,tempPasswordSet:true,origUid:pw.oldUid||'',origUsername:(prof.origUsername||prof.username||''),origEmail:(prof.origEmail||''),createdAt:now,lastLoginAt:now,tempExpiresAt:now+7*86400000,banned:false,createdByStaff:true,createdVia:'panel-'+(this.ROLE||'staff')};
+   await this.db.ref('users/'+nu.uid).update(profile);
+   try{await this.db.ref('usernames/'+user).set(nu.uid)}catch(e){}
+   try{await app.auth().signOut()}catch(e){}
+   /* v3.2.2 💾 TEMP PASSWORD VAULT SAVE — recoveryPrivate/<tempUid> me password persist.
+      Pehle sirf panel RAM (_pwTempNew) me tha — panel refresh/band hone par password LOST.
+      Ab vault me saved → 👑 SAB KE PASSWORDS + temp card + pwBuildText me kabhi bhi milega. */
+   try{await this.db.ref('recoveryPrivate/'+nu.uid).set({username:user,email:temail,password:tpass,tempUid:disp,origUid:pw.oldUid||'',origUsername:(prof.origUsername||prof.username||''),type:'temp_recovery',createdAt:now,createdBy:this.myUid||'',createdByRole:(this.ROLE||'staff')})}catch(e){}
+   this._pwTempNew={uid:nu.uid,user:user,disp:disp,pass:tpass,email:temail};
+   this.audit('temp_id_create',nu.uid,'@'+user+' for @'+(prof.username||'?'));
+   t('🧡 TEMP ID ready: '+disp,true);
+   var pr=document.getElementById('psRight');
+   if(pr)this.pwSelect(pw.uid);else this.pwOpen(pw.uid);
+  }catch(e){
+   var b2=document.getElementById('pwTempBtn');if(b2){b2.disabled=false;b2.textContent='🎲 Naya TEMP ID abhi banao'}
+   t('❌ TEMP fail: '+FR_ERR(e),false);
+  }
+ },
+ pwSend:async function(){
+  var oc=document.getElementById('pwOldChk'),tc=document.getElementById('pwTempChk');
+  await this.pwDeliver(!!(oc&&oc.checked),!!(tc&&tc.checked));
+ },
+ pwSendOne:async function(kind){
+  var pw=this._pw;if(!pw)return t('Pehle Column 1 se user select karo',false);
+  if(kind==='temp'&&pw.prof.tempRecovery!==true&&!this._pwTempNew)return t('Pehle 🎲 Naya TEMP ID banao',false);
+  await this.pwDeliver(kind==='old',kind==='temp');
+ },
+ pwSendBoth:async function(){
+  var pw=this._pw;if(!pw)return t('Pehle Column 1 se user select karo',false);
+  var wT=(pw.prof.tempRecovery===true)||!!this._pwTempNew;
+  await this.pwDeliver(true,wT);
+ },
+ /* v3.2.1 🛑 CONFIRM flow — send buttons pehle CONFIRM modal dikhate hain (receiver + preview);
+     "✅ CONFIRM & SEND" dabane par hi message user ke chat me jata hai (galat-send se bachao) */
+ pwDeliver:async function(wOld,wTemp){
+  var pw=this._pw;if(!pw)return t('Pehle Column 1 se user select karo',false);
+  if(!wOld&&!wTemp)return t('Kuch to bhejo — 1) ya 2)',false);
+  if(wTemp&&pw.prof.tempRecovery!==true&&!this._pwTempNew)return t('Pehle 🎲 Naya TEMP ID banao',false);
+  var tuid=this.pwTargetUid();if(!tuid)return t('Target select nahi hua',false);
+  if(this._pwTempNew&&tuid===this._pwTempNew.uid)wTemp=true;
+  var txt=this.pwBuildText(!!wOld,!!wTemp);
+  this._pwArm={wOld:!!wOld,wTemp:!!wTemp,tuid:tuid};
+  this.modal('🛑 CONFIRM — SEND KARNA HAI?',
+   '<div class="snote">🎯 <b>Receiver (Target):</b> <b>'+esc(this.pwTgtName(tuid))+'</b><br><span class="mono" style="font-size:10px">'+esc(String(tuid).slice(0,16))+'…</span><br>📦 <b>Kya jayega:</b> <b>'+(wOld?'📜 OLD ID (email + password + DOB + codes)':'')+(wOld&&wTemp?'   +   ':'')+(wTemp?'🧡 TEMP ID details':'')+'</b></div>'
+   +'<div class="card mt8" style="margin-bottom:0"><div class="cname">👀 MESSAGE PREVIEW (yahi chat me jayega)</div><pre class="mono" style="white-space:pre-wrap;font-size:10.5px;margin:6px 0 0;word-break:break-word">'+esc(txt)+'</pre></div>'
+   +'<div class="snote mt8">⚠️ Target sahi hai? Confirm ke baad message <b>us user ke chat me</b> chala jayega.</div>',
+   '<button class="btn bg bfull" onclick="PANEL.pwConfirmSend()">✅ CONFIRM &amp; SEND</button><button class="btn bds2 bfull" onclick="PANEL.mClose()">✖ CANCEL</button>');
+ },
+ pwConfirmSend:async function(){
+  var a=this._pwArm;this._pwArm=null;
+  if(!a){this.mClose();return t('Kuch arm nahi hua — dobara send button dabao',false)}
+  this.mClose();
+  await this.pwDeliverNow(a.wOld,a.wTemp,a.tuid);
+ },
+ pwDeliverNow:async function(wOld,wTemp,tuid){
+  var pw=this._pw;if(!pw)return t('Pehle user select karo',false);
+  var isNewTemp=!!(this._pwTempNew&&tuid===this._pwTempNew.uid);
+  var target=tuid||this.pwTargetUid()||pw.uid;
+  try{
+   var txt=this.pwBuildText(wOld,wTemp);
+   var staff=this.myUid;
+   var cid=[staff,target].sort().join('_');
+   var pobj={};pobj[staff]=true;pobj[target]=true;
+   await this.db.ref('chats/'+cid+'/participants').update(pobj);
+   var mid=this.db.ref('messages/'+cid).push().key;
+   await this.db.ref('messages/'+cid+'/'+mid).set({senderId:staff,text:txt,type:'text',createdAt:firebase.database.ServerValue.TIMESTAMP,delivered:true,seen:false});
+   await this.db.ref('chats/'+cid).update({lastMessage:'🔐 Login details bheji gayi (password send)',lastSender:staff,updatedAt:firebase.database.ServerValue.TIMESTAMP});
+   try{this.db.ref('chats/'+cid+'/unread/'+target).transaction(function(n){return (n||0)+1})}catch(e){}
+   try{await this.db.ref('chatIdx/'+staff+'/chats/'+cid).update({peer:target,updatedAt:Date.now()})}catch(e){}
+   try{await this.db.ref('notifs/'+target+'/notifications').push({type:'password_send',title:'🔐 Login details aa gayi',body:'Staff ne aapke account ki details chat me bheji hain — chat khol ke copy karo.',read:false,at:Date.now(),by:staff})}catch(e){}
+   this.audit('password_send',target,'old:'+(wOld?'Y':'N')+' temp:'+(wTemp?'Y':'N')+(isNewTemp?' new:'+this._pwTempNew.disp:''));
+   try{navigator.clipboard.writeText(txt)}catch(e){}
+   this.modal('✅ PASSWORD SENT','<div class="snote">📤 <b>'+(wOld?'📜 OLD ID':'')+(wOld&&wTemp?' + ':'')+(wTemp?'🧡 TEMP ID':'')+'</b> details chat me bhej di gayi.<br>🎯 Receiver: <span class="mono" style="font-size:10px">'+esc(String(target).slice(0,14))+'…</span>'+(isNewTemp?'<br>🧡 Naya temp account: <span class="mono">'+esc(this._pwTempNew.disp)+'</span> — user isme login karke chat kholega':'')+'</div><div class="snote mt8">💡 Message clipboard me bhi copy ho gaya hai. User <b>chat unread badge</b> se dekhega.</div>','<button class="btn bg bfull" onclick="PANEL.mClose()">Done</button>');
+   t('📤 Password send ho gaya — '+String(target).slice(0,10)+'…',true);
+  }catch(e){
+   t('❌ Send fail: '+FR_ERR(e),false);
+  }
+ },
+ /* ── 👑 SAB KE PASSWORDS (owner-only; hidden by default) ── */
+ pwAllLoad:async function(){
+  try{
+   var s=await this.db.ref('recoveryPrivate').limitToLast(500).get();
+   var arr=[];if(s.exists())s.forEach(function(x){arr.push({uid:x.key,v:x.val()||{}})});
+   arr.sort(function(a,b){return String(a.v.username||'').localeCompare(String(b.v.username||''))});
+   this._pwAll=arr;this._pwAllShow=false;
+   var el=document.getElementById('pwaCount');if(el)el.textContent='· '+arr.length+' vault entries';
+   this.pwAllRender((document.getElementById('pwaQ')||{}).value||'');
+  }catch(e){var b=document.getElementById('psAll');if(b)b.innerHTML='<div class="snote">❌ '+esc(FR_ERR(e))+'</div>'}
+ },
+ pwAllRender:function(q){
+  var box=document.getElementById('psAll');if(!box)return;
+  q=String(q||'').trim().toLowerCase();
+  var list=(this._pwAll||[]).filter(function(r){
+   if(!q)return true;
+   return String(r.v.username||'').toLowerCase().indexOf(q)>-1||String(r.v.email||'').toLowerCase().indexOf(q)>-1;
+  });
+  if(!list.length){box.innerHTML='<div class="snote">📭 '+(q?'koi match nahi':'vault khali — users ke signup pe entries banti hain')+'</div>';return}
+  var self=this,h='';
+  list.slice(0,100).forEach(function(r){
+   var v=r.v,idd='pwa_'+String(r.uid).replace(/[^A-Za-z0-9]/g,'');
+   h+='<div class="crow" style="padding:7px 0;border-bottom:1px dashed var(--bds)"><div style="font-size:15px">🔑</div><div class="cinfo">'
+    +'<div class="cname" style="font-size:12.5px">@'+esc(v.username||'?')+(v.type==='temp_recovery'||v.tempUid?' <span class="badge" style="background:var(--wns);color:var(--wn)">🧡TEMP</span>':'')+' <span class="mono" style="font-size:9.5px;color:var(--mut)">'+esc(String(r.uid).slice(0,10))+'…</span></div>'
+    +'<div class="cmeta">'+esc(v.email||'—')+(v.dob?' · DOB: '+esc(v.dob):'')+'</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px">'
+    +'<span class="mono" id="'+idd+'" style="font-size:11.5px">'+(self._pwAllShow?esc(v.password||'—'):'••••••••')+'</span>'
+    +'<button class="btn bsm" onclick="PANEL.pwOneToggle(\''+r.uid+'\')">'+(self._pwAllShow?'🙈 Hide':'👁 Dikhao')+'</button>'
+    +'<button class="btn bsm" onclick="PANEL.pwCopyOne(\''+r.uid+'\')">📋 Copy</button>'
+    +'</div></div></div>';
+  });
+  if(list.length>100)h+='<div class="sm mut">+'+(list.length-100)+' more — filter use karo</div>';
+  box.innerHTML=h;
+ },
+ pwOneToggle:function(uid){
+  var r=(this._pwAll||[]).filter(function(x){return x.uid===uid})[0];if(!r)return;
+  var v=r.v,idd='pwa_'+String(uid).replace(/[^A-Za-z0-9]/g,'');
+  var el=document.getElementById(idd);if(!el)return;
+  var hid=el.textContent.indexOf('•')>-1;
+  el.textContent=hid?(v.password||'—'):'••••••••';
+  this.audit('password_view',(v.username||uid),hid?'reveal ek password':'hide ek password');
+  t(hid?'👁 password dikha — @'+(v.username||'?'):'🙈 password hide — @'+(v.username||'?'),true);
+ },
+ pwAllToggle:function(){
+  this._pwAllShow=!this._pwAllShow;
+  var b=document.getElementById('pwaEyeAll');if(b)b.textContent=this._pwAllShow?'🙈 Sab Hide':'👁 Sab Dikhao';
+  this.pwAllRender((document.getElementById('pwaQ')||{}).value||'');
+  this.audit('password_view_all','',this._pwAllShow?'SAB dikhao ON':'SAB hide ON');
+  t(this._pwAllShow?'👁 SAB passwords dikh rahe hain (sirf screen pe)':'🙈 SAB passwords hidden',true);
+ },
+ pwCopyOne:function(uid){
+  var r=(this._pwAll||[]).filter(function(x){return x.uid===uid})[0];if(!r)return;
+  try{navigator.clipboard.writeText(String(r.v.password||''));t('📋 password copy — @'+(r.v.username||'?'),true)}catch(e){}
+ },
+ _pwRand:function(n){var cs='abcdefghjkmnpqrstuvwxyz23456789',o='';try{var bb=new Uint8Array(n);crypto.getRandomValues(bb);for(var i=0;i<n;i++)o+=cs[bb[i]%cs.length]}catch(e){for(var j=0;j<n;j++)o+=cs[Math.floor(Math.random()*cs.length)]}return o},
+ _pwNum:function(n){var s='';for(var i=0;i<n;i++)s+=String(Math.floor(Math.random()*10));return s}
+};
+PANEL.init();
+</script>
+</body>
+</html>

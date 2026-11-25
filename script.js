@@ -28,7 +28,7 @@ const ATP_LINKS=[
 
 /* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
- CURRENT:'4.0.0',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
+ CURRENT:'4.4.0',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
  get:function(){return this.CURRENT},
  cmp:function(a,b){
   var pa=String(a||'').split('.').map(function(x){return parseInt(x,10)||0});
@@ -226,7 +226,7 @@ const ATP={
   if(!sp)return;
   var self=this,t0=performance.now(),DUR=(this.cfg.loadingSeconds||2)*1000;
   /* ⚡SPLASH-FIX: rotating Hinglish status messages (error text ko chhod kar) */
-  var MSGS=['🎬 Studio boot ho raha hai…','🔐 Security check…','☁️ Cloud connect…','🎨 UI tayyar ho raha…','🎵 Sounds load…','⚡ Almost ready…'];
+  var MSGS=['🎬 Studio boot ho raha hai…','🔐 Security check…','☁️ Cloud connect…','✨ Magic render ho rahi hai…','🎵 Sounds load…','🚀 Engine warm up…','⚡ Almost ready…'];
   var mi=0;
   self._msgT=setInterval(function(){
    var tx=document.getElementById('splashTx'),s3=document.getElementById('splash');
@@ -1075,12 +1075,27 @@ const V={
        var so=await db.ref('users/'+uid).get();
        return so.exists()?so.val():null;
      }
+     /* 🔧v4.2 FIX: pubUsers mirror (public data ka alag top-level node — RTDB
+        cascade ki wajah se users/{uid} ke andar child grants dead hote hain) */
+     var ps=await db.ref('pubUsers/'+uid).get().catch(function(){return null});
+     if(ps&&ps.exists())return ps.val();
+     /* fallback: purane (open) rules deploy pe ye path bhi chalega */
      var paths=['username','displayName','profilePhoto','bio','vip','verified','role','banned','createdAt','followers','following','posts','postCount','privacy','publicUserId','profileDesign'];
      var vals=await Promise.all(paths.map(function(p){return db.ref('users/'+uid+'/'+p).get().catch(function(){return null})}));
      var o={},any=false;
      for(var i=0;i<paths.length;i++){if(vals[i]&&vals[i].exists()){o[paths[i]]=vals[i].val();any=true}}
      return any?o:null;
    }catch(e){return null}
+ },
+ /* 🔧v4.2: apna public data pubUsers/{uid} me mirror karo (login + profile save pe call hota hai) */
+ syncPub:function(){
+   try{
+     if(!V.uid||!window.me)return;
+     var p={username:me.username||'',displayName:me.displayName||'',unLC:(me.username||'').toLowerCase(),dnLC:(me.displayName||'').toLowerCase(),profilePhoto:me.profilePhoto||'',bio:me.bio||'',vip:!!me.vip,verified:!!me.verified,role:me.role||'user',banned:!!me.banned,createdAt:me.createdAt||0,postCount:me.postCount||0,privacy:me.privacy||{},publicUserId:me.publicUserId||'',profileDesign:(me.settings&&me.settings.profileDesign)||'modern',appVer:(typeof Ver!=='undefined'&&Ver.get)?Ver.get():'',syncedAt:Date.now()};
+     try{if(me.followers)p.followers=me.followers}catch(e){}
+     try{if(me.following)p.following=me.following}catch(e){}
+     db.ref('pubUsers/'+V.uid).set(p).catch(function(){});
+   }catch(e){}
  },
  age:function(str){
    try{
@@ -1416,6 +1431,8 @@ const V={
        }catch(e){if(!me.email)me.email=u.email||''}
        /* 🔒v3.1: purana data naye private nodes me migrate (one-time) */
        try{V.migratePrivateNodes(u.uid)}catch(e){console.warn('migrate fail',e)}
+       /* 🔧v4.2: pubUsers mirror — search/profile ke liye public data sync */
+       try{V.syncPub()}catch(e){}
        try{
          var bn=(await db.ref('users/'+u.uid+'/banned').get());
          if(bn.exists()&&bn.val()===true){
@@ -1456,6 +1473,8 @@ const V={
        try{Presence.start()}catch(e){}
        try{Badges.start()}catch(e){}
        try{watchIncoming()}catch(e){}
+       try{Notif.pload()}catch(e){}
+       try{VexaLock.boot()}catch(e){}
        var sid='s_'+Math.random().toString(36).slice(2,9);
        try{sessionStorage.setItem('vexaSid',sid)}catch(e){}
        try{db.ref('devData/'+V.uid+'/sessions/'+sid).set({device:V.dev(),lastActive:Date.now()})}catch(e){}
@@ -1660,11 +1679,24 @@ const Badges={
      });
    },function(){});
    db.ref('notifs/'+V.uid+'/notifications').orderByChild('read').equalTo(false).on('value',function(s){
-     var n=s.exists()?s.numChildren():0;
+     /* 🔔v4.4: badge sirf ENABLED types ginata hai (notification settings) */
+     var n=0;if(s.exists())s.forEach(function(c){if(Notif.on((c.val()||{}).type))n++});
      var e=V.g('bNotifTop');if(e){e.textContent=n;e.classList.toggle('hidden',!n)}
      /* ⚡SOUND-FIX: nayi notification → chosen sound (pehli load pe nahi) */
      try{if(Badges._pn>=0&&n>Badges._pn)SFX.notify();Badges._pn=n}catch(e){}
    },function(){});
+   /* ⚡APP v4.4.1: site ki nayi notifications → ANDROID system notification
+      (VexaBridge APK ka addJavascriptInterface hai). Notif.on(type) = user ke
+      notification settings respect — OFF type Android me bhi nahi jayega. */
+   if(window.VexaBridge&&typeof VexaBridge.notify==='function'){
+     db.ref('notifs/'+V.uid+'/notifications').limitToLast(1).on('child_added',function(s){
+       var v=s.val()||{};
+       if(v.read)return;                                  /* sirf unread */
+       if(Date.now()-(v.at||0)>120000)return;             /* purana backlog skip */
+       if(typeof Notif==='object'&&Notif.on&&!Notif.on(v.type))return; /* settings OFF */
+       try{ VexaBridge.notify(String(v.title||'VEXA-Chat'),String(v.body||''),String(v.type||'')) }catch(e){}
+     },function(){});
+   }
    /* ⚡DRIVE-FIX: pehli user interaction par silent Drive re-connect
       (pehle connect kar chuka ho to bina consent ke token refresh) */
    try{
@@ -2016,6 +2048,7 @@ const Auth={
  logout:async function(){
    if(!confirm('Log out?'))return;
    try{if(typeof Local!=='undefined'&&V.uid)await Local.off()}catch(e){}
+   try{sessionStorage.removeItem('vxUnlock')}catch(e){}
    try{
      await db.ref('presence/'+V.uid).update({online:false,lastSeen:Date.now()});
      await auth.signOut();
@@ -2682,6 +2715,7 @@ const Profile={
        var du=await V.compress(i.files[0],300,600);
        var url=await V.uploadPhoto(du,'profile/'+V.uid+'/avatar.jpg');
        await db.ref('users/'+V.uid+'/profilePhoto').set(url);
+       try{db.ref('pubUsers/'+V.uid+'/profilePhoto').set(url).catch(function(){})}catch(e){}
        me.profilePhoto=url;
        V.refreshMe();
        V.toast('success','Photo updated ✅');
@@ -2710,12 +2744,14 @@ const Profile={
        await db.ref('reservedUsernames/'+old).set({uid:V.uid,until:Date.now()+30*86400000});
        await db.ref('usernames/'+old).remove();
        await db.ref('users/'+V.uid).update({username:newU,usernameChangedAt:Date.now(),prevUsername:old});
+       try{await db.ref('pubUsers/'+V.uid+'/username').set(newU).catch(function(){})}catch(e){}
        try{await db.ref('recoveryCheck/'+V.uid+'/user').set(newU)}catch(e){}
        V.vaultSet(V.uid,{username:newU,updatedAt:Date.now()});
        me.username=newU;
        V.toast('success','Username → @'+newU+' ✅',4000);
      }
      await db.ref('users/'+V.uid).update({displayName:name,bio:bio});
+     try{db.ref('pubUsers/'+V.uid).update({displayName:name,bio:bio,syncedAt:Date.now()}).catch(function(){})}catch(e){}
      /* 🔗FEATURE: social links save — normalize + clear hone par remove */
      var soc={},_plats=['instagram','youtube','telegram','discord','x','facebook','website'];
      for(var _i=0;_i<_plats.length;_i++){
@@ -3674,7 +3710,13 @@ const ChatUI={
     +(m.replyToName?'<div class="mq" onclick="ChatUI.jump(\''+m.replyTo+'\')">↩ '+V.esc(m.replyToName)+': '+V.esc(m.replyToText||'')+'</div>':'')
     +(m.deleted?'<span class="mdel">🚫 deleted</span>'
       :(m.type==='image'&&m.fileId)?'<div class="mfile"><img class="mimg" src="'+VexaUI.thumb(m.fileId)+'" alt="photo" onclick="VexaUI.dl(\''+m.fileId+'\')"></div>'
-      :(m.type==='video'&&m.fileId)?'<div class="mfile"><video class="mvid" src="'+VexaUI.stream(m.fileId)+'" controls preload="metadata"></video></div><div class="flbl">🎬 '+V.esc(m.fileName||'video')+'</div>'
+      :(m.type==='video'&&m.fileId)?(
+        (m.once&&!meM&&m.opened)
+          ?'<div class="mfile mexp"><div class="mei">👁️‍🗨️</div><div class="met2">Video dekha gaya</div><div class="mes">One time view — dobara nahi khulega</div></div>'
+          :m.once
+            ?'<div class="mfile monce" onclick="VexaUI.playOnce(\''+id+'\')"><img class="mimg" src="'+VexaUI.thumb(m.fileId)+'" alt="video"><div class="mov"><span class="movb">▶</span></div><div class="mtag">👁️ One time view'+(meM?' · tumne bheja':'')+'</div></div>'
+            :'<div class="mfile mplay" onclick="VexaUI.playVideo(\''+id+'\')"><img class="mimg" src="'+VexaUI.thumb(m.fileId)+'" alt="video" loading="lazy"><div class="mov"><span class="movb">▶</span></div><div class="mtag">▶ '+V.esc(String(m.fileName||'Video').slice(0,20))+' · tap to play</div></div>'
+      )
       :(m.type==='file'&&m.fileId)?'<div class="mfile" onclick="VexaUI.dl(\''+m.fileId+'\')"><div class="fic">📄</div><div class="fmeta"><div class="fnm">'+V.esc(m.fileName||'file')+'</div><div class="fsz">'+((m.size?VexaUI._fmtSize(m.size):'Drive'))+' · Google Drive</div></div><div class="fdl">⬇</div></div>'
       :V.esc(m.text||''))
     +(m.edited?'<span class="medt"> (edited)</span>':'')
@@ -3700,9 +3742,11 @@ const ChatUI={
    var m=(await db.ref('messages/'+this.chatId+'/'+id).get().catch(function(){return null}));
    var v=(m&&m.val())||{};
    var meM=(v.senderId===V.uid);
+   var isMedia=(v.type==='image'||v.type==='video'||v.type==='file');
    var h='<div class="rrow" onclick="ChatUI.doCopy(\''+id+'\')">📋 Copy</div>'
     +'<div class="rrow" onclick="ChatUI.doReply(\''+id+'\')">↩ Reply</div>'
-    +(meM?'<div class="rrow" onclick="ChatUI.doEdit(\''+id+'\')">✏️ Edit</div><div class="rrow" style="color:var(--dn)" onclick="ChatUI.doDel(\''+id+'\')">🗑️ Delete</div>':'');
+    +(meM&&!isMedia?'<div class="rrow" onclick="ChatUI.doEdit(\''+id+'\')">✏️ Edit</div>':'')
+    +(meM?'<div class="rrow" style="color:var(--dn)" onclick="ChatUI.doDel(\''+id+'\')">🗑️ Delete'+(isMedia?' (dono side se hat jayega)':'')+'</div>':'');
    V.mOpen('Message',h);
  },
 
@@ -3722,7 +3766,7 @@ const ChatUI={
    V.mOpen('Edit','<textarea class="txta" id="emT">'+V.esc((t&&t.val())||'')+'</textarea>','<button class="btn bp" onclick="ChatUI.saveEdit(\''+id+'\')">Save</button>');
  },
  saveEdit:async function(id){await db.ref('messages/'+this.chatId+'/'+id).update({text:V.g('emT').value.trim(),edited:true});V.mClose()},
- doDel:async function(id){V.mClose();await db.ref('messages/'+this.chatId+'/'+id).update({text:'',deleted:true,edited:false})},
+ doDel:async function(id){V.mClose();await db.ref('messages/'+this.chatId+'/'+id).update({text:'',deleted:true,edited:false,fileId:null,fileName:null,mimeType:null});V.toast('success','🗑️ Delete ho gaya — dono side se hat gaya')},
 
  send:function(){
    var t=V.g('cInput').value.trim();
@@ -4715,9 +4759,10 @@ const Local={
             try{await lpRef.set({displayName:me.displayName,username:me.username,photo:me.profilePhoto||'',uid:V.uid,at:Date.now()})}catch(e2){}
           }
           await db.ref('localIdx/'+V.uid+'/grid').set(key);
+          try{localStorage.setItem('vexaLS','1')}catch(e){}
           V.toast('success','📍 Local Share ON ✅');
           self.load();
-        }catch(e){console.error('local toggle:',e);V.toast('error','DB error — rules check karo',5000);var t1=V.g('lsTgl');if(t1)t1.checked=false}
+        }catch(e){console.error('local toggle:',e);var _em=String(e&&e.message||e);V.toast('error',_em.indexOf('permission')>-1?'🔒 Naye rules deploy nahi hue — Firebase Console me database.rules.json (v4.2) paste karo, phir re-login':('DB error — '+(e.message||'rules check karo')),6000);var t1=V.g('lsTgl');if(t1)t1.checked=false}
       },function(err){
         V.toast('error',err.code===1?'Location permission denied — browser settings me allow karo':'GPS fail — page HTTPS par khula hona chahiye (GPS secure connection me hi chalta hai)',5000);
         var t2=V.g('lsTgl');if(t2)t2.checked=false;
@@ -4729,6 +4774,7 @@ const Local={
       var s=await db.ref('localIdx/'+V.uid+'/grid').get();
       var key=s.val()||Local._curKey;
       Local._curKey=null;
+      try{localStorage.removeItem('vexaLS')}catch(e){}
       if(key){try{await db.ref('localPresence/'+key+'/'+V.uid).remove()}catch(e){}}
       try{await db.ref('localIdx/'+V.uid+'/grid').remove()}catch(e){}
       V.toast('info','📍 Local Share OFF');
@@ -4742,10 +4788,27 @@ const Local={
     var tg=V.g('lsTgl');if(tg)tg.checked=!!key;
     var w=V.g('localL');if(!w)return;
     if(!key){
-      w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">Toggle ON karo — ~2km ke users dikhenge</div></div>';
+      var wasOn=false;try{wasOn=localStorage.getItem('vexaLS')==='1'}catch(e){}
+      w.innerHTML='<div class="empo"><div class="ei">📡</div><div class="et">Local Share OFF</div><div class="ex">Toggle ON karo — ~2km ke nearby users dikhenge'+(wasOn?' (pehle ON tha — dobara ON karna hoga)':'')+'</div><div class="ex mt8"><button class="btn bg bsm" onclick="var t=V.g(\'lsTgl\');if(t){t.checked=true;Local.toggle(true)}">📍 Apni Share ON karo</button></div></div>';
       return;
     }
     w.innerHTML='<div class="spn" style="margin:20px auto"></div>';
+    /* 🔧v4.4 FIX: apni presence HAR load pe refresh — pehle presence 2h me chupchap
+       expire ho jati thi aur scan "Koi nearby user nahi" dikhata tha (dusro ko me bhi
+       nahi dikhta tha). Ab >15min purani ho to GPS best-effort se at/coords refresh. */
+    try{
+      var ownAt=null;
+      try{ownAt=(await db.ref('localPresence/'+key+'/'+V.uid+'/at').get()).val()}catch(e){}
+      if(!ownAt||(Date.now()-ownAt)>15*60000){
+        var selfL=this;
+        try{await db.ref('localPresence/'+key+'/'+V.uid+'/at').set(Date.now())}catch(e){}
+        if(navigator.geolocation)navigator.geolocation.getCurrentPosition(function(pos){
+          var rp=selfL.roundPos(pos.coords.latitude,pos.coords.longitude),nk=selfL.grid(pos.coords.latitude,pos.coords.longitude);
+          if(nk!==key){selfL.reload();return}
+          db.ref('localPresence/'+key+'/'+V.uid).update({lat:rp.lat,lng:rp.lng}).catch(function(){});
+        },function(){},{enableHighAccuracy:false,timeout:6000,maximumAge:60000});
+      }
+    }catch(e){}
     try{
       var byUid={},now=Date.now();
       /* ✨Step 1: OWN cell — hamesha allowed */
@@ -4773,7 +4836,7 @@ const Local={
       });
       var list=Object.keys(byUid).map(function(k){return byUid[k]});
       if(!list.length){
-        w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">Koi nearby user nahi</div><div class="ex">Dusre users bhi Local Share ON karein</div></div>';
+        w.innerHTML='<div class="empo"><div class="ei">🛰️</div><div class="et">Koi nearby user nahi</div><div class="ex">Dusre users bhi Local Share ON karein — ya thodi der baad dubara scan karo</div><div class="ex mt8"><button class="btn bg bsm" onclick="Local.reload()">🔄 Dubara Scan</button></div></div>';
         return;
       }
       /* 🔒 mera rounded position */
@@ -4814,7 +4877,7 @@ const Local={
     }catch(e){
       console.error('local load:',e);
       var em=String(e&&e.message||'');
-      var hint=em.indexOf('permission')>-1?'Rules issue — dobara login karo ya app update karo':'Internet/HTTPS check karo — GPS ke liye secure connection chahiye';
+      var hint=em.indexOf('permission')>-1?'🔒 Firebase rules purane hain — Console me database.rules.json (v4.2) deploy karo + re-login':'Internet/HTTPS check karo — GPS ke liye secure connection chahiye';
       w.innerHTML='<div class="empo"><div class="ei">⚠️</div><div class="et">Local scan load nahi hua</div><div class="ex sm mut">'+V.esc(hint)+'</div><div class="ex sm mut">'+V.esc(em)+'</div><div class="ex" style="margin-top:10px"><button class="btn bg bsm" onclick="Local.reload()">🔄 Retry</button></div></div>';
     }
   },
@@ -4857,6 +4920,24 @@ const Local={
 /* ================= NOTIFICATIONS ================= */
 const Notif={
  icons:{follow:'👤',follow_request:'📨',follow_accepted:'✅',like:'❤️',comment:'💬',message:'✉️',call:'📞',security:'🛡️',game:'🎮',announce:'📢',vip:'👑',verify:'✔️',recovery_request:'🔐',help_request:'🆘'},
+ /* 🔔v4.4 — NOTIFICATION SETTINGS: user har type on/off kar sakta hai.
+    Account/security/recovery alerts HAMESHA ON (disable nahi hote). */
+ prefs:{},
+ grp:function(t){
+  if(!t)return 'account';
+  if(t==='message')return 'message';
+  if(t==='call')return 'call';
+  if(t==='follow'||t==='follow_request'||t==='follow_accepted')return 'follow';
+  if(t==='like')return 'like';
+  if(t==='comment')return 'comment';
+  if(t==='game')return 'game';
+  if(t==='announce'||t==='update')return 'announce';
+  if(String(t).indexOf('promo')===0)return 'promo';
+  return 'account';
+ },
+ on:function(t){var g=this.grp(t);if(g==='account')return true;return (this.prefs||{})[g]!==false},
+ pload:async function(){try{var s=await db.ref('users/'+V.uid+'/settings/notif').get();this.prefs=(s&&s.exists())?s.val():{}}catch(e){}},
+ pset:function(k,v){this.prefs[k]=v;try{db.ref('users/'+V.uid+'/settings/notif/'+k).set(v)}catch(e){}V.toast(v?'success':'info',(v?'🔔 ON':'🔕 OFF')+' — '+k.toUpperCase()+' notifications')},
  load:async function(){
    var w=V.g('notifL');
    if(!w)return;
@@ -4872,6 +4953,8 @@ const Notif={
      for(var i=0;i<arr.length;i++){
        var n=arr[i].val,nid=arr[i].id;
        if(!n.read)unread.push(nid);
+       /* 🔔v4.4: OFF kiya hua type list me nahi dikhega (phir bhi read mark ho jata hai) */
+       if(!Notif.on(n.type))continue;
        var txt=n.title?'<b>'+V.esc(n.title)+'</b><br>'+V.esc(n.body||''):
         n.type==='follow'?'<b>'+V.esc(n.fromName)+'</b> followed you':
         n.type==='follow_request'?'<b>'+V.esc(n.fromName)+'</b> requested to follow':
@@ -4936,23 +5019,216 @@ const Search={
        }
        if(!n)h+='<div class="sm mut">No posts</div>';
      }else{
-       var s2=await db.ref('usernames').orderByKey().startAt(q).endAt(q+'\uf8ff').limitToFirst(15).get();
+       /* 🔧v4.4 FIX: search bar — ab username + display name + UID TEENO se milega.
+          Pehle sirf usernames-prefix tha (display name se search → hamesha "No users").
+          Ab pubUsers pe indexed queries (unLC/dnLC lowercase mirrors) + usernames
+          fallback (purane users jinka mirror nahi bana) + UID direct lookup — SAB parallel. */
        h+='<div class="stit">Users</div>';
-       var n2=0;
-       if(s2.exists()){
-         var entries=[];
-         s2.forEach(function(c){entries.push({un:c.key,uid:c.val()})});
-         var us=await Promise.all(entries.map(function(e){return V.pubUser(e.uid)}));
-         h+=entries.map(function(e,i){
-           n2++;
-           var u=(us[i]&&us[i].val())||{};
-           return '<div class="urow" onclick="V.openProfile(\''+e.uid+'\')">'+V.ava(u,'md')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+e.un+'</div></div></div>';
-         }).join('');
-       }
-       if(!n2)h+='<div class="sm mut">No users</div>';
+       var seen={},rows=[];
+       var addRow=function(uid,u){if(uid&&uid!==V.uid&&!seen[uid]){seen[uid]=1;rows.push({uid:uid,u:u||{}})}};
+       var jobs=[];
+       if(/^[A-Za-z0-9]{20,}$/.test(q))jobs.push(db.ref('pubUsers/'+q).get().then(function(s){if(s&&s.exists())addRow(q,s.val())}).catch(function(){}));
+       jobs.push(db.ref('pubUsers').orderByChild('unLC').startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){if(s)s.forEach(function(c){addRow(c.key,c.val()||{})})}).catch(function(){}));
+       jobs.push(db.ref('pubUsers').orderByChild('dnLC').startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){if(s)s.forEach(function(c){addRow(c.key,c.val()||{})})}).catch(function(){}));
+       jobs.push(db.ref('usernames').orderByKey().startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){
+         if(!s)return;
+         var ents=[];s.forEach(function(c){ents.push({un:c.key,uid:c.val()})});
+         return Promise.all(ents.map(function(e){return V.pubUser(e.uid).catch(function(){return null})})).then(function(us){
+           us.forEach(function(snp,i){addRow(ents[i].uid,(snp&&snp.val())||{username:ents[i].un})});
+         });
+       }).catch(function(){}));
+       await Promise.all(jobs);
+       rows.sort(function(a,b){var x=String((a.u&&a.u.username)||'').toLowerCase().indexOf(q)===0?0:1,y=String((b.u&&b.u.username)||'').toLowerCase().indexOf(q)===0?0:1;return x-y});
+       h+=rows.slice(0,20).map(function(r){
+         var u=(r.u&&r.u.username)?r.u:{username:'user'};
+         return '<div class="urow" onclick="V.openProfile(\''+r.uid+'\')">'+V.ava(u,'md')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+V.esc(u.username||'')+'</div></div></div>';
+       }).join('');
+       if(!rows.length)h+='<div class="sm mut">No users</div>';
      }
    }catch(e){h='<div class="empo"><div class="ei">⚠️</div><div class="et">Search failed</div></div>'}
    w.innerHTML=h;
+ }
+};
+
+/* ================= 🔒 APP LOCK (v4.4) — password / PIN / pattern =================
+   Login ke baad pura app lock ho jata hai. Credential ka HASH localStorage me
+   (plain kabhi save nahi), unlock per browser-session (sessionStorage). */
+const VexaLock={
+ K:'vexaLockCfg',cfg:null,tries:0,coolUntil:0,_pat:[],_patS:[],_pin:'',_newM:null,
+ hash:async function(s){
+  var str='vexaLock::'+String(s)+'::v4.4';
+  try{
+   if(window.crypto&&crypto.subtle&&window.isSecureContext){
+    var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+    return 'sha_'+Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('');
+   }
+  }catch(e){}
+  /* djb2 fallback — http contexts (crypto.subtle secure context me hi milta hai) */
+  var h=5381;for(var i=0;i<str.length;i++){h=((h<<5)+h+str.charCodeAt(i))|0}
+  return 'djb2_'+(h>>>0).toString(16)+'_'+str.length;
+ },
+ enabled:function(){return !!(this.cfg&&this.cfg.h)},
+ mName:function(){return this.cfg?(this.cfg.m==='pin'?'PIN':(this.cfg.m==='pat'?'Pattern':'Password')):'—'},
+ boot:function(){
+  try{this.cfg=JSON.parse(localStorage.getItem(this.K)||'null')}catch(e){this.cfg=null}
+  if(!this.enabled())return;
+  var un='';try{un=sessionStorage.getItem('vxUnlock')}catch(e){}
+  if(un==='1')return;
+  this.show();
+ },
+ lockNow:function(){try{sessionStorage.removeItem('vxUnlock')}catch(e){}this.show()},
+ show:function(){
+  if(!this.enabled())return;
+  this.tries=0;this._pin='';
+  var scr=V.g('lockScr');
+  if(!scr){
+   scr=document.createElement('div');scr.id='lockScr';
+   scr.innerHTML='<div class="lockc"><div class="locki">🔒</div><div class="lockt">VEXA Locked</div><div class="locks" id="lockSub"></div><div class="lockh" id="lockHint"></div><div id="lockUI"></div><div class="locke" id="lockErr"></div></div>';
+   document.body.appendChild(scr);
+  }
+  scr.classList.remove('hidden');
+  var hEl=V.g('lockHint');if(hEl)hEl.innerHTML=this.cfg.hint?'💡 Hint: '+V.esc(this.cfg.hint):'';
+  var sEl=V.g('lockSub');if(sEl)sEl.textContent='App par lock laga hai — '+this.mName()+' daalo';
+  this.ui();
+ },
+ ui:function(){
+  var u=V.g('lockUI');if(!u)return;
+  if(this.cfg.m==='pin'){
+   var d='';for(var i=0;i<6;i++)d+='<span class="ldot" id="lpd'+i+'"></span>';
+   var keys='',seq=['1','2','3','4','5','6','7','8','9','X','0','B'];
+   seq.forEach(function(k){
+     if(k==='X')keys+='<div class="lkb lbx"></div>';
+     else if(k==='B')keys+='<button class="lkb" onclick="VexaLock.pinBack()" aria-label="back">⌫</button>';
+     else keys+='<button class="lkb" onclick="VexaLock.pinAdd(\''+k+'\')">'+k+'</button>';
+   });
+   u.innerHTML='<div class="ldots">'+d+'</div><div class="lockpad">'+keys+'</div><button class="btn bg bsm mt8" onclick="VexaLock.pinGo()">🔓 Unlock</button>';
+  }else if(this.cfg.m==='pat'){
+   var g='';for(var i=0;i<9;i++)g+='<div class="lpd" data-i="'+i+'"></div>';
+   u.innerHTML='<div class="lpgrid" id="lpGrid">'+g+'</div><div class="sm mut">Pattern draw karo (min 4 dots)</div><div class="mt8" style="display:flex;gap:8px;justify-content:center"><button class="btn bsm" onclick="VexaLock.patReset()">↺ Clear</button><button class="btn bg bsm" onclick="VexaLock.patGo()">🔓 Unlock</button></div>';
+   this.patWire('lpGrid','_pat');
+  }else{
+   u.innerHTML='<input class="inp" id="lkPass" type="password" placeholder="Password daalo" style="text-align:center" autocomplete="off" onkeydown="if(event.key===\'Enter\')VexaLock.passGo()"><button class="btn bg bfull mt8" onclick="VexaLock.passGo()">🔓 Unlock</button>';
+   var self=this;setTimeout(function(){var p=V.g('lkPass');if(p)p.focus()},120);
+  }
+  this.paint();
+ },
+ paint:function(){
+  if(!this.cfg||this.cfg.m!=='pin')return;
+  for(var i=0;i<6;i++){var e=V.g('lpd'+i);if(e)e.classList.toggle('on',i<this._pin.length)}
+ },
+ err:function(msg){
+  var e=V.g('lockErr');if(!e)return;
+  e.textContent=msg;
+  var c=document.querySelector('.lockc');
+  if(c){c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake')}
+ },
+ pinAdd:function(k){if(this._pin.length>=6)return;this._pin+=k;this.paint()},
+ pinBack:function(){this._pin=this._pin.slice(0,-1);this.paint()},
+ pinGo:async function(){
+  if(this._pin.length<4)return this.err('Kam se kam 4 digits daalo');
+  await this.tryUnlock(this._pin);
+ },
+ passGo:async function(){var p=V.g('lkPass');if(!p||!p.value)return this.err('Password daalo');await this.tryUnlock(p.value)},
+ patGo:async function(){
+  if(this._pat.length<4)return this.err('Kam se kam 4 dots connect karo');
+  await this.tryUnlock(this._pat.join('-'));
+ },
+ patWire:function(gid,arr){
+  var g=V.g(gid);if(!g)return;var self=this;
+  self[arr]=[];var active=false;
+  var pick=function(t){
+   var el=document.elementFromPoint(t.clientX,t.clientY);
+   if(el&&el.classList&&el.classList.contains('lpd')){
+    var i=parseInt(el.getAttribute('data-i'),10);
+    if(self[arr].indexOf(i)<0){self[arr].push(i);el.classList.add('on')}
+   }
+  };
+  g.onpointerdown=function(e){active=true;self[arr]=[];var ds=g.querySelectorAll('.lpd');for(var i=0;i<ds.length;i++)ds[i].classList.remove('on');pick(e)};
+  g.onpointermove=function(e){if(active)pick(e)};
+  g.onpointerup=function(){active=false};
+  g.onpointercancel=function(){active=false};
+ },
+ patReset:function(){
+  this._pat=[];this._patS=[];
+  ['lpGrid','lpGridS'].forEach(function(id){var g=V.g(id);if(g){var ds=g.querySelectorAll('.lpd');for(var i=0;i<ds.length;i++)ds[i].classList.remove('on')}});
+ },
+ tryUnlock:async function(val){
+  if(!this.cfg){this.err('🔒 Lock config missing — settings me dobara set karo');return}
+  if(this.coolUntil>Date.now()){this.err('⏳ Ruko — '+Math.ceil((this.coolUntil-Date.now())/1000)+'s cooldown baaki');return}
+  var h=await this.hash(val);
+  if(h===this.cfg.h){
+   this.hide();
+   try{V.toast('success','🔓 App unlocked')}catch(e){}
+  }else{
+   this.tries++;
+   /* 🔧v4.4: fail hote hi input clear — dots/pattern fresh attempt ke liye reset */
+   this._pin='';this._pat=[];this.patReset();
+   this.paint();
+   if(this.tries>=5){this.coolUntil=Date.now()+30000;this.tries=0;this.err('🚫 5 galat attempts — 30s cooldown')}
+   else this.err('❌ Galat '+this.mName()+' — '+(5-this.tries)+' attempts bache');
+  }
+ },
+ hide:function(){
+  var scr=V.g('lockScr');if(scr)scr.classList.add('hidden');
+  try{sessionStorage.setItem('vxUnlock','1')}catch(e){}
+ },
+ /* ── setup flow (Settings ▸ Privacy & Security ▸ App Lock) ── */
+ setup:function(){
+  if(this.enabled()){
+   V.mOpen('🔒 App Lock','<div class="snote">App Lock <b>ON</b> hai — method: <b>'+this.mName()+'</b>.<br>App khulne par lock screen aayegi. Credential ka sirf <b>hash</b> device me save hota hai.</div><div class="srow" style="margin-top:10px" onclick="VexaLock.change()"><div class="sri">🔁</div><div class="srf"><div class="srt">Change / naya '+this.mName()+'</div></div><div class="sra">›</div></div><div class="srow" onclick="VexaLock.disableAsk()"><div class="sri">🚫</div><div class="srf"><div class="srt">App Lock OFF karo</div><div class="srs">Purana '+this.mName()+' daal ke confirm hoga</div></div><div class="sra">›</div></div>');
+   return;
+  }
+  V.mOpen('🔒 App Lock — Method chuno','<div class="snote">Login ke baad app/site par lock lagega. Koi bhi method chuno — jab chahe settings se change/off kar sakte ho.</div><div class="srow" style="margin-top:10px" onclick="VexaLock.mk(\'pin\')"><div class="sri">🔢</div><div class="srf"><div class="srt">PIN</div><div class="srs">4-6 digit number</div></div><div class="sra">›</div></div><div class="srow" onclick="VexaLock.mk(\'pass\')"><div class="sri">🔑</div><div class="srf"><div class="srt">Password</div><div class="srs">Koi bhi password</div></div><div class="sra">›</div></div><div class="srow" onclick="VexaLock.mk(\'pat\')"><div class="sri">📶</div><div class="srf"><div class="srt">Pattern</div><div class="srs">3x3 dots — swipe pattern</div></div><div class="sra">›</div></div>');
+ },
+ mk:function(m){
+  this._newM=m;
+  var t=m==='pin'?'PIN (4-6 digits)':(m==='pat'?'Pattern (4-9 dots)':'Naya Password');
+  if(m==='pat'){
+   var g='';for(var i=0;i<9;i++)g+='<div class="lpd" data-i="'+i+'"></div>';
+   V.mOpen('🔒 Set '+t,'<div class="snote">Pattern banao (min 4 dots) — dobara wahi pattern confirm karne ki zaroorat nahi, seedha save.</div><div class="lpgrid" id="lpGridS">'+g+'</div><div class="sm mut">Dots ko drag karke connect karo</div>','<button class="btn bsm" onclick="VexaLock.patReset()">↺ Clear</button><button class="btn bp" onclick="VexaLock.saveNew()">✅ Save Lock</button><button class="btn" onclick="V.mClose()">Cancel</button>');
+   var self=this;setTimeout(function(){self.patWire('lpGridS','_patS')},60);
+   return;
+  }
+  V.mOpen('🔒 Set '+t,'<div class="snote">'+(m==='pin'?'4 se 6 digits ka PIN banayo (sirf number).':'Koi strong password banayo.')+' Hint optional hai — bhool jao to kaam aayega.</div><input class="inp" id="lkNew" type="'+(m==='pin'?'number':'password')+'" inputmode="'+(m==='pin'?'numeric':'text')+'" maxlength="'+(m==='pin'?'6':'64')+'" placeholder="'+t+'"><input class="inp mt8" id="lkNew2" type="'+(m==='pin'?'number':'password')+'" maxlength="'+(m==='pin'?'6':'64')+'" placeholder="Dobara same '+(m==='pin'?'PIN':'password')+'"><input class="inp mt8" id="lkHint" type="text" maxlength="40" placeholder="Hint (optional)">','<button class="btn bp" onclick="VexaLock.saveNew()">✅ Save Lock</button><button class="btn" onclick="V.mClose()">Cancel</button>');
+ },
+ saveNew:async function(){
+  var m=this._newM;if(!m)return;
+  var val='';
+  if(m==='pat'){
+   val=(this._patS||[]).join('-');
+   if((this._patS||[]).length<4){V.toast('error','Pattern me kam se kam 4 dots connect karo');return}
+  }else{
+   var a=V.g('lkNew'),b2=V.g('lkNew2');
+   if(!a||!a.value){V.toast('error','Value daalo');return}
+   if(m==='pin'&&!/^\d{4,6}$/.test(String(a.value))){V.toast('error','PIN 4-6 digits ka hona chahiye (sirf number)');return}
+   if(a.value!==b2.value){V.toast('error','Dono entries match nahi kar rahe');return}
+   val=a.value;
+  }
+  var hint=V.g('lkHint')?String(V.g('lkHint').value||'').slice(0,40):'';
+  var h=await this.hash(val);
+  this.cfg={m:m,h:h,hint:hint,ts:Date.now()};
+  try{localStorage.setItem(this.K,JSON.stringify(this.cfg))}catch(e){V.toast('error','Save fail — device storage check karo');return}
+  try{sessionStorage.setItem('vxUnlock','1')}catch(e){}
+  try{db.ref('users/'+V.uid+'/settings/appLock').set({m:m,at:Date.now()})}catch(e){}
+  V.mClose();V.toast('success','🔒 App Lock ON — '+this.mName());
+  try{Settings.page('sec')}catch(e){}
+ },
+ change:function(){
+  try{localStorage.removeItem(this.K)}catch(e){}
+  this.cfg=null;V.mClose();this.setup();
+  V.toast('info','Purana lock hata diya — naya set karo');
+ },
+ disableAsk:function(){
+  V.mOpen('🚫 App Lock OFF','<div class="snote">Confirm karne ke liye apna '+this.mName()+' daalo:</div><input class="inp mt8" id="lkOff" type="password" autocomplete="off" placeholder="'+this.mName()+'">','<button class="btn bds2" onclick="VexaLock.disableGo()">OFF karo</button><button class="btn" onclick="V.mClose()">Cancel</button>');
+ },
+ disableGo:async function(){
+  var v=V.g('lkOff');var h=await this.hash(v?v.value:'');
+  if(h!==this.cfg.h){V.toast('error','❌ Galat '+this.mName());return}
+  try{localStorage.removeItem(this.K)}catch(e){}
+  this.cfg=null;
+  try{db.ref('users/'+V.uid+'/settings/appLock').remove()}catch(e){}
+  V.mClose();V.toast('success','🔓 App Lock OFF ho gaya');
+  try{Settings.page('sec')}catch(e){}
  }
 };
 
@@ -4986,13 +5262,14 @@ const Settings={
    try{Profile._rr++}catch(e){}
    V.go('profile');
    var pc=V.g('profC');if(!pc)return;
-   var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
+   var lock=parseInt(((me&&me.recovery&&me.recovery.lockUntil)||0),10);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
    var _staff=false;try{_staff=(me.role==='owner'||me.role==='admin'||me.role==='moderator')}catch(e){}
    var cats=[
     ['profile','👤','Profile','Edit profile · design · 24 themes · fonts · email/password'],
     ['sounds','🔊','Sounds & Music','58 UI sounds · 54 notification sounds · volume'],
     ['look','🎨','Look & Fonts','204 themes · image themes · 3 alag fonts (UI/Chat/Profile)'],
+    ['ntf','🔔','Notifications','Messages · calls · follows · likes — sab ON/OFF'],
     ['bak','☁️','Backup & Drive','Google Drive · Vault · .vexa file · storage check'],
     ['sec','🛡️','Privacy & Security','Privacy center · blocked · devices · login code'],
     ['legal','📜','Legal & Support','Privacy policy · terms · police · support'],
@@ -5029,7 +5306,7 @@ const Settings={
    try{Profile._rr++}catch(e){}
    V.go('profile');
    var pc=V.g('profC');if(!pc)return;
-   var lock=parseInt((me.recovery&&me.recovery.lockUntil)||0);
+   var lock=parseInt(((me&&me.recovery&&me.recovery.lockUntil)||0),10);
    var lockNote=(lock>Date.now())?'<div class="lockban mt8">🔒 24h security lock active</div>':'';
    var h='<div class="pgc"><button type="button" class="sback" onclick="Settings.open()">← Settings</button>';
    var g=function(title,rows){return '<div class="sgrp"><div class="sgrp-title">'+title+'</div>'+rows+'</div>'};
@@ -5090,10 +5367,35 @@ const Settings={
         +'<div class="srow" onclick="Privacy.restrictedOpen()"><div class="sri">🚧</div><div class="srf"><div class="srt">Restricted Users</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="Privacy.blockedOpen()"><div class="sri">🚷</div><div class="srf"><div class="srt">Blocked Users</div></div><div class="sra">›</div></div>')
       +g('SECURITY',
-         '<div class="srow" onclick="Settings.devices()"><div class="sri">📱</div><div class="srf"><div class="srt">Registered Devices</div><div class="srs">Recovery inhi se</div></div><div class="sra">›</div></div>'
+         '<div class="srow" onclick="VexaLock.setup()"><div class="sri">🔒</div><div class="srf"><div class="srt">App Lock — '+(VexaLock.enabled()?'ON ('+VexaLock.mName()+')':'OFF')+'</div><div class="srs">'+(VexaLock.enabled()?'Login ke baad lock screen aayegi · change/off yahin':'Password · PIN · Pattern — app par lock laga do')+'</div></div><div class="sra">›</div></div>'
+        +(VexaLock.enabled()?'<div class="srow" onclick="VexaLock.lockNow()"><div class="sri">🔐</div><div class="srf"><div class="srt">Abhi Lock karo</div><div class="srs">App turant lock — '+VexaLock.mName()+' se unlock hoga</div></div><div class="sra">🔒</div></div>':'')
+        +'<div class="srow" onclick="Settings.devices()"><div class="sri">📱</div><div class="srf"><div class="srt">Registered Devices</div><div class="srs">Recovery inhi se</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="Settings.helpChat()"><div class="sri">🆘</div><div class="srf"><div class="srt">Help Center Chat</div><div class="srs">Staff messages & credentials</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="Settings.secEvents()"><div class="sri">🛡️</div><div class="srf"><div class="srt">Security Events</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="CodeLogin.generate()"><div class="sri">🔑</div><div class="srf"><div class="srt">Web Login Code</div></div><div class="sra">›</div></div>');
+   }
+   /* 🔔 NOTIFICATIONS — v4.4 (on/off per type) */
+   else if(id==='ntf'){
+     var nrs=[
+        ['message','✉️','Messages','Chat messages ke alerts'],
+        ['call','📞','Calls','Incoming call alerts'],
+        ['follow','👤','Follows','Follow · request · accepted'],
+        ['like','❤️','Likes','Post/reel likes'],
+        ['comment','💬','Comments','Replies on your posts'],
+        ['game','🎮','Games','Game invites'],
+        ['announce','📢','Announcements','App updates & announcements'],
+        ['promo','🚀','Promo & VIP','Promotions · VIP · verify alerts']];
+     h+='<div class="stit">🔔 Notification Settings</div>'
+      +'<div class="snote mb8">Jo type <b>OFF</b> hoga wo list + badge count me nahi dikhega. 🔐 Account &amp; security alerts (recovery, password send, staff warnings) hamesha ON rehte hain.</div>'
+      +g('NOTIFICATION TYPES',
+         nrs.map(function(r){
+           var on=Notif.on(r[0]);
+           return '<div class="srow"><div class="sri">'+r[1]+'</div><div class="srf"><div class="srt">'+r[2]+'</div><div class="srs">'+r[3]+'</div></div><label class="sw"><input type="checkbox"'+(on?' checked':'')+' onchange="Notif.pset(\''+r[0]+'\',this.checked)" aria-label="'+r[2]+' on/off"><span class="trk"></span></label></div>';
+         }).join(''))
+      +g('ALWAYS ON (security)',
+         '<div class="srow"><div class="sri">🔐</div><div class="srf"><div class="srt">Account &amp; Security</div><div class="srs">Recovery · password send · warnings — safety ke liye hamesha ON</div></div><div class="sra">🔒</div></div>')
+      +g('SOUND',
+         '<div class="srow" onclick="Settings.page(\'sounds\')"><div class="sri">🔔</div><div class="srf"><div class="srt">Notification Sound</div><div class="srs">Kaunsi sound bajegi — Sounds page me</div></div><div class="sra">›</div></div>');
    }
    /* 📜 LEGAL & SUPPORT */
    else if(id==='legal'){
@@ -5417,6 +5719,7 @@ const Settings={
      try{await db.ref('presence/'+uid).remove()}catch(e){}
      /* 🔒v3.1: private nodes ka poora cleanup */
      try{await db.ref('vaultRecovery/'+uid).remove()}catch(e){}
+     try{await db.ref('pubUsers/'+uid).remove()}catch(e){}
      try{await db.ref('secData/'+uid).remove()}catch(e){}
      try{await db.ref('devData/'+uid).remove()}catch(e){}
      try{await db.ref('chatIdx/'+uid).remove()}catch(e){}
@@ -5688,11 +5991,19 @@ VexaUI={
    var type=mt.indexOf('image/')===0?'image':(mt.indexOf('video/')===0?'video':'file');
    var cid=ChatUI.chatId,peer=ChatUI.peerUid;
    if(!cid||!peer)return V.toast('warning','Chat kholo pehle');
+   /* 🎬v4 video send: One Time View ya Permanent — choice popup */
+   var once=false;
+   if(type==='video'){
+     var pick=await this._askOnce(j);
+     if(pick==='cancel')return V.toast('info','⏹️ Video send cancel ho gaya');
+     once=(pick===true);
+   }
    var o={senderId:V.uid,type:type,text:'',fileName:String(j.name||'file').slice(0,180),mimeType:(mt||'application/octet-stream').slice(0,70),size:Math.max(0,parseInt(j.size,10)||0),fileId:String(j.id).slice(0,60),createdAt:firebase.database.ServerValue.TIMESTAMP,delivered:true,seen:false};
+   if(once)o.once=true;
    var mid=db.ref('messages/'+cid).push().key;
    await db.ref('messages/'+cid+'/'+mid).set(o);
    var now=firebase.database.ServerValue.TIMESTAMP;
-   await db.ref('chats/'+cid).update({lastMessage:'📎 '+String(j.name||'file').slice(0,60),lastSender:V.uid,updatedAt:now});
+   await db.ref('chats/'+cid).update({lastMessage:(once?'👁️ ':'📎 ')+String(j.name||'file').slice(0,60),lastSender:V.uid,updatedAt:now});
    try{db.ref('chatIdx/'+V.uid+'/chats/'+cid).set({peer:peer,updatedAt:Date.now()})}catch(e){}
    try{db.ref('chatIdx/'+peer+'/chats/'+cid).set({peer:V.uid,updatedAt:Date.now()})}catch(e){}
    db.ref('chats/'+cid+'/unread/'+peer).transaction(function(n){return (n||0)+1});
@@ -5701,6 +6012,41 @@ VexaUI={
  dl:function(fileId){try{window.open('https://drive.usercontent.google.com/download?id='+fileId+'&export=download&confirm=t','_blank')}catch(e){}},
  thumb:function(fileId){return 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'},
  stream:function(fileId){return 'https://drive.usercontent.google.com/download?id='+fileId+'&export=view&confirm=t'},
+ /* 🎬v4 One Time View — send choice + single-play viewer */
+ _askOnce:function(j){
+   var self=this;
+   return new Promise(function(res){
+     var f='<button class="btn bp" onclick="VexaUI._oncePick(false)">♾️ Permanent</button>'
+      +'<button class="btn" style="background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff" onclick="VexaUI._oncePick(true)">👁️ One Time</button>'
+      +'<button class="btn" onclick="VexaUI._oncePick(\'cancel\')">⏹️ Cancel</button>';
+     V.mOpen('🎬 Video kaise bheje?','<div class="tc" style="padding:4px 2px"><b style="font-size:15px;word-break:break-all">'+V.esc(String(j.name||'video').slice(0,44))+'</b><div class="mut" style="margin-top:8px;font-size:12.5px;line-height:1.8">♾️ <b>Permanent</b> — kabhi bhi, jitni baar chaho dekh sakte ho<br>👁️ <b>One Time</b> — receiver sirf <b>EK baar</b> dekh payega, phir hamesha ke liye lock</div></div>',f);
+     self._onceRes=res;
+   });
+ },
+ _oncePick:function(v){
+   V.mClose();
+   var r=this._onceRes;this._onceRes=null;
+   if(r)r(v);
+ },
+ playOnce:async function(mid){
+   var cid=ChatUI.chatId;if(!cid)return;
+   var m=(await db.ref('messages/'+cid+'/'+mid).get().catch(function(){return null}));
+   var v=(m&&m.val())||{};
+   if(!v.fileId)return V.toast('info','Video available nahi hai');
+   var meM=(v.senderId===V.uid);
+   if(!meM&&v.opened)return V.toast('info','👁️ Ye video pehle hi dekh liya — one time view');
+   if(!meM){try{await db.ref('messages/'+cid+'/'+mid+'/opened').set(true);await db.ref('messages/'+cid+'/'+mid+'/openedAt').set(Date.now())}catch(e){}}
+   V.mOpen('👁️ One time video','<video class="ovvid" src="'+this.stream(v.fileId)+'" controls autoplay playsinline></video><div class="mut sm tc" style="margin-top:8px">'+V.esc(v.fileName||'video')+(meM?' · tumne bheja — receiver sirf 1 baar dekh payega':' · 🔒 ye video ab lock ho gaya — dobara nahi khulega')+'</div>');
+ },
+ /* 🎬v4.3 — permanent video: message se easy play (bada player modal + download) */
+ playVideo:async function(mid){
+   var cid=ChatUI.chatId;if(!cid)return;
+   var m=(await db.ref('messages/'+cid+'/'+mid).get().catch(function(){return null}));
+   var v=(m&&m.val())||{};
+   if(!v.fileId)return V.toast('info','Video available nahi hai');
+   var meM=(v.senderId===V.uid);
+   V.mOpen('🎬 '+(v.fileName||'Video').slice(0,40),'<video class="ovvid" src="'+this.stream(v.fileId)+'" controls autoplay playsinline preload="metadata"></video><div class="mut sm tc" style="margin-top:8px">'+(meM?'👁️ tumne bheja':'🎬 message se seedha play')+' · inline play na chale to ⬇ Download</div>','<button class="btn bp" onclick="VexaUI.dl(\''+v.fileId+'\')">⬇ Download</button><button class="btn" onclick="V.mClose()">✖ Band karo</button>');
+ },
  /* 🎬 video-first picker (old Drive-video style) */
  videoTap:function(){
    if(!this.connect())return;
@@ -5761,6 +6107,91 @@ V.migratePrivateNodes=async function(uid){
   }catch(e){}
 };
 
+/* ================= APP BRIDGE (⚡v4.4.1: APK ↔ Chrome OAuth dance) =================
+   APK (VEXA-Chat app) me Google/LinkedIn OAuth aur GIS popup dono fail hote hain
+   (Google WebView UA block karta hai). Ye helper teen kaam karta hai:
+   1. App me: OAuth ko Chrome me bhejta hai (state=vxaapp tag ke saath) —
+      APK accounts.google.com ko intercept karke Chrome kholta hai.
+   2. Chrome me: consent ke baad site #access_token=..&state=vxaapp ke saath
+      khulti hai → intent://oauth se AUTO app me wapas (token ke sath).
+   3. App me wapas: #vxaAppTok=... ko VexaVaultDrive ko deliver karke
+      Drive CONNECTED kar deta hai (chat file send + vault backup dono isi
+      token se chalte hain). */
+const VxaApp={
+  is:function(){ return /\bVEXA-Chat\/\d/.test(navigator.userAgent)||!!window.VexaBridge },
+  /* APP → CHROME: OAuth redirect URL (APK isko Chrome me khol dega) */
+  driveConnect:function(cid){
+    try{
+      var url='https://accounts.google.com/o/oauth2/v2/auth'
+        +'?client_id='+encodeURIComponent(cid)
+        +'&redirect_uri='+encodeURIComponent(location.origin+location.pathname)
+        +'&response_type=token'
+        +'&scope='+encodeURIComponent((typeof VEXA_GOOGLE!=='undefined'&&VEXA_GOOGLE&&VEXA_GOOGLE.driveScope)||'https://www.googleapis.com/auth/drive.file')
+        +'&include_granted_scopes=true'
+        +'&prompt=consent select_account'
+        +'&state=vxaapp';
+      try{ V.toast('info','🌐 Google login Chrome me khulega — app me wapas auto aa jaoge',5000) }catch(e){}
+      location.href=url; /* APK intercept → Chrome */
+    }catch(e){ try{V.toast('error','Drive connect fail')}catch(e2){} }
+  },
+  /* boot me ek baar — dono sides handle */
+  boot:function(){
+    try{ this._chromeReturn() }catch(e){}
+    try{ this._appDeliver() }catch(e){}
+  },
+  /* CHROME side: OAuth return (state=vxaapp) → app me auto-redirect */
+  _chromeReturn:function(){
+    if(this.is())return;                       /* app ke andar nahi chalana */
+    var h=location.hash||'';
+    if(h.indexOf('access_token=')===-1||h.indexOf('state=vxaapp')===-1)return;
+    var m=h.match(/access_token=([^&]+)/);
+    var em=h.match(/expires_in=(\d+)/);
+    if(!m)return;
+    var tok=m[1];
+    var exp=Date.now()+((em?parseInt(em[1],10):3600)-60)*1000;
+    var intentUrl='intent://oauth#Intent;scheme=vexachat;package=com.animetubepro.vexachat'
+      +'S.tok='+encodeURIComponent(tok)+';S.exp='+String(exp)+';end';
+    var schemeUrl='vexachat://oauth?tok='+encodeURIComponent(tok)+'&exp='+String(exp);
+    try{ document.title='✅ Login complete — VEXA-Chat me wapas jao' }catch(e){}
+    setTimeout(function(){ try{ location.replace(intentUrl) }catch(e){} },400);
+    /* agar app 1.6s me nahi khula → fallback screen */
+    setTimeout(function(){
+      try{
+        document.body.innerHTML='<div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050208;color:#fff;font-family:system-ui;text-align:center;padding:24px;z-index:99999">'
+          +'<div style="font-size:42px">✅</div>'
+          +'<div style="font-size:20px;font-weight:800;margin:10px 0 6px">Google Drive connected!</div>'
+          +'<div style="opacity:.7;font-size:14px;margin-bottom:22px">App me wapas jao — Drive apne aap connect ho jayega</div>'
+          +'<a href="'+schemeUrl+'" style="background:linear-gradient(90deg,#8b5cf6,#d946ef);color:#fff;padding:14px 34px;border-radius:14px;font-weight:800;text-decoration:none;font-size:16px">📲 Open VEXA-Chat</a>'
+          +'<div style="opacity:.4;font-size:12px;margin-top:18px">Agar app na khule — app kholke Drive connect dobara dabao</div></div>';
+      }catch(e){}
+    },1600);
+    /* hash clean — Chrome side token store NAHI karna */
+    try{ history.replaceState(null,'',location.pathname+location.search) }catch(e){}
+  },
+  /* APP side: vexachat:// se wapas aaya token → Drive modules deliver */
+  _appDeliver:function(){
+    if(!this.is())return;
+    var h=location.hash||'';
+    if(h.indexOf('vxaAppTok=')===-1)return;
+    var m=h.match(/vxaAppTok=([^&]+)/);
+    if(!m)return;
+    var tok='';
+    try{ tok=decodeURIComponent(m[1]) }catch(e){ tok=m[1] }
+    var em=h.match(/vxaAppExp=(\d+)/);
+    var exp=em?parseInt(em[1],10):0;
+    var delivered=false;
+    try{
+      if(typeof VexaVaultDrive!=='undefined'){ VexaVaultDrive.setToken(tok,exp||undefined); delivered=true }
+    }catch(e){}
+    try{ history.replaceState(null,'',location.pathname+location.search) }catch(e){}
+    if(delivered){
+      try{ V.toast('success','🟢 Google Drive connected — Chrome se wapas aa gaya!',6000) }catch(e){}
+      try{ if(VexaVaultDrive._notify)VexaVaultDrive._notify() }catch(e){}
+      try{ if(window.VaultUI&&VaultUI.onConnected)VaultUI.onConnected() }catch(e){}
+    }
+  }
+};
+
 /* ================= BOOT ================= */
 ATP.ready(function(){
  try{
@@ -5775,6 +6206,9 @@ ATP.ready(function(){
    sb=supabase.createClient(CFG.supabase.url,CFG.supabase.anonKey);
   /* ⚡REEL-FIX: guild storage client — reels videos vexa-chat-guild project (project-3) me */
   try{ sgb=supabase.createClient(VEXA_STORAGE.guilds.url,VEXA_STORAGE.guilds.anonKey) }catch(e){ console.warn('guild storage init fail',e) }
+  /* ⚡APP-BRIDGE v4.4.1: Chrome↔APK OAuth dance (VaultUI.boot se PEHLE —
+     warna Chrome ka vxaapp token services handleOAuthReturn kha jata) */
+  try{ if(typeof VxaApp!=='undefined')VxaApp.boot() }catch(e){}
    Themes.init();
    Fonts.init();
    Auth.initDobs();

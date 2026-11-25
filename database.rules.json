@@ -34,7 +34,7 @@
       ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
-        ".write": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && (auth.uid === $uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
 
         /* PUBLIC profile — sab logged-in users (chat/feed ke liye zaroori) */
         "username":         { ".read": "auth != null" },
@@ -180,8 +180,8 @@
     "usernames": {
       ".read": "auth != null",
       "$name": {
-        ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
-        ".validate": "newData.isString() && newData.val() === auth.uid"
+        ".write": "auth != null && ((!data.exists() && (newData.val() === auth.uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))) || data.val() === auth.uid)",
+        ".validate": "newData.isString() && newData.val().length <= 64 && (newData.val() === auth.uid || (root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
       }
     },
     "reservedUsernames": { ".read": "auth != null", ".write": false },
@@ -542,6 +542,30 @@
     "localPresence": {
       ".read": "auth != null",
       "$cell": { "$uid": { ".write": "auth != null && auth.uid === $uid" } }
+    },
+
+    /* ═══ PUB USERS — v4.2 SEARCH/PROFILE FIX ═══
+       RTDB cascade: users/ parent deny hone se uske child grants DEAD ho jate hain,
+       isliye PUBLIC profile data ka alag top-level mirror zaroori hai.
+       Public fields ONLY (passwords/recovery/private kabhi nahi). */
+    "pubUsers": {
+      ".read": "auth != null",
+      ".indexOn": ["unLC", "dnLC"],
+      "$uid": {
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'moderator')",
+        ".validate": "newData.hasChildren()"
+      }
+    },
+    "ownerAudit": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'"
+    },
+
+    /* ═══ STAFF PANEL AUDIT — v4.2 (owner.html ke saare actions log hote hain;
+       write = staff, read = staff — Audit tab owner-only dikhta hai) ═══ */
+    "auditLog": {
+      ".read": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))",
+      ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() === 'owner') || (root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'moderator'))"
     },
 
     /* ═══ CALLS — caller/peer-only read+write (world-readable calls FIX) ═══ */
