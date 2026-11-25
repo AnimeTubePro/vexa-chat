@@ -28,7 +28,7 @@ const ATP_LINKS=[
 
 /* ═══════════ 🔄 APP VERSION SYSTEM v3 — Firebase-driven APK link ═══════════ */
 const Ver={
- CURRENT:'4.4.0',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
+ CURRENT:'4.5.4',   /* ⭐⭐ APK BUILD KARTE WAQT YE NUMBER BADLO ⭐⭐ */
  get:function(){return this.CURRENT},
  cmp:function(a,b){
   var pa=String(a||'').split('.').map(function(x){return parseInt(x,10)||0});
@@ -224,6 +224,8 @@ const ATP={
  loader:function(){
   var bar=document.getElementById('loadBar'),pct=document.getElementById('loadPct'),sp=document.getElementById('splash');
   if(!sp)return;
+  /* 🔧v4.5.3: version chip DYNAMIC — Ver.get() se set hota hai, kabhi purana nahi dikhega */
+  try{var chip=document.getElementById('splashChip');if(chip)chip.textContent='v'+((typeof Ver!=='undefined'&&Ver.get)?Ver.get():this._ver||'')}catch(e){}
   var self=this,t0=performance.now(),DUR=(this.cfg.loadingSeconds||2)*1000;
   /* ⚡SPLASH-FIX: rotating Hinglish status messages (error text ko chhod kar) */
   var MSGS=['🎬 Studio boot ho raha hai…','🔐 Security check…','☁️ Cloud connect…','✨ Magic render ho rahi hai…','🎵 Sounds load…','🚀 Engine warm up…','⚡ Almost ready…'];
@@ -239,7 +241,7 @@ const ATP={
    if(!s2)return;
    var p=Math.min(1,(performance.now()-t0)/DUR);
    if(bar)bar.style.width=(p*100).toFixed(1)+'%';
-   if(pct)pct.textContent=Math.round(p*100)+'% — Loading...';
+   if(pct)pct.textContent=Math.round(p*100)+'%'; /* 🔧v4.5.3: clean — "21%", purana "21% — Loading..." nahi */
    if(p<1&&!s2.classList.contains('fade'))requestAnimationFrame(tick);
    else{
     if(bar)bar.style.width='100%';
@@ -1079,7 +1081,16 @@ const V={
         cascade ki wajah se users/{uid} ke andar child grants dead hote hain) */
      var ps=await db.ref('pubUsers/'+uid).get().catch(function(){return null});
      if(ps&&ps.exists())return ps.val();
-     /* fallback: purane (open) rules deploy pe ye path bhi chalega */
+     /* 🔧v4.5.2 FAST PATH: purane (open) rules par users/{uid} FULL READ chal jata hai —
+        16 alag requests ki jagah 1. Sirf public fields memory me rakhte hain;
+        locked rules par ye deny hoga aur niche per-field fallback chalega. */
+     var fu=await db.ref('users/'+uid).get().catch(function(){return null});
+     if(fu&&fu.exists()){
+       var v=fu.val()||{},pub={},PK=['username','displayName','profilePhoto','bio','vip','verified','role','banned','createdAt','postCount','privacy','publicUserId','profileDesign','followers','following'];
+       for(var i=0;i<PK.length;i++){if(v[PK[i]]!==undefined)pub[PK[i]]=v[PK[i]]}
+       if(pub.username||pub.displayName)return pub;
+     }
+     /* fallback: locked rules — public fields ek-ek karke (16 chhote reads) */
      var paths=['username','displayName','profilePhoto','bio','vip','verified','role','banned','createdAt','followers','following','posts','postCount','privacy','publicUserId','profileDesign'];
      var vals=await Promise.all(paths.map(function(p){return db.ref('users/'+uid+'/'+p).get().catch(function(){return null})}));
      var o={},any=false;
@@ -1125,6 +1136,9 @@ const V={
    if(sc==='games')Games.home();
    if(sc==='notif')Notif.load();
    if(sc==='local')Local.load();
+   /* 🔧v4.5.1: search screen pe aao to Insta-style idle state (recents+suggested),
+      agar input me pehle se kuch likha hai to wo results wapas dikhao */
+   if(sc==='search'){var si=V.g('sInput');if(si&&si.value.trim())Search.exec();else Search.idle()}
    /* ⚡PORT v3: Police · Support · Policies screens wapas */
    if(sc==='police')Police.load();
    if(sc==='support')Support.load();
@@ -4985,16 +4999,110 @@ const Notif={
 };
 
 /* ================= SEARCH — ⚡parallel ================= */
+/* 🔧v4.5.1 SEARCH REBUILD-2: Insta-style search —
+   1) SUBSTRING matching (pehle sirf prefix tha — "sharma"/"kumar" beech me ho to
+      kuch nahi milta tha, yehi user ki complaint thi)
+   2) Khali search bar pe RECENT SEARCHES + SUGGESTED USERS dikhte hain (Insta jaisa)
+   3) Results me prefix matches upar, substring matches neeche — har group A→Z
+   4) Sab sources parallel + fail-safe: koi ek path/rules fail ho to bhi baaki chalte hain */
 const Search={
  to:null,
- run:function(){clearTimeout(this.to);var self=this;this.to=setTimeout(function(){self.exec()},350)},
- hash:function(t){V.go('search');var ip=V.g('sInput');if(ip)ip.value='#'+t;this.exec()},
+ RECENT_KEY:'vexaRecentSearch',
+ _last:{},
+ run:function(){
+   /* 🔧v4.5.2: ✕ clear button dikhao/chhupao input ke hisaab se */
+   try{var x=V.g('sClear'),ip=V.g('sInput');if(x&&ip)x.classList.toggle('on',!!ip.value)}catch(e){}
+   clearTimeout(this.to);var self=this;this.to=setTimeout(function(){self.exec()},280)},
+ clear:function(){
+   var ip=V.g('sInput');if(ip){ip.value='';ip.focus()}
+   try{var x=V.g('sClear');if(x)x.classList.remove('on')}catch(e){}
+   this.idle();
+ },
+ hash:function(t){V.go('search');var ip=V.g('sInput');if(ip)ip.value='#'+t;try{var x=V.g('sClear');if(x)x.classList.add('on')}catch(e){}this.exec()},
+ /* recent searches — localStorage me max 6, profile khulte hi add */
+ remember:function(uid){
+   try{
+     if(!uid)return;
+     var l=[];try{l=JSON.parse(localStorage.getItem(this.RECENT_KEY)||'[]')}catch(e){l=[]}
+     if(!Array.isArray(l))l=[];
+     l=l.filter(function(x){return x&&x.uid!==uid});
+     var e=this._last[uid]||{};
+     l.unshift({uid:uid,un:e.username||'',dn:e.displayName||'',ph:e.profilePhoto||''});
+     this._last[uid]=e;
+     localStorage.setItem(this.RECENT_KEY,JSON.stringify(l.slice(0,6)));
+   }catch(err){}
+ },
+ open:function(uid){this.remember(uid);V.openProfile(uid)},
+ clearRecent:function(){
+   try{localStorage.removeItem(this.RECENT_KEY)}catch(e){}
+   this.idle();
+ },
+ /* khali state: recent searches + suggested users */
+ idle:async function(){
+   var w=V.g('sRes');if(!w)return;
+   var h='';
+   var rec=[];
+   try{rec=JSON.parse(localStorage.getItem(this.RECENT_KEY)||'[]')}catch(e){rec=[]}
+   if(!Array.isArray(rec))rec=[];
+   rec=rec.filter(function(x){return x&&x.uid});
+   if(rec.length){
+     h+='<div class="stit">Recent Searches <a class="sm" style="cursor:pointer;color:#7c5cff" onclick="Search.clearRecent()">Clear</a></div>';
+     h+=rec.map(function(r){
+       var u={username:r.un||'user',displayName:r.dn||'User',profilePhoto:r.ph||''};
+       return '<div class="urow" onclick="Search.open(\''+V.esc(r.uid)+'\')">'+V.ava(u,'md')
+        +'<div class="uinf"><div class="unm">'+V.esc(u.displayName)+'</div><div class="uun">@'+V.esc(u.username)+'</div></div>'
+        +'<div class="uchev" aria-hidden="true">›</div></div>';
+     }).join('');
+   }
+   h+='<div class="stit">Suggested</div><div id="sSug"><div class="spn" style="margin:16px auto"></div></div>';
+   if(!rec.length)h+='<div class="sm mut" style="margin-top:10px">🔍 Naam, @username, UID ya #hashtag likho — jaise Instagram me hota hai</div>';
+   w.innerHTML=h;
+   try{
+     var s=await db.ref('pubUsers').limitToLast(15).get();
+     var sug=[];
+     if(s&&s.exists()){
+       s.forEach(function(c){
+         var u=c.val()||{};
+         if(u.banned)return;
+         sug.push({uid:c.key,u:u});
+       });
+     }
+     /* 🔧v4.5.2: pubUsers mirror khali ho (purane accounts abhi re-login nahi hue)
+        to usernames index se REAL users uthao — users/{uid} se enrich hota hai */
+     if(!sug.length){
+       try{
+         var s2=await db.ref('usernames').limitToFirst(12).get();
+         var ents=[];
+         if(s2&&s2.exists())s2.forEach(function(c){ents.push({un:c.key,uid:c.val()})});
+         var us2=await Promise.all(ents.map(function(e){return V.pubUser(e.uid).catch(function(){return null})}));
+         us2.forEach(function(u,i){
+           if(!u||(!u.username&&!u.displayName))return; /* stale/deleted — skip */
+           if(!u.username)u.username=ents[i].un;
+           sug.push({uid:ents[i].uid,u:u});
+         });
+       }catch(e2){}
+     }
+     var sw=V.g('sSug');
+     if(!sw)return;
+     sug=sug.slice(0,8);
+     if(!sug.length){sw.innerHTML='<div class="sm mut">Abhi koi user nahi — pehle dost join karo!</div>';return}
+     sw.innerHTML=sug.map(function(r){
+       Search._last[r.uid]={username:r.u.username,displayName:r.u.displayName,profilePhoto:r.u.profilePhoto||''};
+       return '<div class="urow" onclick="Search.open(\''+r.uid+'\')">'+V.ava(r.u,'md')
+        +'<div class="uinf"><div class="unm">'+V.nameB(r.u)+'</div><div class="uun">@'+V.esc(r.u.username||'')+'</div></div>'
+        +'<div class="uchev" aria-hidden="true">›</div></div>';
+     }).join('');
+   }catch(e){
+     var sw2=V.g('sSug');
+     if(sw2)sw2.innerHTML='<div class="sm mut">Suggestions load nahi hue — net check karo</div>';
+   }
+ },
  exec:async function(){
    var w=V.g('sRes');
    if(!w)return;
    var ip=V.g('sInput');
    var q=ip?ip.value.trim().toLowerCase():'';
-   if(!q){w.innerHTML='';return}
+   if(!q){this.idle();return}
    w.innerHTML='<div class="spn" style="margin:16px auto"></div>';
    var h='';
    try{
@@ -5019,74 +5127,75 @@ const Search={
        }
        if(!n)h+='<div class="sm mut">No posts</div>';
      }else{
-       /* 🔧v4.5 REBUILD: search bar SHURU SE — purana prefix style wapas.
-          "Amit" type karo → Amit, Amitsharma_059, Amit_007... jo bhi username/display
-          name isse START hota hai sabki list dikhegi. 3 sources PARALLEL chalte hain,
-          koi ek fail ho jaye (rules/index/mirror missing) tab bhi search zinda rehta hai:
-          1) usernames node — key-prefix query (Firebase .indexOn ki zaroorat NAHI,
-             purane deployed rules par bhi chalega — ye sabse reliable path hai)
-          2) pubUsers ka poora snapshot — client-side prefix filter (unLC/dnLC mirror
-             ke bina bhi username/displayName/UID/publicUserId se match karega)
-          3) UID direct lookup — Firebase UID ya numeric public ID poora daala ho */
+       /* 3 sources PARALLEL — koi ek fail ho (rules/index/mirror missing) tab bhi
+          search zinda rehta hai. Substring scoring: username-prefix > name-prefix >
+          username-substring > name-substring > UID/publicId */
        h+='<div class="stit">Users</div>';
        var raw=ip?ip.value.trim():'';
+       var self2=this;
+       this._last={};
        var seen={},rows=[];
        var scoreOf=function(uid,u){
          var un=String((u&&u.username)||'').toLowerCase();
          var dn=String((u&&u.displayName)||'').toLowerCase();
          if(un.indexOf(q)===0)return 0;
          if(dn.indexOf(q)===0)return 1;
-         if(String(uid||'').toLowerCase().indexOf(q)===0||String((u&&u.publicUserId)||'').indexOf(q)===0)return 2;
-         return 1;
+         if(un.indexOf(q)>-1)return 2;
+         if(dn.indexOf(q)>-1)return 3;
+         if(String(uid||'').toLowerCase().indexOf(q)===0||String((u&&u.publicUserId)||'').indexOf(q)===0)return 4;
+         return 9;
        };
        var addRow=function(uid,u){if(!uid)return;if(seen[uid])return;seen[uid]=1;rows.push({uid:uid,u:u||{},sc:scoreOf(uid,u||{})})};
        var jobs=[];
-       /* ── 1) usernames key-prefix (purana path — index-free, hamesha chalta hai) ── */
+       /* ── 1) usernames key-prefix (index-free, purane deployed rules par bhi chalta hai) ── */
        jobs.push(db.ref('usernames').orderByKey().startAt(q).endAt(q+'\uf8ff').limitToFirst(30).get().then(function(s){
          if(!s)return;
          var ents=[];s.forEach(function(c){ents.push({un:c.key,uid:c.val()})});
          return Promise.all(ents.map(function(e){return V.pubUser(e.uid).catch(function(){return null})})).then(function(us){
-           us.forEach(function(snp,i){
-             var u=(snp&&snp.val())||{};
+           us.forEach(function(u,i){
+             /* 🔧v4.5.2 FIX (ASLI BUG): V.pubUser PLAIN OBJECT return karta hai,
+                DataSnapshot nahi — pehle .val() call kar rahe the isliye object
+                hamesha khali padta aur HAR RESULT "User"+"?" dikhta tha. */
+             if(!u||(!u.username&&!u.displayName))return; /* stale username (deleted user) — row skip */
              if(!u.username)u.username=ents[i].un;
              addRow(ents[i].uid,u);
            });
          });
        }).catch(function(){}));
-       /* ── 2) pubUsers snapshot — client-side prefix filter (mirror/index fail-proof) ── */
+       /* ── 2) pubUsers snapshot — SUBSTRING filter (mirror/index fail-proof) ── */
        jobs.push(db.ref('pubUsers').get().then(function(s){
          if(!s)return;
          s.forEach(function(c){
            var u=c.val()||{};
            var un=String(u.username||'').toLowerCase(),dn=String(u.displayName||'').toLowerCase();
            var pub=String(u.publicUserId||''),k=String(c.key||'').toLowerCase();
-           if(un.indexOf(q)===0||dn.indexOf(q)===0||k.indexOf(q)===0||pub.indexOf(q)===0)addRow(c.key,u);
+           if(un.indexOf(q)>-1||dn.indexOf(q)>-1||k.indexOf(q)===0||pub.indexOf(q)===0)addRow(c.key,u);
          });
        }).catch(function(){}));
        /* ── 3) UID direct lookup (original case me — UID case-sensitive hota hai) ── */
        if(/^[A-Za-z0-9_-]{6,}$/.test(raw))jobs.push(V.pubUser(raw).then(function(u){if(u)addRow(raw,u)}).catch(function(){}));
        await Promise.all(jobs);
-       /* username-prefix pehle, phir name-prefix, phir UID/ID — har group me A→Z */
+       /* score pehle, phir A→Z */
        rows.sort(function(a,b){
          if(a.sc!==b.sc)return a.sc-b.sc;
          return String((a.u&&a.u.username)||'').toLowerCase()<String((b.u&&b.u.username)||'').toLowerCase()?-1:1;
        });
        var shown=rows.slice(0,30);
+       shown.forEach(function(r){self2._last[r.uid]={username:(r.u&&r.u.username)||'',displayName:(r.u&&r.u.displayName)||'',profilePhoto:(r.u&&r.u.profilePhoto)||''}});
        h+=shown.map(function(r){
          var u=(r.u&&r.u.username)?r.u:{username:'user'};
          var meTag=r.uid===V.uid?' <span class="umetag">You</span>':'';
-         return '<div class="urow" onclick="V.openProfile(\''+r.uid+'\')">'+V.ava(u,'md')
+         return '<div class="urow" onclick="Search.open(\''+r.uid+'\')">'+V.ava(u,'md')
           +'<div class="uinf"><div class="unm">'+V.nameB(u)+meTag+'</div><div class="uun">@'+V.esc(u.username||'')+'</div></div>'
           +'<div class="uchev" aria-hidden="true">›</div></div>';
        }).join('');
-       if(!rows.length)h+='<div class="sm mut">Koi user nahi mila — dusra naam try karo</div>';
-       else h+='<div class="sm mut srchcount">'+shown.length+' user'+(shown.length>1?'s':'')+' mile</div>';
+       if(!rows.length)h+='<div class="sm mut">\u201C'+V.esc(raw)+'\u201D — koi user nahi mila. Dusra naam try karo (beech ka word bhi chalega)</div>';
+       else h+='<div class="sm mut srchcount">'+(shown.length>1?shown.length+' users mile':'1 user mila')+'</div>';
      }
    }catch(e){h='<div class="empo"><div class="ei">⚠️</div><div class="et">Search failed</div></div>'}
    w.innerHTML=h;
  }
 };
-
 /* ================= 🔒 APP LOCK (v4.4) — password / PIN / pattern =================
    Login ke baad pura app lock ho jata hai. Credential ka HASH localStorage me
    (plain kabhi save nahi), unlock per browser-session (sessionStorage). */
@@ -6899,7 +7008,7 @@ const Promo={
 window.Promo=Promo;
 
 /* ═══════════════════════════════════════════════════════════
-   🆘 HELP SHIM (v2.3 — bug fix)
+   🆘 HELP SHIM (v2.4 — bug fix)
    Auth screen ka Help Center pehle se `Help.report()` call
    karta tha lekin Help module exist hi nahi karta tha — sab
    buttons broken the (ReferenceError). Ab ye shim login se
