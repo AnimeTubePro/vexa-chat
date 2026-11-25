@@ -1,3 +1,34 @@
+# VEXA v4.5 — SEARCH REBUILD + HEAVY SPLASH + GUIDE BOOK 🚀
+
+**AnimeTubePro Studio × VEXA** — user spec ke hisaab se 3 bade updates: (1) search bar pura shuru se — purana prefix style wapas, (2) loading screen heavy-animated + text bhi animate, (3) puri guide book ab PDF me bhi.
+
+## 🔍 1) SEARCH BAR — PURA REBUILD (purana prefix style)
+- **"Amit" type karo → Amit, Amitsharma_059, Amit_007… jo bhi naam se START hota hai sabki list** — avatar + naam + @username ke saath
+- 3 sources PARALLEL, koi ek fail ho tab bhi search chalti rehti hai:
+  1. `usernames` node key-prefix query — **`.indexOn` ki zaroorat NAHI**, purane deployed rules par bhi chal gaya (ye hi pakka path hai)
+  2. `pubUsers` poora snapshot — client-side prefix filter (`unLC`/`dnLC` mirror na ho tab bhi username/displayName/UID/publicUserId se match)
+  3. UID direct lookup (Firebase UID ya numeric public ID, original case me)
+- **Username + Display name + UID TEENO** se search; result tap → seedha profile
+- Ranking: username-prefix sabse upar, phir name-prefix, phir ID — har group me A→Z; neeche **"N users mile"** count; khud apne result par **You** badge; max 30 results
+- Search page placeholder ab: "Naam, @username, UID ya #hashtag..."
+
+## 🎬 2) LOADING SCREEN — HEAVY ANIMATED (text bhi animate)
+- **Per-letter wordmark**: V-E-X-A--C-h-a-t har akshar khud uthta hai (staggered bounce), phir lehrata hai, glow pulse + har letter me gradient shine sweep ("VEXA-" white→magenta→purple gradient, "Chat" logo-red)
+- Naya **aurora layer** (3 dim color clouds drift) + orbs wapas (dim) + **shooting star** + purane stars/scan/rings/logo — background ab bhi saccha BLACK
+- Subtitle blur + letter-spacing se clear hoti hai, phir halka float karta hai; chip pulse, bar glow, status-text pulse, "Tap to skip" bounce
+- `prefers-reduced-motion` respected — animation band par text PHIR BHI dikhta hai
+- Saare JS IDs same: `#splash`, `#splashLogo`, `#loadBar`, `#loadPct`, `#splashTx`, `.loader-title`, `.loader-sub`, `.skiphint` — Ver lock screen waise ka waisa kaam karega
+
+## 📖 3) GUIDE BOOK — PDF (alag file)
+- **`vexa-user-guide.pdf`** — 16 pages, Hinglish, puri app ki guide: account, search (naya v4.5), chat & calls, Drive files, posts, reels, songs, friends, games, backup/vault, notifications (8 types table), app lock, paid promotion, safety, **settings ka pura naksha (table)** aur FAQ/troubleshooting
+- App ke andar: **Settings → Legal & Support → "Guide Book PDF"** (naya row, `GuideBook.pdf()`) — file ko index.html ke saath deploy karna hai
+
+## ✅ Verify
+- `node --check script.js` PASS; splash headless-Chromium me render check (letters visible, gradient clip sahi)
+- Guide PDF: `pdf_qa.py` **PASS** (16 pages, 0 overflow, fill ok), har page visual check
+
+---
+
 # VEXA v4.0 — REBUILD EDITION 🚀
 
 **AnimeTubePro Studio × VEXA** — reverse-engineer karke pura naya bana. **OLD UI hi rakha gaya hai** (style.css + redesign.css — jaisa pehle dikhta tha waisa hi), saare v4 fixes functional hain: owner-level privacy, bina size-limit wali Google Drive files, calls + games — sab ek jagah.

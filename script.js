@@ -5019,31 +5019,68 @@ const Search={
        }
        if(!n)h+='<div class="sm mut">No posts</div>';
      }else{
-       /* 🔧v4.4 FIX: search bar — ab username + display name + UID TEENO se milega.
-          Pehle sirf usernames-prefix tha (display name se search → hamesha "No users").
-          Ab pubUsers pe indexed queries (unLC/dnLC lowercase mirrors) + usernames
-          fallback (purane users jinka mirror nahi bana) + UID direct lookup — SAB parallel. */
+       /* 🔧v4.5 REBUILD: search bar SHURU SE — purana prefix style wapas.
+          "Amit" type karo → Amit, Amitsharma_059, Amit_007... jo bhi username/display
+          name isse START hota hai sabki list dikhegi. 3 sources PARALLEL chalte hain,
+          koi ek fail ho jaye (rules/index/mirror missing) tab bhi search zinda rehta hai:
+          1) usernames node — key-prefix query (Firebase .indexOn ki zaroorat NAHI,
+             purane deployed rules par bhi chalega — ye sabse reliable path hai)
+          2) pubUsers ka poora snapshot — client-side prefix filter (unLC/dnLC mirror
+             ke bina bhi username/displayName/UID/publicUserId se match karega)
+          3) UID direct lookup — Firebase UID ya numeric public ID poora daala ho */
        h+='<div class="stit">Users</div>';
+       var raw=ip?ip.value.trim():'';
        var seen={},rows=[];
-       var addRow=function(uid,u){if(uid&&uid!==V.uid&&!seen[uid]){seen[uid]=1;rows.push({uid:uid,u:u||{}})}};
+       var scoreOf=function(uid,u){
+         var un=String((u&&u.username)||'').toLowerCase();
+         var dn=String((u&&u.displayName)||'').toLowerCase();
+         if(un.indexOf(q)===0)return 0;
+         if(dn.indexOf(q)===0)return 1;
+         if(String(uid||'').toLowerCase().indexOf(q)===0||String((u&&u.publicUserId)||'').indexOf(q)===0)return 2;
+         return 1;
+       };
+       var addRow=function(uid,u){if(!uid)return;if(seen[uid])return;seen[uid]=1;rows.push({uid:uid,u:u||{},sc:scoreOf(uid,u||{})})};
        var jobs=[];
-       if(/^[A-Za-z0-9]{20,}$/.test(q))jobs.push(db.ref('pubUsers/'+q).get().then(function(s){if(s&&s.exists())addRow(q,s.val())}).catch(function(){}));
-       jobs.push(db.ref('pubUsers').orderByChild('unLC').startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){if(s)s.forEach(function(c){addRow(c.key,c.val()||{})})}).catch(function(){}));
-       jobs.push(db.ref('pubUsers').orderByChild('dnLC').startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){if(s)s.forEach(function(c){addRow(c.key,c.val()||{})})}).catch(function(){}));
-       jobs.push(db.ref('usernames').orderByKey().startAt(q).endAt(q+'\uf8ff').limitToFirst(20).get().then(function(s){
+       /* ── 1) usernames key-prefix (purana path — index-free, hamesha chalta hai) ── */
+       jobs.push(db.ref('usernames').orderByKey().startAt(q).endAt(q+'\uf8ff').limitToFirst(30).get().then(function(s){
          if(!s)return;
          var ents=[];s.forEach(function(c){ents.push({un:c.key,uid:c.val()})});
          return Promise.all(ents.map(function(e){return V.pubUser(e.uid).catch(function(){return null})})).then(function(us){
-           us.forEach(function(snp,i){addRow(ents[i].uid,(snp&&snp.val())||{username:ents[i].un})});
+           us.forEach(function(snp,i){
+             var u=(snp&&snp.val())||{};
+             if(!u.username)u.username=ents[i].un;
+             addRow(ents[i].uid,u);
+           });
          });
        }).catch(function(){}));
+       /* ── 2) pubUsers snapshot — client-side prefix filter (mirror/index fail-proof) ── */
+       jobs.push(db.ref('pubUsers').get().then(function(s){
+         if(!s)return;
+         s.forEach(function(c){
+           var u=c.val()||{};
+           var un=String(u.username||'').toLowerCase(),dn=String(u.displayName||'').toLowerCase();
+           var pub=String(u.publicUserId||''),k=String(c.key||'').toLowerCase();
+           if(un.indexOf(q)===0||dn.indexOf(q)===0||k.indexOf(q)===0||pub.indexOf(q)===0)addRow(c.key,u);
+         });
+       }).catch(function(){}));
+       /* ── 3) UID direct lookup (original case me — UID case-sensitive hota hai) ── */
+       if(/^[A-Za-z0-9_-]{6,}$/.test(raw))jobs.push(V.pubUser(raw).then(function(u){if(u)addRow(raw,u)}).catch(function(){}));
        await Promise.all(jobs);
-       rows.sort(function(a,b){var x=String((a.u&&a.u.username)||'').toLowerCase().indexOf(q)===0?0:1,y=String((b.u&&b.u.username)||'').toLowerCase().indexOf(q)===0?0:1;return x-y});
-       h+=rows.slice(0,20).map(function(r){
+       /* username-prefix pehle, phir name-prefix, phir UID/ID — har group me A→Z */
+       rows.sort(function(a,b){
+         if(a.sc!==b.sc)return a.sc-b.sc;
+         return String((a.u&&a.u.username)||'').toLowerCase()<String((b.u&&b.u.username)||'').toLowerCase()?-1:1;
+       });
+       var shown=rows.slice(0,30);
+       h+=shown.map(function(r){
          var u=(r.u&&r.u.username)?r.u:{username:'user'};
-         return '<div class="urow" onclick="V.openProfile(\''+r.uid+'\')">'+V.ava(u,'md')+'<div class="uinf"><div class="unm">'+V.nameB(u)+'</div><div class="uun">@'+V.esc(u.username||'')+'</div></div></div>';
+         var meTag=r.uid===V.uid?' <span class="umetag">You</span>':'';
+         return '<div class="urow" onclick="V.openProfile(\''+r.uid+'\')">'+V.ava(u,'md')
+          +'<div class="uinf"><div class="unm">'+V.nameB(u)+meTag+'</div><div class="uun">@'+V.esc(u.username||'')+'</div></div>'
+          +'<div class="uchev" aria-hidden="true">›</div></div>';
        }).join('');
-       if(!rows.length)h+='<div class="sm mut">No users</div>';
+       if(!rows.length)h+='<div class="sm mut">Koi user nahi mila — dusra naam try karo</div>';
+       else h+='<div class="sm mut srchcount">'+shown.length+' user'+(shown.length>1?'s':'')+' mile</div>';
      }
    }catch(e){h='<div class="empo"><div class="ei">⚠️</div><div class="et">Search failed</div></div>'}
    w.innerHTML=h;
@@ -5401,7 +5438,8 @@ const Settings={
    else if(id==='legal'){
      h+='<div class="stit">📜 Legal & Support</div>'
       +g('GUIDE',
-         '<div class="srow" onclick="GuideBook.open()"><div class="sri">📖</div><div class="srf"><div class="srt">Guide Book</div><div class="srs">Puri app ki Hinglish guide — posts, reels, songs, backup, promotion</div></div><div class="sra">›</div></div>')
+         '<div class="srow" onclick="GuideBook.open()"><div class="sri">📖</div><div class="srf"><div class="srt">Guide Book</div><div class="srs">Puri app ki Hinglish guide — posts, reels, songs, backup, promotion</div></div><div class="sra">›</div></div>'
+        +'<div class="srow" onclick="GuideBook.pdf()"><div class="sri">⬇️</div><div class="srf"><div class="srt">Guide Book PDF</div><div class="srs">Puri guide ek PDF file me — download karke offline padho</div></div><div class="sra">›</div></div>')
       +g('LEGAL & SUPPORT',
          '<div class="srow" onclick="V.go(\'privacy\')"><div class="sri">📜</div><div class="srf"><div class="srt">Privacy Policy</div><div class="srs">Aapka data kaise safe hai</div></div><div class="sra">›</div></div>'
         +'<div class="srow" onclick="V.go(\'terms\')"><div class="sri">📖</div><div class="srf"><div class="srt">Terms of Service</div><div class="srs">Rules aur conditions</div></div><div class="sra">›</div></div>'
@@ -6704,6 +6742,10 @@ const GuideBook={
  open:function(ch){
    this.ch=ch||'start';
    this.draw();
+ },
+ /* v4.5: standalone PDF guide (app ke saath deploy hoti hai — vexa-user-guide.pdf) */
+ pdf:function(){
+   try{window.open('vexa-user-guide.pdf','_blank','noopener')}catch(e){}
  },
  tab:function(k){
    this.ch=k;

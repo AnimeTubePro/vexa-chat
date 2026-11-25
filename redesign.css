@@ -411,3 +411,118 @@ button,.btn,.bico,.srow,.rrow,.sgi{transition:transform .18s cubic-bezier(.34,1.
 .loader-chip{border-color:rgba(139,92,246,.5)}
 .orbit-dot i{background:#ef4444!important;box-shadow:0 0 10px rgba(239,68,68,.7)}
 @media (prefers-reduced-motion:reduce){.vlogo-img,.splash-bubble{animation:none!important}}
+
+/* ════════════════════════════════════════════════════════════════════
+   🎬 v4.5 SPLASH REBUILD — HEAVY ANIMATED (text bhi animate hota hai)
+   Search rebuild ke saath — ye layer sabse last load hoti hai, sab override
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 1) Aurora wash — black background RAHEGA, bas dim color clouds drift karenge ── */
+#splash .splash-aurora{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#splash .splash-aurora .au{position:absolute;border-radius:50%;filter:blur(72px);opacity:.32;animation:auDrift 12s ease-in-out infinite}
+#splash .splash-aurora .a1{width:46vmax;height:46vmax;left:-14vmax;top:-16vmax;background:radial-gradient(circle,#3b82f6,transparent 65%)}
+#splash .splash-aurora .a2{width:42vmax;height:42vmax;right:-12vmax;top:28%;background:radial-gradient(circle,#d946ef,transparent 65%);animation-delay:-4s}
+#splash .splash-aurora .a3{width:38vmax;height:38vmax;left:22%;bottom:-18vmax;background:radial-gradient(circle,#8b5cf6,transparent 65%);animation-delay:-8s}
+@keyframes auDrift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(4vmax,3vmax) scale(1.14)}66%{transform:translate(-3vmax,-2.5vmax) scale(.92)}}
+
+/* orbs wapas (dim — black bg ke saath blend) */
+#splash .splash-orbs{display:block}
+.splash-orbs .orb{opacity:.26}
+
+/* ── 2) Shooting star — beech beech me tweeti cross karegi ── */
+#splash .splash-stars .shoot{
+  position:absolute;left:-140px;top:16%;width:130px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),#9fe8ff 55%,#fff);
+  box-shadow:0 0 12px rgba(0,217,255,.85);
+  opacity:0;transform:rotate(16deg);
+  animation:vxShoot 4.2s ease-in 1.4s infinite;
+}
+@keyframes vxShoot{
+  0%{opacity:0;transform:rotate(16deg) translateX(0)}
+  5%{opacity:1}
+  16%{opacity:0;transform:rotate(16deg) translateX(125vw)}
+  100%{opacity:0;transform:rotate(16deg) translateX(125vw)}
+}
+
+/* ── 3) Wordmark — PER-LETTER animation: har akshar khud uthta, lehra aur chamakta hai ── */
+#splash .loader-title.vx-wordmark .vxw1{background:none;animation:none}
+.loader-title.vx-wordmark b{
+  display:inline-block;font-weight:inherit;font-style:inherit;
+  opacity:0;will-change:transform,opacity,filter;
+  animation-name:vxLett,vxWave,vxGlowL,vxLShine;
+  animation-duration:.6s,2.8s,2.8s,3.4s;
+  animation-timing-function:cubic-bezier(.2,1.5,.35,1),ease-in-out,ease-in-out,ease-in-out;
+  animation-delay:calc(.08s + var(--i)*.085s),calc(1.5s + var(--i)*.13s),calc(1.5s + var(--i)*.13s),calc(1.2s + var(--i)*.16s);
+  animation-iteration-count:1,infinite,infinite,infinite;
+  animation-fill-mode:both,none,none,none;
+  animation-direction:normal,normal,normal,alternate;
+}
+@keyframes vxLett{0%{opacity:0;transform:translateY(30px) scale(.35) rotate(-10deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0deg)}}
+@keyframes vxWave{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes vxGlowL{0%,100%{filter:drop-shadow(0 0 3px rgba(139,92,246,.2))}50%{filter:drop-shadow(0 0 13px rgba(0,217,255,.55))}}
+@keyframes vxLShine{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+/* "VEXA-" — har letter apna gradient shine (logo jaisa white→magenta→purple) */
+.loader-title.vx-wordmark .vxw1 b{
+  background:linear-gradient(90deg,#fff 12%,#d946ef 42%,#8b5cf6 62%,#fff 88%);
+  background-size:300% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+/* "Chat" — red glow (logo ka red), per-letter pulse */
+.loader-title.vx-wordmark .vxw2 b{
+  color:#ef4444;-webkit-text-fill-color:#ef4444;
+  text-shadow:0 0 12px rgba(239,68,68,.5),0 0 30px rgba(239,68,68,.25);
+}
+/* poore wordmark par halki shine sweep */
+.loader-title.vx-wordmark{position:relative}
+.loader-title.vx-wordmark::after{
+  content:'';position:absolute;inset:-6px -14px;border-radius:14px;pointer-events:none;
+  background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.15) 50%,transparent 60%);
+  background-size:260% 100%;mix-blend-mode:screen;
+  animation:vxSheen 3.6s linear 1.4s infinite;
+}
+@keyframes vxSheen{0%{background-position:130% 0}100%{background-position:-130% 0}}
+
+/* ── 4) Subtitle — blur+letter-spacing se clear hota hai, phir halka float karta hai ── */
+.loader-sub .subline{display:inline-block;opacity:0;will-change:transform,opacity,filter,letter-spacing;
+  animation-name:vxSubIn,vxSubFloat;
+  animation-duration:1.1s,3.6s;
+  animation-timing-function:ease,ease-in-out;
+  animation-delay:.9s,2.1s;
+  animation-iteration-count:1,infinite;
+  animation-fill-mode:both,none;
+}
+@keyframes vxSubIn{0%{opacity:0;transform:translateY(16px);letter-spacing:.34em;filter:blur(7px)}100%{opacity:1;transform:translateY(0);letter-spacing:.02em;filter:blur(0)}}
+@keyframes vxSubFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ── 5) Chip / bar / status text / skip hint — sab me saans aati rahegi ── */
+.loader-chip{animation:vxChipP 2.4s ease-in-out infinite}
+@keyframes vxChipP{0%,100%{transform:scale(1);box-shadow:0 0 0 rgba(139,92,246,0)}50%{transform:scale(1.07);box-shadow:0 0 22px rgba(139,92,246,.5)}}
+.loader-bar{animation:vxBarGlow 2.2s ease-in-out infinite}
+@keyframes vxBarGlow{0%,100%{box-shadow:0 0 12px rgba(59,130,246,.3)}50%{box-shadow:0 0 26px rgba(139,92,246,.55)}}
+#splash #splashTx{animation:vxTxP 1.4s ease-in-out infinite}
+@keyframes vxTxP{0%,100%{opacity:.72}50%{opacity:1}}
+.skiphint{animation:vxSkipB 1.7s ease-in-out infinite}
+@keyframes vxSkipB{0%,100%{transform:translateY(0);opacity:.68}50%{transform:translateY(-4px);opacity:1}}
+.loader-logo .vlogo-img{animation:vxLogoPulse 2.3s ease-in-out infinite}
+@keyframes vxLogoPulse{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.07) rotate(-1.6deg)}}
+.splash-bubble{animation:vxBubble 2.2s ease-in-out infinite}
+
+/* ── 6) SEARCH v4.5 results — badge + chevron + count ── */
+.umetag{font-size:.58rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:#0b0618;background:linear-gradient(90deg,#00d9ff,#a855f7);
+  border-radius:99px;padding:2px 8px;margin-left:2px;white-space:nowrap}
+.urow .uchev{margin-left:auto;color:var(--tx3,#8a85a3);font-size:1.35rem;font-weight:700;
+  line-height:1;padding-right:4px;animation:vxChev 1s ease-in-out infinite}
+@keyframes vxChev{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+.srchcount{letter-spacing:.05em;text-align:center;padding:8px 0 2px}
+
+/* ── 7) Reduced motion — sab band, text PHIR BHI dikhe (opacity fix zaroori) ── */
+@media (prefers-reduced-motion:reduce){
+  #splash .splash-aurora .au,#splash .splash-stars .shoot,
+  .loader-title.vx-wordmark b,.loader-title.vx-wordmark::after,
+  .loader-sub .subline,.loader-chip,.loader-bar,#splash #splashTx,
+  .skiphint,.loader-logo .vlogo-img,.splash-bubble,.urow .uchev{animation:none!important}
+  .loader-title.vx-wordmark b,.loader-sub .subline{opacity:1!important}
+  .loader-title.vx-wordmark::after{display:none}
+}

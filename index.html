@@ -103,8 +103,9 @@ function VXtemp(){
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
 <div id="splash" role="status" aria-busy="true">
+  <div class="splash-aurora" aria-hidden="true"><span class="au a1"></span><span class="au a2"></span><span class="au a3"></span></div>
   <div class="splash-orbs" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
-  <div class="splash-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="splash-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b class="shoot"></b></div>
   <div class="splash-scan" aria-hidden="true"></div>
   <div class="loader-logo" id="splashLogo">
     <div class="logo-ring" aria-hidden="true"></div>
@@ -113,8 +114,8 @@ function VXtemp(){
     <img src="logo-v44.png" alt="VEXA-Chat" class="vlogo-img">
     <span class="splash-bubble" aria-hidden="true">💬</span>
   </div>
-  <div class="loader-title vx-wordmark"><span class="vxw1">VEXA-</span><span class="vxw2">Chat</span></div>
-  <div class="loader-sub f-vibes agrad">AnimeTubePro Studio × VEXA — Connect Privately</div>
+  <div class="loader-title vx-wordmark" aria-label="VEXA-Chat"><span class="vxw1" aria-hidden="true"><b style="--i:0">V</b><b style="--i:1">E</b><b style="--i:2">X</b><b style="--i:3">A</b><b style="--i:4">-</b></span><span class="vxw2" aria-hidden="true"><b style="--i:5">C</b><b style="--i:6">h</b><b style="--i:7">a</b><b style="--i:8">t</b></span></div>
+  <div class="loader-sub f-vibes" aria-hidden="true"><span class="subline agrad">AnimeTubePro Studio × VEXA — Connect Privately</span></div>
   <div class="loader-chip">⚡ V4.4 · REBUILD</div>
   <div class="loader-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading"><span id="loadBar"></span></div>
   <div class="loader-pct" id="loadPct">0%</div>
@@ -323,7 +324,7 @@ function VXtemp(){
         <button type="button" class="pfab" onclick="Posts.fabTap()" aria-label="Create post or reel">✏️</button>
       </section>
       <section class="scr" id="sc-search"><div class="pgc">
-        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Users or #hashtags..." oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"></div>
+        <div class="iwrap" style="margin-bottom:14px"><span class="iico">🔍</span><input class="inp" id="sInput" placeholder="Naam, @username, UID ya #hashtag..." oninput="Search.run()" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search users or hashtags"></div>
         <div id="sRes"></div></div></section>
       <section class="scr" id="sc-local"><div class="pgc">
         <div class="radar"><div class="rdc">📡</div></div>
